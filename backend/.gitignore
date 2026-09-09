@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Environment Variables (IMPORTANT: Database credentials aur JWT secret protect karne ke liye)
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS & Editor Files
+.DS_Store
+.vscode/
+Thumbs.db
