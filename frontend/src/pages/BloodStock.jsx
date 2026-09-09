@@ -371,17 +371,17 @@ const BloodStock = () => {
       )}
 
       {/* Summary Cards at Bottom */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+      <div className="blood-stock-summary-grid grid grid-cols-1 md:grid-cols-3 items-start gap-5 pt-2">
         
         {/* Card 1: Available Stock Summary */}
-        <div className="bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-between text-center aspect-square">
+        <div className="blood-stock-summary-card blood-stock-summary-card--list bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-between text-center">
           <div className="flex items-center gap-2 mb-2 w-full justify-center">
             <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0" />
             <h3 className="text-[#5A1827] font-black text-xs uppercase tracking-wider">
               Available Stock Summary
             </h3>
           </div>
-          <div className="flex flex-col gap-1.5 w-full max-w-[250px] mx-auto overflow-y-auto max-h-[210px] pr-1">
+          <div className="flex flex-col gap-1.5 w-full max-w-[250px] mx-auto overflow-y-auto max-h-[180px] pr-1">
             {Object.entries(groupCounts).map(([grp, count]) => (
               <div key={grp} className="flex justify-between items-center border font-black px-3 py-1 rounded-xl text-xs shadow-inner bg-emerald-50 border-emerald-300 text-emerald-900">
                 <span className="flex items-center gap-1">
@@ -395,7 +395,7 @@ const BloodStock = () => {
         </div>
 
         {/* Card 2: Recent Dispatches Count */}
-        <div className="bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center aspect-square">
+        <div className="blood-stock-summary-card bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-3 w-full justify-center">
             <PackageCheck className="w-5 h-5 text-blue-700 shrink-0" />
             <h3 className="text-[#5A1827] font-black text-xs uppercase tracking-wider">
@@ -413,7 +413,7 @@ const BloodStock = () => {
         </div>
 
         {/* Card 3: Critical Shortage Alert */}
-        <div className="bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center aspect-square">
+        <div className="blood-stock-summary-card bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-3 w-full justify-center">
             <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
             <h3 className="text-[#5A1827] font-black text-xs uppercase tracking-wider">

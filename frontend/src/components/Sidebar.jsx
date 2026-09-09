@@ -18,7 +18,7 @@ import {
   HeartHandshake 
 } from 'lucide-react';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   const navigate = useNavigate();
 
   // Retrieve user details from localStorage
@@ -62,7 +62,7 @@ const Sidebar = () => {
   const menuItems = getMenuItems();
 
   return (
-    <aside className="w-64 bg-[#5A1827] border-r-2 border-[#E5C158]/30 flex flex-col h-screen sticky top-0 z-40 font-sans shadow-xl shrink-0">
+    <aside className={`sidebar-responsive ${isOpen ? 'sidebar-open' : ''} w-64 bg-[#5A1827] border-r-2 border-[#E5C158]/30 flex flex-col h-screen sticky top-0 z-40 font-sans shadow-xl shrink-0`}>
       {/* Brand Header Section */}
       <div className="p-6 border-b-2 border-[#E5C158]/20 flex items-center gap-3 bg-[#4A121F]">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#E5C158] to-amber-300 flex items-center justify-center text-[#5A1827] font-black shadow-lg border border-white/20">
@@ -84,6 +84,7 @@ const Sidebar = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 ${
                   isActive
@@ -93,7 +94,7 @@ const Sidebar = () => {
               }
             >
               <IconComponent className="w-4 h-4 transition-transform duration-200 shrink-0" />
-              <span>{item.label}</span>
+              <span className="sidebar-link-label">{item.label}</span>
             </NavLink>
           );
         })}
@@ -101,6 +102,7 @@ const Sidebar = () => {
         {/* Add Blood Entry link */}
         <NavLink
           to="/add-blood-record"
+          onClick={onClose}
           className={({ isActive }) =>
             `flex items-center gap-3 px-4 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all duration-200 ${
               isActive 
@@ -110,7 +112,7 @@ const Sidebar = () => {
           }
         >
           <PlusCircle className="w-4 h-4 transition-transform duration-200" />
-          <span>Add Blood Entry</span>
+          <span className="sidebar-link-label">Add Blood Entry</span>
         </NavLink>
       </nav>
 
@@ -121,7 +123,7 @@ const Sidebar = () => {
           className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-rose-200 bg-rose-950/40 hover:bg-rose-900/60 transition-colors text-left border border-rose-500/30 shadow-sm cursor-pointer"
         >
           <LogOut className="w-4 h-4 text-rose-400" />
-          <span>Logout</span>
+          <span className="sidebar-link-label">Logout</span>
         </button>
       </div>
     </aside>

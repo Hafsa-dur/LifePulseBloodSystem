@@ -75,14 +75,14 @@ const InventoryList = () => {
           Calculating stock aggregation...
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="blood-inventory-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {bloodGroupsData.map((item) => {
             const isCritical = item.status === 'Critical';
 
             return (
               <div
                 key={item.group}
-                className={`relative group aspect-square rounded-2xl p-6 transition-all duration-300 overflow-hidden border-2 shadow-md flex flex-col justify-between ${
+                className={`blood-inventory-card relative group rounded-2xl p-6 transition-all duration-300 overflow-hidden border-2 shadow-md flex flex-col justify-between ${
                   isCritical
                     ? 'bg-rose-50/60 border-rose-400 shadow-rose-100'
                     : 'bg-white border-[#6B1D2F]/30 hover:border-[#6B1D2F]'

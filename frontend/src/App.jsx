@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // Public Components
@@ -31,6 +31,8 @@ import DonorRecipientDispatchLog from './pages/DonorRecipientDispatchLog';
 import LiveTracking from './pages/LiveTracking';
 import GamificationRewards from './pages/GamificationRewards';
 import LifeImpactBoard from './pages/LifeImpactBoard';
+import './styles/Responsive.css';
+
 // Simplified Protected Route Guard
 const ProtectedRoute = ({ allowedRole }) => {
   const token = localStorage.getItem('token');
@@ -50,7 +52,7 @@ const ProtectedRoute = ({ allowedRole }) => {
 };
 
 const PublicLayout = () => (
-  <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+  <div className="public-layout min-h-screen bg-slate-950 text-slate-100 flex flex-col">
     <Navbar />
     <main className="flex-1">
       <Outlet />
@@ -60,16 +62,25 @@ const PublicLayout = () => (
 );
 
 const DashboardLayout = () => (
-  <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
-    <Sidebar />
+  <DashboardShell />
+);
+
+const DashboardShell = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+  <div className="dashboard-layout flex h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    {sidebarOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <Topbar />
-      <main className="flex-1 overflow-y-auto p-8 bg-slate-950">
+      <Topbar onMenuClick={() => setSidebarOpen(true)} />
+      <main className="dashboard-content flex-1 overflow-y-auto p-8 bg-slate-950">
         <Outlet />
       </main>
     </div>
   </div>
-);
+  );
+};
 
 function App() {
   return (
