@@ -34,7 +34,7 @@ const Register = () => {
 
     try {
       // POST Request to Node.js/Express MongoDB Auth Register Endpoint
-      const response = await fetch(`/${API_URL}/auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
