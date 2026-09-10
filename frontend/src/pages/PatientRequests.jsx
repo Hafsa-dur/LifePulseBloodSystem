@@ -99,7 +99,10 @@ const PatientRequests = () => {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-            }
+          },
+          body: JSON.stringify({
+            currentLocationNote: 'Dispatched securely from blood bank.'
+          })
         });
         
         const data = await parseResponse(res);

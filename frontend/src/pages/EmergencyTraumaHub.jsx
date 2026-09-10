@@ -41,20 +41,28 @@ const EmergencyTraumaHub = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hospitalName: item.hospitalName,
+          patientName: item.contactPerson || 'Emergency Patient',
           bloodGroup: item.bloodGroup,
-          units: Number(item.unitsRequired || 1)
+          units: Number(item.unitsRequired || 1),
+          notes: `Emergency dispatch: ${item.urgencyLevel || 'Critical'}`
         })
       });
 
       if (!dispatchRes.ok) {
-        alert("Failed to deduct blood stock!");
+        const errorData = await parseResponse(dispatchRes);
+        alert(errorData.message || "Failed to deduct blood stock!");
         setProcessingId(null);
         return;
       }
 
-      await fetch(`${API_URL}/hospital-requests/${itemId}`, {
+      const resolveRes = await fetch(`${API_URL}/hospital-requests/${itemId}`, {
         method: 'DELETE'
       });
+
+      if (!resolveRes.ok) {
+        const errorData = await parseResponse(resolveRes);
+        throw new Error(errorData.message || 'Blood dispatched, but emergency request could not be resolved.');
+      }
 
     } catch (err) {
       console.error('Dispatch and resolve error:', err);
