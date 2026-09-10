@@ -12,8 +12,16 @@ if (!cached) {
 }
 
 const connectDB = async () => {
-  if (cached.conn) {
+  if (!process.env.MONGODB_URI) {
+    throw new Error('MONGODB_URI is not configured');
+  }
+
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
+  }
+
+  if (cached.conn && mongoose.connection.readyState !== 1) {
+    cached.conn = null;
   }
 
   if (!cached.promise) {
@@ -22,8 +30,6 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
     };
 
-    console.log("URI Check:", process.env.MONGODB_URI);
-    
     cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => {
       console.log('>>> Database Connected Successfully! <<<');
       return mongoose;
@@ -34,7 +40,7 @@ const connectDB = async () => {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    console.log("MongoDB Connection Error:", e.message);
+    console.error('MongoDB Connection Error:', e.message);
     throw e;
   }
 

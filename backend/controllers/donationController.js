@@ -112,7 +112,7 @@ export const getDonorHistory = async (req, res) => {
 export const dispatchBlood = async (req, res) => {
   const session = await mongoose.startSession();
   try {
-    const { hospitalName, bloodGroup, units, donorName, patientName } = req.body;
+    const { hospitalName, bloodGroup, units, donorName, patientName } = req.body || {};
     const requestedUnits = Number(units);
     const normalizedBloodGroup = String(bloodGroup || '').trim();
     if (!normalizedBloodGroup || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
@@ -124,8 +124,7 @@ export const dispatchBlood = async (req, res) => {
       const donations = await Donation.find({
         bloodGroup: new RegExp(`^${normalizedBloodGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
         units: { $gt: 0 },
-        status: { $ne: 'Dispatched' },
-        donorName: { $exists: true, $nin: ['', null], $not: /^(Direct Donor|System Stock|Dispatched to:)/i }
+        status: { $ne: 'Dispatched' }
       }).sort({ createdAt: 1, _id: 1 }).session(session);
       const availableUnits = donations.reduce((total, donation) => total + donation.units, 0);
       if (availableUnits < requestedUnits) {

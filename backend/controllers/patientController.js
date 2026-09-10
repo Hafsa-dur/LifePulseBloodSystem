@@ -175,9 +175,10 @@ export const dispatchRequest = async (req, res) => {
             }).save({ session });
             request.status = 'Dispatched';
             request.matchStatus = 'Fulfilled';
-            request.currentLocationNote = req.body.currentLocationNote || 'Dispatched securely from blood bank.';
-            if (req.body.areaOrLocation) request.areaOrLocation = req.body.areaOrLocation;
-            if (req.body.city) request.city = req.body.city;
+            const dispatchDetails = req.body || {};
+            request.currentLocationNote = dispatchDetails.currentLocationNote || 'Dispatched securely from blood bank.';
+            if (dispatchDetails.areaOrLocation) request.areaOrLocation = dispatchDetails.areaOrLocation;
+            if (dispatchDetails.city) request.city = dispatchDetails.city;
             await request.save({ session });
             matchLog.pints = requiredUnits;
             matchLog.matchStatus = 'Fulfilled';

@@ -16,13 +16,27 @@ import lifeImpactRoutes from './routes/lifeImpactRoutes.js';
 
 // Load environment variables from .env and establish MongoDB connection
 dotenv.config();
-connectDB();
 
 const app = express();
 
 // Middleware setup for parsing incoming JSON payloads and enabling CORS restrictions
 app.use(cors());
 app.use(express.json());
+
+// Vercel can invoke a request before the serverless instance has connected.
+// Wait for the cached connection before any route performs a Mongoose query.
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection unavailable:', error.message);
+    return res.status(503).json({
+      success: false,
+      message: 'Database is temporarily unavailable. Please try again shortly.'
+    });
+  }
+});
 
 // Create HTTP Server instance and attach Socket.io for Real-Time Event Handling
 const server = http.createServer(app);
