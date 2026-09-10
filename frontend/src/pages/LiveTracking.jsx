@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, Thermometer, MapPin, CheckCircle2, ArrowLeft, AlertCircle, Clock, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API_URL } from '../api';
 
 const LiveTracking = () => {
   const [activeDispatch, setActiveDispatch] = useState(null);
@@ -9,7 +10,7 @@ const LiveTracking = () => {
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes delivery countdown
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/patient-requests')
+    fetch(`${API_URL}/api/patient-requests`)
       .then(res => res.json())
       .then(data => {
         const requests = Array.isArray(data) ? data : data.data || [];

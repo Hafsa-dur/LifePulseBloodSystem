@@ -31,7 +31,7 @@ const GamificationRewards = () => {
       // Web3Forms Clean JSON Payload
       const formData = {
         access_key: "086142c1-1ea1-4e42-9ddd-e2aa7c064067",
-        subject: `🎉 LifePulse Reward Unlocked: ${offer.title}`,
+        subject: ` LifePulse Reward Unlocked: ${offer.title}`,
         from_name: "LifePulse Rewards System",
         message: `A reward has been successfully redeemed!\n\nDonor Email: ${donorEmail}\nReward: ${offer.title}\nPartner Lab: ${offer.partner}\nPoints Deducted: ${offer.pointsCost} PTS\nVoucher Code: LP-VOUCHER-${Math.floor(100000 + Math.random() * 900000)}\n\nShow this code at the lab counter.`
       };
@@ -102,7 +102,7 @@ const GamificationRewards = () => {
             type="email"
             value={donorEmail}
             onChange={(e) => setDonorEmail(e.target.value)}
-            placeholder="e.g. hafsasohail557@gmail.com"
+            placeholder="e.g. hafsa@gmail.com"
             className="w-full px-4 py-2.5 rounded-xl border-2 border-[#5A1827]/20 focus:border-[#5A1827] outline-none text-sm font-semibold bg-[#FAF9F6]"
           />
         </div>

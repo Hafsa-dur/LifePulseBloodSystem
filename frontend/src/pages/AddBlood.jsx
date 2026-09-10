@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { UserPlus, Send, Calendar, Clock, Mail } from 'lucide-react';
+import { API_URL } from '../api';
 
 const AddBlood = () => {
   const [formData, setFormData] = useState({
@@ -39,7 +40,7 @@ const AddBlood = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/donations', {
+      const response = await axios.post(`${API_URL}/api/donations`, {
         donorName: formData.donorName,
         email: formData.email.toLowerCase().trim(),
         bloodGroup: formData.bloodGroup,

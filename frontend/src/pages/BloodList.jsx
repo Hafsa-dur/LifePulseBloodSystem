@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../api';
+
 
 const InventoryList = () => {
   const [bloodGroupsData, setBloodGroupsData] = useState([]);
@@ -12,9 +14,9 @@ const InventoryList = () => {
       try {
         let res;
         try {
-          res = await axios.get('http://localhost:5000/api/donations');
+          res = await axios.get(`${API_URL}/api/donations`);
         } catch {
-          res = await axios.get('http://localhost:5000/api/donations/history');
+          res = await axios.get(`${API_URL}/api/donations/history`);
         }
 
         const rawList = Array.isArray(res.data) ? res.data : res.data.donations || [];

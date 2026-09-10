@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Radio, X, Building2, Droplet, Hash, Calendar, Clock, User } from 'lucide-react';
+import { API_URL } from '../api';
+
 
 const DispatchModal = ({ isOpen, onClose, onSuccess }) => {
   const [hospital, setHospital] = useState('');
@@ -29,7 +31,7 @@ const DispatchModal = ({ isOpen, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      await axios.post('http://localhost:5000/api/donations/dispatch', {
+      await axios.post('${API_URL}/api/donations/dispatch', {
         hospitalName: hospital,
         patientName: patientName, // Sending exact patient name
         bloodGroup,

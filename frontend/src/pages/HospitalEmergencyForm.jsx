@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Building2, Send, AlertCircle } from 'lucide-react';
+import { API_URL } from '../api';
 
 const HospitalEmergencyForm = () => {
   const [formData, setFormData] = useState({
@@ -18,7 +19,7 @@ const HospitalEmergencyForm = () => {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/hospital-requests', {
+      const res = await fetch(`${API_URL}/api/hospital-requests`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -49,7 +50,7 @@ const HospitalEmergencyForm = () => {
       }
     } catch (err) {
       console.error('Error submitting form:', err);
-      alert('❌ Failed to send broadcast. Check browser console & Express server.');
+      alert('Failed to send broadcast. Check browser console & Express server.');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import heroBg from '../assets/hero.png';
+import { API_URL } from '../api';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const Home = () => {
   useEffect(() => {
     const fetchPublicStats = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/donations');
+        const res = await fetch(`${API_URL}/api/donations`);
         if (res.ok) {
           const data = await res.json();
           const groups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -77,7 +78,7 @@ const Home = () => {
     setStatus(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/patient-requests', {
+      const res = await fetch(`/${API_URL}api/patient-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

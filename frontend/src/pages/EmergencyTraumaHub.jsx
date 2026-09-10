@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import { AlertCircle, Send, ShieldAlert } from 'lucide-react';
+import { API_URL } from '../api';
 
 const EmergencyTraumaHub = () => {
   const [cases, setCases] = useState([]);
@@ -8,7 +9,7 @@ const EmergencyTraumaHub = () => {
 
   useEffect(() => {
     // 1. Fetch initial requests
-    fetch('http://localhost:5000/api/hospital-requests')
+    fetch(`${API_URL}/api/hospital-requests`)
       .then((res) => res.json())
       .then((data) => setCases(data))
       .catch((err) => console.error('Error loading requests:', err));
@@ -35,7 +36,7 @@ const EmergencyTraumaHub = () => {
     try {
       setProcessingId(itemId);
 
-      const dispatchRes = await fetch('http://localhost:5000/api/donations/dispatch', {
+      const dispatchRes = await fetch(`${API_URL}/api/donations/dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -51,7 +52,7 @@ const EmergencyTraumaHub = () => {
         return;
       }
 
-      await fetch(`http://localhost:5000/api/hospital-requests/${itemId}`, {
+      await fetch(`${API_URL}/api/hospital-requests/${itemId}`, {
         method: 'DELETE'
       });
 

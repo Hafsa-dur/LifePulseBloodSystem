@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { HelpCircle, ChevronDown } from 'lucide-react';
 
+
 const FAQPage = () => {
   const [openIndex, setOpenIndex] = useState(null);
 

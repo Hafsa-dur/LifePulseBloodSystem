@@ -1,0 +1,1 @@
+export const API_URL = "https://life-pulse-blood-system-backend.vercel.app/api";

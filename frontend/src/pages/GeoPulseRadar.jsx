@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Search, Navigation, Send, X, Building2, Droplet, User } from 'lucide-react';
+import { API_URL } from '../api';
 
 const GeoPulseRadar = () => {
   const routeLocation = useLocation();
@@ -74,7 +75,7 @@ const GeoPulseRadar = () => {
   const fetchRealDonors = async (searchQueryAddr = targetAddress) => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/donations');
+      const response = await fetch('${API_URL}/api/donations');
       if (response.ok) {
         const data = await response.json();
         

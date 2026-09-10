@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { ShieldCheck, Download, History } from 'lucide-react';
 
+
 const DonorPassport = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const passportRef = useRef(null);
