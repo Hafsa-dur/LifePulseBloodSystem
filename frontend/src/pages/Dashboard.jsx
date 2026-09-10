@@ -36,7 +36,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const donationsRes = await fetch('${API_URL}/api/donations/dashboard');
+        const donationsRes = await fetch(`${API_URL}/donations/dashboard`);
         let donationsData = [];
         let groupDonationUnits = { 'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0, 'O+': 0, 'O-': 0, 'AB+': 0, 'AB-': 0 };
         let totalUnits = 0;
@@ -59,7 +59,7 @@ const Dashboard = () => {
           uniqueDonors = new Set(donationsData.map((item) => item.donorName)).size;
         }
 
-        const requestsRes = await fetch('${API_URL}/api/patient-requests');
+        const requestsRes = await fetch(`${API_URL}/patient-requests`);
         let pendingCount = 0;
         let distributedUnits = 0;
 

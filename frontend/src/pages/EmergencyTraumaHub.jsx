@@ -9,7 +9,7 @@ const EmergencyTraumaHub = () => {
 
   useEffect(() => {
     // 1. Fetch initial requests
-    fetch(`${API_URL}/api/hospital-requests`)
+    fetch(`${API_URL}/hospital-requests`)
       .then((res) => res.json())
       .then((data) => setCases(data))
       .catch((err) => console.error('Error loading requests:', err));
@@ -36,7 +36,7 @@ const EmergencyTraumaHub = () => {
     try {
       setProcessingId(itemId);
 
-      const dispatchRes = await fetch(`${API_URL}/api/donations/dispatch`, {
+      const dispatchRes = await fetch(`${API_URL}/donations/dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -52,7 +52,7 @@ const EmergencyTraumaHub = () => {
         return;
       }
 
-      await fetch(`${API_URL}/api/hospital-requests/${itemId}`, {
+      await fetch(`${API_URL}/hospital-requests/${itemId}`, {
         method: 'DELETE'
       });
 

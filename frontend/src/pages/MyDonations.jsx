@@ -56,8 +56,8 @@ const MyDonations = ({ currentUserName }) => {
       const email = storedUser.email || localStorage.getItem('userEmail') || '';
       const impactQuery = email ? `email=${encodeURIComponent(email)}` : `donorName=${encodeURIComponent(targetName)}`;
       const [response, impactResponse] = await Promise.all([
-        fetch(`${API_URL}/api/donations`),
-        fetch(`${API_URL}/api/life-impact?${impactQuery}`)
+        fetch(`${API_URL}/donations`),
+        fetch(`${API_URL}/life-impact?${impactQuery}`)
       ]);
       if (response.ok) {
         const data = await response.json();

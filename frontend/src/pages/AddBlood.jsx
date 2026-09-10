@@ -40,7 +40,7 @@ const AddBlood = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/api/donations`, {
+      const response = await axios.post(`${API_URL}/donations`, {
         donorName: formData.donorName,
         email: formData.email.toLowerCase().trim(),
         bloodGroup: formData.bloodGroup,

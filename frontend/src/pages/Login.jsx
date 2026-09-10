@@ -18,9 +18,9 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    console.log("Sending request to:", `${API_URL}/api/auth/login`);
+    console.log("Sending request to:", `${API_URL}/auth/login`);
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

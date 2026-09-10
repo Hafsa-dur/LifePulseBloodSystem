@@ -8,7 +8,7 @@ const DonorRecipientDispatchLog = () => {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/donor-recipient-logs/combined`);
+      const res = await fetch(`${API_URL}/donor-recipient-logs/combined`);
       if (!res.ok) {
         throw new Error('Failed to fetch combined dispatch logs.');
       }

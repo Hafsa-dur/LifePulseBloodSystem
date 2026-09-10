@@ -32,7 +32,7 @@ const Home = () => {
   useEffect(() => {
     const fetchPublicStats = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/donations`);
+        const res = await fetch(`${API_URL}/donations`);
         if (res.ok) {
           const data = await res.json();
           const groups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -78,7 +78,7 @@ const Home = () => {
     setStatus(null);
 
     try {
-      const res = await fetch(`/${API_URL}api/patient-requests`, {
+      const res = await fetch(`/${API_URL}/patient-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

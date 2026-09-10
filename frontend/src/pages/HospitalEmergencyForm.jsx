@@ -19,7 +19,7 @@ const HospitalEmergencyForm = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/api/hospital-requests`, {
+      const res = await fetch(`${API_URL}/hospital-requests`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

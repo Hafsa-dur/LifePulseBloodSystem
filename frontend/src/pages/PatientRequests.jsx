@@ -9,7 +9,7 @@ const PatientRequests = () => {
 
   useEffect(() => {
     // 1. Fetch initial patient requests
-    fetch('${API_URL}/api/patient-requests')
+    fetch(`${API_URL}/patient-requests`)
       .then((res) => res.json())
       .then((data) => setRequests(data))
       .catch((err) => console.error('Error fetching patient requests:', err));
@@ -36,7 +36,7 @@ const PatientRequests = () => {
   const handleApprove = async (id) => {
     try {
         setLoadingId(id);
-        const res = await fetch(`${API_URL}/api/patient-requests/approve/${id}`, {
+        const res = await fetch(`${API_URL}/patient-requests/approve/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ const PatientRequests = () => {
   const handleReject = async (id) => {
     try {
         setLoadingId(id);
-        const res = await fetch(`${API_URL}/api/patient-requests/reject/${id}`, {
+        const res = await fetch(`${API_URL}/patient-requests/reject/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ const PatientRequests = () => {
   const handleDispatch = async (id) => {
     try {
         setLoadingId(id);
-        const res = await fetch(`${API_URL}/api/patient-requests/dispatch/${id}`, {
+        const res = await fetch(`${API_URL}/patient-requests/dispatch/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

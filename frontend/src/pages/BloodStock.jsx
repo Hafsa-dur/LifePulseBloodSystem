@@ -37,8 +37,8 @@ const BloodStock = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const donationsRes = await fetch('${API_URL}/api/donations');
-      const requestsRes = await fetch('${API_URL}/api/patient-requests');
+      const donationsRes = await fetch(`${API_URL}/donations`);
+      const requestsRes = await fetch(`${API_URL}/patient-requests`);
 
       if (donationsRes.ok) {
         const donationsData = await donationsRes.json();
@@ -100,7 +100,7 @@ const BloodStock = () => {
         dispatchTime
       };
 
-      const response = await fetch('${API_URL}/api/donations/dispatch', {
+      const response = await fetch(`${API_URL}/donations/dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dispatchData)

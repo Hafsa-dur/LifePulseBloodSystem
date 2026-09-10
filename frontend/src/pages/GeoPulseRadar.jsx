@@ -75,7 +75,7 @@ const GeoPulseRadar = () => {
   const fetchRealDonors = async (searchQueryAddr = targetAddress) => {
     try {
       setLoading(true);
-      const response = await fetch('${API_URL}/api/donations');
+      const response = await fetch(`${API_URL}/donations`);
       if (response.ok) {
         const data = await response.json();
         

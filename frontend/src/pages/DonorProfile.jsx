@@ -12,7 +12,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchUserDonations = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/donations`);
+        const response = await axios.get(`${API_URL}/donations`);
         // Filter user's specific donations
         const myDonations = response.data.filter(
           (item) => item.donorName?.toLowerCase() === user?.name?.toLowerCase() || item.email === user?.email

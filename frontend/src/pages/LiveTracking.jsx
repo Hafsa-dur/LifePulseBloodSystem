@@ -10,7 +10,7 @@ const LiveTracking = () => {
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes delivery countdown
 
   useEffect(() => {
-    fetch(`${API_URL}/api/patient-requests`)
+    fetch(`${API_URL}/patient-requests`)
       .then(res => res.json())
       .then(data => {
         const requests = Array.isArray(data) ? data : data.data || [];

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../api';
 
 const LifeImpactBoard = () => {
   const [impactData, setImpactData] = useState({ stats: {}, logs: [] });
@@ -35,7 +36,7 @@ const LifeImpactBoard = () => {
 
       console.log("Fetching impact data with:", queryParams.toString());
 
-      const response = await axios.get(`/api/life-impact?${queryParams.toString()}`);
+      const response = await axios.get(`${API_URL}/life-impact?${queryParams.toString()}`);
       console.log("Response received:", response.data);
 
       const resData = response.data;

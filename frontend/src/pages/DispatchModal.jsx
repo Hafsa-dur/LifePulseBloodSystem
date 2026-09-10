@@ -31,7 +31,7 @@ const DispatchModal = ({ isOpen, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      await axios.post('${API_URL}/api/donations/dispatch', {
+      await axios.post(`${API_URL}/donations/dispatch`, {
         hospitalName: hospital,
         patientName: patientName, // Sending exact patient name
         bloodGroup,
@@ -96,7 +96,7 @@ const DispatchModal = ({ isOpen, onClose, onSuccess }) => {
             <input
               type="text"
               required
-              placeholder="e.g. Muhammad Ali"
+              placeholder="e.g. Ahmed Khan"
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               className="w-full bg-white border-2 border-[#5A1827]/30 rounded-xl px-4 py-2 text-[#5A1827] font-semibold text-sm focus:outline-none focus:border-[#5A1827] transition shadow-inner"

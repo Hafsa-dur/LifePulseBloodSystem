@@ -14,9 +14,9 @@ const InventoryList = () => {
       try {
         let res;
         try {
-          res = await axios.get(`${API_URL}/api/donations`);
+          res = await axios.get(`${API_URL}/donations`);
         } catch {
-          res = await axios.get(`${API_URL}/api/donations/history`);
+          res = await axios.get(`${API_URL}/donations/history`);
         }
 
         const rawList = Array.isArray(res.data) ? res.data : res.data.donations || [];
