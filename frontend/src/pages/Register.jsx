@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ const Register = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await parseResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed. Please try again.');

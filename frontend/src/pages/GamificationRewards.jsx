@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { parseResponse } from '../api';
 import { Award, Gift, Sparkles, Star, Zap, ShieldCheck, Mail } from 'lucide-react';
 
 const GamificationRewards = () => {
@@ -45,7 +46,7 @@ const GamificationRewards = () => {
         body: JSON.stringify(formData)
       });
 
-      const result = await response.json();
+      const result = await parseResponse(response);
 
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Failed to send voucher email.');

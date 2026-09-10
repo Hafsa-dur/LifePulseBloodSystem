@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import heroBg from '../assets/hero.png';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ const Home = () => {
       try {
         const res = await fetch(`${API_URL}/donations`);
         if (res.ok) {
-          const data = await res.json();
+          const data = await parseResponse(res);
           const groups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
           const criticals = groups.filter((g) => {
             const count = data
@@ -78,13 +78,13 @@ const Home = () => {
     setStatus(null);
 
     try {
-      const res = await fetch(`/${API_URL}/patient-requests`, {
+      const res = await fetch(`${API_URL}/patient-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
-      const data = await res.json();
+      const data = await parseResponse(res);
 
       if (res.ok && data.success) {
         setStatus({ type: 'success', msg: 'Request Submitted Successfully! Admin will process it shortly.' });

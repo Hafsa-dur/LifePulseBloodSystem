@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import DispatchModal from './DispatchModal';
 import StockAlertModal from '../components/StockAlertModal';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const Dashboard = () => {
   // State management for dashboard analytics and metrics
@@ -43,7 +43,7 @@ const Dashboard = () => {
         let uniqueDonors = 0;
 
         if (donationsRes.ok) {
-          donationsData = await donationsRes.json();
+          donationsData = await parseResponse(donationsRes);
           
           // Calculate total units and group-wise donations securely
           donationsData.forEach((item) => {
@@ -64,7 +64,7 @@ const Dashboard = () => {
         let distributedUnits = 0;
 
         if (requestsRes.ok) {
-          const requestsData = await requestsRes.json();
+          const requestsData = await parseResponse(requestsRes);
           
           const pendingItems = requestsData.filter(
             (req) => req.status === 'Pending' || !req.status

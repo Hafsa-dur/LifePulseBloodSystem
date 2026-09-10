@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import { Users, CheckCircle, XCircle, Clock, AlertCircle, Truck } from 'lucide-react';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const PatientRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -10,8 +10,14 @@ const PatientRequests = () => {
   useEffect(() => {
     // 1. Fetch initial patient requests
     fetch(`${API_URL}/patient-requests`)
-      .then((res) => res.json())
-      .then((data) => setRequests(data))
+      .then(async (res) => {
+        const data = await parseResponse(res);
+        if (!res.ok) {
+          throw new Error(data.message || `Request failed with status ${res.status}`);
+        }
+        return data;
+      })
+      .then((data) => setRequests(Array.isArray(data) ? data : data.requests || []))
       .catch((err) => console.error('Error fetching patient requests:', err));
 
     // 2. Real-time Socket Listeners
@@ -43,7 +49,7 @@ const PatientRequests = () => {
             }
         });
         
-        const data = await res.json();
+        const data = await parseResponse(res);
         
         if (!res.ok) {
             alert(data.message || 'Approval failed!');
@@ -70,7 +76,7 @@ const PatientRequests = () => {
             }
         });
         
-        const data = await res.json();
+        const data = await parseResponse(res);
         
         if (!res.ok) {
             alert(data.message || 'Rejection failed!');
@@ -96,7 +102,7 @@ const PatientRequests = () => {
             }
         });
         
-        const data = await res.json();
+        const data = await parseResponse(res);
         
         if (!res.ok) {
             alert(data.message || 'Dispatch failed!');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Send, AlertTriangle, CheckCircle, PackageCheck, Droplets, User, Building2, Calendar, FileText, Radio, X, Hash, Clock } from 'lucide-react';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const BloodStock = () => {
   const [activeTab, setActiveTab] = useState('donors'); // 'donors' | 'patients' | 'dispatches'
@@ -41,12 +41,12 @@ const BloodStock = () => {
       const requestsRes = await fetch(`${API_URL}/patient-requests`);
 
       if (donationsRes.ok) {
-        const donationsData = await donationsRes.json();
+        const donationsData = await parseResponse(donationsRes);
         setDonations(donationsData);
       }
 
       if (requestsRes.ok) {
-        const requestsData = await requestsRes.json();
+        const requestsData = await parseResponse(requestsRes);
         setPatientRequests(requestsData);
       }
     } catch (error) {

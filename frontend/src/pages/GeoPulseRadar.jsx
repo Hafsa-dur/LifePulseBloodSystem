@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Search, Navigation, Send, X, Building2, Droplet, User } from 'lucide-react';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const GeoPulseRadar = () => {
   const routeLocation = useLocation();
@@ -77,7 +77,7 @@ const GeoPulseRadar = () => {
       setLoading(true);
       const response = await fetch(`${API_URL}/donations`);
       if (response.ok) {
-        const data = await response.json();
+        const data = await parseResponse(response);
         
         // Lenient filter: Sirf unko roko jo waqai dispatched ya patient hain, baaki sab ko show karo!
         let activeDonors = data.filter(item => {
@@ -200,7 +200,7 @@ const GeoPulseRadar = () => {
         body: formData
       });
 
-      const data = await response.json();
+      const data = await parseResponse(response);
 
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Failed to dispatch email.');

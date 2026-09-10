@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const DonorRecipientDispatchLog = () => {
   const [combinedLogs, setCombinedLogs] = useState([]);
@@ -12,7 +12,7 @@ const DonorRecipientDispatchLog = () => {
       if (!res.ok) {
         throw new Error('Failed to fetch combined dispatch logs.');
       }
-      const data = await res.json();
+      const data = await parseResponse(res);
       setCombinedLogs(data);
       setLoading(false);
     } catch (err) {

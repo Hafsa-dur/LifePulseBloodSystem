@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Droplet, Calendar, AlertCircle, History, RefreshCcw, User } from 'lucide-react';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const MyDonations = ({ currentUserName }) => {
   const [donations, setDonations] = useState([]);
@@ -60,7 +60,7 @@ const MyDonations = ({ currentUserName }) => {
         fetch(`${API_URL}/life-impact?${impactQuery}`)
       ]);
       if (response.ok) {
-        const data = await response.json();
+        const data = await parseResponse(response);
         const dataList = Array.isArray(data) ? data : data.donations || [];
         
         // Strict Filter: Sirf usi donor ki donations aayengi jo profile khol kar baitha hai
@@ -74,7 +74,7 @@ const MyDonations = ({ currentUserName }) => {
         setDonations(userRecords);
       }
       if (impactResponse.ok) {
-        const impactData = await impactResponse.json();
+        const impactData = await parseResponse(impactResponse);
         setImpactLogs(impactData.impactLogs || []);
       }
     } catch (error) {

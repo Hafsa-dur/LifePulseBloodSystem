@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { parseResponse } from '../api';
 import { Send, Mail, Phone, MapPin } from 'lucide-react';
 import aboutImage from '../assets/About us .png';
 
@@ -25,7 +26,7 @@ const AboutUsPage = () => {
         body: formData
       });
 
-      const data = await response.json();
+      const data = await parseResponse(response);
 
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Failed to send message. Please try again.');

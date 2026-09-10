@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Building2, Send, AlertCircle } from 'lucide-react';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const HospitalEmergencyForm = () => {
   const [formData, setFormData] = useState({
@@ -35,7 +35,12 @@ const HospitalEmergencyForm = () => {
         throw new Error(`Server responded with status ${res.status}`);
       }
 
-      const data = await res.json();
+      const data = await parseResponse(res);
+
+      if (!res.ok) {
+        alert(data.message || 'Operation failed!');
+        return;
+      }
 
       if (data.success) {
         alert('✅ Emergency Request Live Broadcasted!');

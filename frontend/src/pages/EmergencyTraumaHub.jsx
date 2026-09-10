@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import { AlertCircle, Send, ShieldAlert } from 'lucide-react';
-import { API_URL } from '../api';
+import { API_URL, parseResponse } from '../api';
 
 const EmergencyTraumaHub = () => {
   const [cases, setCases] = useState([]);
@@ -10,8 +10,8 @@ const EmergencyTraumaHub = () => {
   useEffect(() => {
     // 1. Fetch initial requests
     fetch(`${API_URL}/hospital-requests`)
-      .then((res) => res.json())
-      .then((data) => setCases(data))
+      .then((res) => parseResponse(res))
+      .then((data) => setCases(Array.isArray(data) ? data : data.requests || []))
       .catch((err) => console.error('Error loading requests:', err));
 
     // 2. Real-time Listeners
