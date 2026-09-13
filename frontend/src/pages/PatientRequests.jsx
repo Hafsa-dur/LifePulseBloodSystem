@@ -161,6 +161,7 @@ const PatientRequests = () => {
                 <th className="py-4 px-5">Blood Group</th>
                 <th className="py-4 px-5">Units</th>
                 <th className="py-4 px-5">Contact</th>
+                <th className="py-4 px-5">Assigned Source</th>
                 <th className="py-4 px-5">Status</th>
                 <th className="py-4 px-5 text-center">Actions</th>
               </tr>
@@ -168,7 +169,7 @@ const PatientRequests = () => {
             <tbody className="divide-y divide-[#5A1827]/10 font-semibold">
               {requests.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-12 text-slate-500 italic font-medium">
+                  <td colSpan="8" className="text-center py-12 text-slate-500 italic font-medium">
                     <AlertCircle className="w-8 h-8 text-rose-600 mx-auto mb-2 opacity-80" />
                     No patient blood requests found.
                   </td>
@@ -188,6 +189,10 @@ const PatientRequests = () => {
                       </td>
                       <td className="py-4 px-5 font-black text-amber-800">{row.unitsRequired}</td>
                       <td className="py-4 px-5 text-slate-600 font-medium text-xs">{row.contactPhone}</td>
+                      <td className="py-4 px-5 text-xs">
+                        <div className="font-black text-[#5A1827]">{row.donorName || 'Stock Inventory'}</div>
+                        {row.donorLocation && <div className="text-slate-500">{row.donorLocation}</div>}
+                      </td>
                       <td className="py-4 px-5">
                         <span
                           className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black ${

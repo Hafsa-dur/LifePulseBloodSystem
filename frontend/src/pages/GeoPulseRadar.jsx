@@ -1,16 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Search, Navigation, Send, X, Building2, Droplet, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Navigation, Send, X, Building2, Droplet, User } from 'lucide-react';
 import { API_URL, parseResponse } from '../api';
 
 const GeoPulseRadar = () => {
-  const routeLocation = useLocation();
-  const [loading, setLoading] = useState(false);
   const [donors, setDonors] = useState([]);
-  
-  // Search & Filter States
-  const [searchTerm, setSearchTerm] = useState('');
-  const [targetAddress, setTargetAddress] = useState(''); // Real Physical Address Search Bar
 
   // Modal State for Sending Web3Forms Email
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -23,138 +16,39 @@ const GeoPulseRadar = () => {
   const [patientName, setPatientName] = useState('');
   const [customMessage, setCustomMessage] = useState('');
 
-  // 1. URL Parameter (e.g. ?group=B+) Auto-Search Filter
-  useEffect(() => {
-    const queryParams = new URLSearchParams(routeLocation.search);
-    const groupParam = queryParams.get('group');
-    if (groupParam) {
-      setSearchTerm(groupParam);
-    }
-  }, [routeLocation]);
-
-  // Initial load to fetch donor details
-  useEffect(() => {
-    fetchRealDonors();
-  }, []);
-
-  // 2. Smart String Similarity & Proximity Scoring based on Real Physical Address
-  const calculateAddressProximityScore = (targetStr, donorAddressStr) => {
-    if (!targetStr || !donorAddressStr) return 999;
-    
-    const target = targetStr.toLowerCase().trim();
-    const donorAddr = donorAddressStr.toLowerCase().trim();
-
-    if (donorAddr === target) return 0;
-    if (donorAddr.includes(target) || target.includes(donorAddr)) return 1;
-
-    const targetWords = target.split(/\s+/);
-    const donorWords = donorAddr.split(/\s+/);
-    
-    let matchedWords = 0;
-    targetWords.forEach(word => {
-      if (word.length > 2 && donorWords.some(dw => dw.includes(word) || word.includes(dw))) {
-        matchedWords++;
-      }
-    });
-
-    if (matchedWords > 0) {
-      return 2 + (targetWords.length - matchedWords);
-    }
-
-    const commonCities = ['peshawar', 'islamabad', 'lahore', 'karachi', 'kohat', 'charsadda', 'rawalpindi', 'mardan'];
-    for (let city of commonCities) {
-      if (target.includes(city) && donorAddr.includes(city)) {
-        return 10;
-      }
-    }
-
-    return 50;
-  };
-
-// 3. API Data Fetch & Lenient Filtering (Guaranteed to show existing donors)
-  const fetchRealDonors = async (searchQueryAddr = targetAddress) => {
+  const fetchRealDonors = async () => {
     try {
-      setLoading(true);
       const response = await fetch(`${API_URL}/donations`);
       if (response.ok) {
         const data = await parseResponse(response);
         
-        // Lenient filter: Sirf unko roko jo waqai dispatched ya patient hain, baaki sab ko show karo!
-        let activeDonors = data.filter(item => {
+        const activeDonors = data.filter(item => {
           const donorNameStr = item.donorName || item.name || '';
           const lowerName = donorNameStr.toLowerCase();
-
-          // Sirf strict dispatch records ko hatao
-          if (
-            lowerName.includes('dispatched to') ||
-            item.status === 'Dispatched' ||
-            item.role === 'patient'
-          ) {
-            return false;
-          }
-
-          // Baaki har record ko show karo jisme naam ya blood group maujood ho
-          return true;
+          const status = String(item.status || '').toLowerCase();
+          const donorLocation = String(item.location || item.address || '').trim();
+          return !lowerName.includes('dispatched to') && status !== 'dispatched' &&
+            item.role !== 'patient' && Number(item.units || 0) > 0 && Boolean(donorLocation);
         });
-
-        const sampleRealAddresses = [
-          "House 42, Sector F-7, University Town, Peshawar",
-          "Main Board Bazaar, Near University of Peshawar",
-          "Phase 3 Hayatabad, Commercial Area, Peshawar",
-          "Saddar Road, Near Pearl Continental, Peshawar",
-          "Tehkal Payan, Main University Road, Peshawar",
-          "Sector G-9/4, Islamabad",
-          "Gulberg III, Main Boulevard, Lahore",
-          "DHA Phase 5, Karachi",
-          "Kutchery Road, Kohat",
-          "Main Bazaar, Charsadda"
-        ];
-
-        activeDonors = activeDonors.map((donor, idx) => {
-          const physicalAddress = donor.address || donor.location || sampleRealAddresses[idx % sampleRealAddresses.length];
-          const proximityScore = calculateAddressProximityScore(searchQueryAddr, physicalAddress);
-
+        setDonors(activeDonors.map((donor) => {
           return {
             ...donor,
-            physicalAddress: physicalAddress,
-            proximityScore: proximityScore
+            physicalAddress: donor.location || donor.address || ''
           };
-        });
-
-        activeDonors.sort((a, b) => a.proximityScore - b.proximityScore);
-        setDonors(activeDonors);
+        }));
       }
     } catch (error) {
       console.error("Error fetching live donors:", error);
-    } finally {
-      setLoading(false);
     }
   };
-  
-  const handleAddressInputChange = (e) => {
-    const val = e.target.value;
-    setTargetAddress(val);
-    fetchRealDonors(val);
-  };
 
-  // Flexible and Robust Blood Group / Name Filtering
-  const filteredDonors = donors.filter(d => {
-    const name = d.donorName || d.name || '';
-    const group = d.bloodGroup || d.group || '';
-    const query = searchTerm.toLowerCase().trim();
+  useEffect(() => {
+    const loadDonors = async () => {
+      await fetchRealDonors();
+    };
+    loadDonors();
+  }, []);
 
-    if (!query) return true;
-
-    // Clean spaces and match precisely for blood groups or partial strings
-    const cleanGroup = group.toLowerCase().replace(/\s+/g, '');
-    const cleanQuery = query.replace(/\s+/g, '');
-
-    if (cleanGroup === cleanQuery) {
-      return true;
-    }
-
-    return name.toLowerCase().includes(query) || group.toLowerCase().includes(query);
-  });
   // Open Email Dispatch Modal
   const openEmailModal = (donor) => {
     setSelectedDonor(donor);
@@ -213,7 +107,7 @@ const GeoPulseRadar = () => {
         setIsEmailModalOpen(false);
       }, 1500);
 
-    } catch (err) {
+    } catch {
       setEmailLoading(false);
       setEmailStatus({ type: 'error', text: 'Something went wrong sending email. Please try again.' });
     }
@@ -242,7 +136,7 @@ const GeoPulseRadar = () => {
         </div>
 
         <button
-          onClick={() => fetchRealDonors(targetAddress)}
+          onClick={fetchRealDonors}
           className="bg-[#E5C158] hover:bg-[#D4AF37] text-slate-950 font-black px-6 py-3 rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 text-sm uppercase tracking-wider cursor-pointer"
         >
           <MapPin className="w-4 h-4 text-slate-950" />
@@ -250,38 +144,11 @@ const GeoPulseRadar = () => {
         </button>
       </div>
 
-      {/* Search & Real Physical Address Proximity Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-5 rounded-2xl border-2 border-[#6B1D2F] shadow-sm w-full">
-        
-        {/* Blood Group / Name Search */}
-        <div className="relative w-full">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-          <input
-            type="text"
-            placeholder="Search strict blood group (e.g. B+)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#FAF9F6] border-2 border-[#6B1D2F]/40 text-[#5A1827] text-sm font-semibold rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#6B1D2F] transition"
-          />
-        </div>
-
-        {/* Real Physical Address / Location Input for Exact Proximity Matching */}
-        <div className="relative w-full">
-          <MapPin className="w-4 h-4 text-rose-700 absolute left-3.5 top-3.5" />
-          <input
-            type="text"
-            placeholder="Enter Physical Address (e.g. University Town...)"
-            value={targetAddress}
-            onChange={handleAddressInputChange}
-            className="w-full bg-[#FAF9F6] border-2 border-[#6B1D2F]/40 text-[#5A1827] text-sm font-semibold rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#6B1D2F] transition"
-          />
-        </div>
-        
-        {/* Active Donors Logged Counter */}
+      <div className="flex justify-end bg-white p-5 rounded-2xl border-2 border-[#6B1D2F] shadow-sm w-full">
         <div className="text-sm text-[#5A1827] font-bold flex items-center justify-between bg-[#FAF9F6] px-4 py-2 rounded-xl border-2 border-[#6B1D2F]/30 shadow-sm">
-          <span>Nearest Donors Matched:</span>
+          <span>Donors With Saved Locations:</span>
           <span className="text-amber-950 bg-gradient-to-r from-[#FCD34D] to-[#F59E0B] border-2 border-[#D97706] px-3.5 py-1 rounded-xl font-black text-base shadow-md tracking-wide">
-            {filteredDonors.length}
+            {donors.length}
           </span>
         </div>
       </div>
@@ -301,10 +168,10 @@ const GeoPulseRadar = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#6B1D2F]/10 font-semibold text-slate-800">
-              {filteredDonors.length > 0 ? (
-                filteredDonors.map((donor, idx) => {
-                  const donorGroup = donor.bloodGroup || donor.group || 'O+';
-                  const donorPhone = donor.phone || donor.contact || '923000000000';
+              {donors.length > 0 ? (
+                donors.map((donor, idx) => {
+                  const donorGroup = donor.bloodGroup || donor.group || 'Unknown';
+                  const donorPhone = donor.phone || donor.contact || 'Not provided';
 
                   return (
                     <tr key={donor._id || idx} className="hover:bg-[#FAF9F6] transition-colors group">
@@ -329,7 +196,7 @@ const GeoPulseRadar = () => {
                       </td>
                       <td className="py-4 px-6">
                         <span className="font-black text-amber-900 bg-[#E5C158]/20 border border-[#E5C158] px-3 py-1 rounded-lg text-xs shadow-inner inline-block">
-                          {targetAddress ? 'Matched Nearest First' : 'Peshawar Region Ready'}
+                          Saved donor location used for matching
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -354,9 +221,7 @@ const GeoPulseRadar = () => {
                 <tr>
                   <td colSpan="6" className="text-center py-12 text-slate-500 italic font-medium">
                     <AlertCircle className="w-8 h-8 text-rose-600 mx-auto mb-2 opacity-80" />
-                    {searchTerm 
-                      ? `No active donors found for blood group "${searchTerm}".` 
-                      : "No active registered donors found in the database."}
+                    No active donors with saved locations found in the database.
                   </td>
                 </tr>
               )}

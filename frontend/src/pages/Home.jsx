@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import heroBg from '../assets/hero.png';
 import { API_URL, parseResponse } from '../api';
@@ -19,6 +19,7 @@ const Home = () => {
     bloodGroup: 'A+',
     unitsRequired: 1,
     hospitalName: '',
+    hospitalLocation: '',
     contactPhone: '',
     urgencyLevel: 'Normal'
   });
@@ -50,7 +51,7 @@ const Home = () => {
             totalDonors: `${uniqueDonors}+ Registered Donors`
           });
         }
-      } catch (err) {
+      } catch {
         setSystemStats({
           criticalNeed: 'O- & B- Negative',
           totalDonors: '850+ Donors'
@@ -93,6 +94,7 @@ const Home = () => {
           bloodGroup: 'A+',
           unitsRequired: 1,
           hospitalName: '',
+          hospitalLocation: '',
           contactPhone: '',
           urgencyLevel: 'Normal'
         });
@@ -310,14 +312,27 @@ const Home = () => {
             </div>
 
             <div>
-              <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Hospital Name & Location</label>
+              <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Hospital Name</label>
               <input
                 type="text"
                 name="hospitalName"
                 required
                 value={formData.hospitalName}
                 onChange={handleChange}
-                placeholder="e.g. Lady Reading Hospital, Peshawar"
+                placeholder="e.g. Lady Reading Hospital"
+                className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Hospital Location / Address</label>
+              <input
+                type="text"
+                name="hospitalLocation"
+                required
+                value={formData.hospitalLocation}
+                onChange={handleChange}
+                placeholder="Enter the exact hospital address"
                 className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition"
               />
             </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { UserPlus, Send, Calendar, Clock, Mail } from 'lucide-react';
 import { API_URL } from '../api';
@@ -9,6 +9,7 @@ const AddBlood = () => {
     email: '',
     bloodGroup: 'A+',
     units: 1,
+    location: '',
     lastDonationDate: '',
     nextEligibleDate: '',
     notes: ''
@@ -45,6 +46,7 @@ const AddBlood = () => {
         email: formData.email.toLowerCase().trim(),
         bloodGroup: formData.bloodGroup,
         units: Number(formData.units),
+        location: formData.location,
         lastDonationDate: formData.lastDonationDate || new Date(),
         nextEligibleDate: formData.nextEligibleDate,
         notes: formData.notes,
@@ -59,6 +61,7 @@ const AddBlood = () => {
           email: '',
           bloodGroup: 'A+',
           units: 1,
+          location: '',
           lastDonationDate: '',
           nextEligibleDate: '',
           notes: ''
@@ -178,6 +181,18 @@ const AddBlood = () => {
               value={formData.nextEligibleDate}
               placeholder="Auto-calculated (56 days gap)"
               className="w-full bg-slate-100 border-2 border-[#5A1827]/20 p-3 rounded-xl text-sm text-slate-700 font-bold focus:outline-none cursor-not-allowed"
+            />
+          </div>
+
+          <div className="col-span-1 md:col-span-2 space-y-1.5">
+            <label className="text-xs font-black text-[#5A1827] uppercase tracking-wider block">Donor Location / Address (Required)</label>
+            <input
+              type="text"
+              required
+              placeholder="Enter the donor's real city or address"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/30 p-3 rounded-xl text-sm text-[#5A1827] font-semibold focus:outline-none focus:border-[#5A1827] transition"
             />
           </div>
 

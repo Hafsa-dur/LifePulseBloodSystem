@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import { AlertCircle, Send, ShieldAlert } from 'lucide-react';
 import { API_URL, parseResponse } from '../api';
@@ -41,9 +41,14 @@ const EmergencyTraumaHub = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hospitalName: item.hospitalName,
+          hospitalLocation: item.hospitalLocation,
           patientName: item.contactPerson || 'Emergency Patient',
           bloodGroup: item.bloodGroup,
           units: Number(item.unitsRequired || 1),
+          donorId: item.donorId || null,
+          donorName: item.donorName || item.contactPerson || '',
+          donorEmail: item.donorEmail || '',
+          donorLocation: item.donorLocation || '',
           notes: `Emergency dispatch: ${item.urgencyLevel || 'Critical'}`
         })
       });
@@ -123,6 +128,17 @@ const EmergencyTraumaHub = () => {
                     <p className="text-xs text-slate-500 font-medium">
                       Contact Person: <span className="text-slate-800 font-bold">{item.contactPerson}</span> ({item.phone})
                     </p>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Selected Donor: <span className="text-slate-800 font-bold">{item.donorName || 'Stock Inventory'}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Hospital Location: <span className="text-slate-800 font-bold">{item.hospitalLocation || 'Not provided'}</span>
+                    </p>
+                    {item.donorLocation && (
+                      <p className="text-xs text-slate-500 font-medium">
+                        Matched Donor Location: <span className="text-slate-800 font-bold">{item.donorLocation}</span>
+                      </p>
+                    )}
                   </div>
                   
                   <button

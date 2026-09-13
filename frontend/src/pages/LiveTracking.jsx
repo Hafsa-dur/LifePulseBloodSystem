@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Truck, Thermometer, MapPin, CheckCircle2, ArrowLeft, AlertCircle, Clock, Building2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Truck, Thermometer, MapPin, ArrowLeft, AlertCircle, Clock, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_URL, parseResponse } from '../api';
 
@@ -37,8 +37,7 @@ const LiveTracking = () => {
             patientName: current.patientName || 'Patient',
             hospitalName: current.hospitalName || 'Hospital',
             bloodGroup: current.bloodGroup || 'A+',
-            city: current.city || 'Peshawar',
-            areaOrLocation: current.areaOrLocation || current.hospitalName || 'Hospital Emergency Unit, Peshawar',
+            hospitalLocation: current.hospitalLocation || '',
             status: current.status,
             currentLocationNote: current.currentLocationNote || 'Dispatched securely from blood bank.'
           });
@@ -139,7 +138,7 @@ const LiveTracking = () => {
             </span>
             <h4 className="text-sm font-black text-[#4A1521]">Blood Bag En Route to {activeDispatch.hospitalName}</h4>
             <p className="text-xs text-slate-600 font-medium">
-              Patient: <strong className="text-slate-800">{activeDispatch.patientName}</strong> | Location: <strong className="text-slate-800">{activeDispatch.areaOrLocation}, {activeDispatch.city}</strong>
+              Patient: <strong className="text-slate-800">{activeDispatch.patientName}</strong> | Location: <strong className="text-slate-800">{activeDispatch.hospitalLocation || 'Not provided'}</strong>
             </p>
           </div>
           <div className="text-right bg-white p-4 rounded-xl border border-amber-200 shadow-sm shrink-0">
@@ -163,7 +162,7 @@ const LiveTracking = () => {
               Patient Name: <strong className="text-slate-800">{activeDispatch.patientName}</strong>
             </p>
             <p className="text-xs text-slate-600 font-medium">
-              City / Area: <strong className="text-slate-800">{activeDispatch.city}</strong>
+              Hospital Location: <strong className="text-slate-800">{activeDispatch.hospitalLocation || 'Not provided'}</strong>
             </p>
             <div className="pt-2">
               <span className="bg-rose-100 text-[#990000] px-2.5 py-1 rounded-lg text-xs font-black border border-rose-200">

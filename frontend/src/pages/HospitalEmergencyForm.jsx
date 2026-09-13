@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Building2, Send, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Building2, Send } from 'lucide-react';
 import { API_URL, parseResponse } from '../api';
 
 const HospitalEmergencyForm = () => {
   const [formData, setFormData] = useState({
     hospitalName: '',
+    hospitalLocation: '',
     bloodGroup: 'O+',
     unitsRequired: 1,
     urgencyLevel: 'Critical',
@@ -13,6 +14,42 @@ const HospitalEmergencyForm = () => {
   });
   
   const [loading, setLoading] = useState(false);
+  const [matching, setMatching] = useState(false);
+  const [matchedDonor, setMatchedDonor] = useState(null);
+  const [matchMessage, setMatchMessage] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const matchDonor = async () => {
+      const location = formData.hospitalLocation.trim();
+      if (!location) {
+        setMatchedDonor(null);
+        setMatchMessage('Enter hospital location to find the nearest donor.');
+        setMatching(false);
+        return;
+      }
+      setMatching(true);
+      setMatchedDonor(null);
+      try {
+        const res = await fetch(`${API_URL}/donations/match?bloodGroup=${encodeURIComponent(formData.bloodGroup)}&units=${Number(formData.unitsRequired) || 1}&location=${encodeURIComponent(location)}`, { signal: controller.signal });
+        const data = await parseResponse(res);
+        if (!res.ok) {
+          throw new Error(data.message || `Donor matching failed (${res.status})`);
+        }
+        setMatchedDonor(data.donor || null);
+        setMatchMessage(data.donor ? `Nearest donor: ${data.donor.donorName}` : 'No donor found');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setMatchedDonor(null);
+          setMatchMessage(error.message || 'Donor matching is unavailable');
+        }
+      } finally {
+        setMatching(false);
+      }
+    };
+    matchDonor();
+    return () => controller.abort();
+  }, [formData.bloodGroup, formData.unitsRequired, formData.hospitalLocation]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +64,10 @@ const HospitalEmergencyForm = () => {
         },
         body: JSON.stringify({
           ...formData,
+          donorId: matchedDonor?._id || null,
+          donorName: matchedDonor?.donorName || '',
+          donorEmail: matchedDonor?.email || '',
+          donorLocation: matchedDonor?.location || matchedDonor?.address || '',
           unitsRequired: Number(formData.unitsRequired)
         })
       });
@@ -46,6 +87,7 @@ const HospitalEmergencyForm = () => {
         alert('✅ Emergency Request Live Broadcasted!');
         setFormData({
           hospitalName: '',
+          hospitalLocation: '',
           bloodGroup: 'O+',
           unitsRequired: 1,
           urgencyLevel: 'Critical',
@@ -102,9 +144,26 @@ const HospitalEmergencyForm = () => {
               type="text"
               placeholder="e.g. Dr. Ahmed"
               className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/30 p-3 rounded-xl text-sm text-[#5A1827] font-semibold focus:outline-none focus:border-[#5A1827] transition"
-              value={formData.contactPerson}
+              value={matchedDonor?.donorName || formData.contactPerson}
+              readOnly={Boolean(matchedDonor)}
               onChange={(e) => setFormData((prev) => ({ ...prev, contactPerson: e.target.value }))}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-[#5A1827] uppercase tracking-wider block">Hospital Location / Address</label>
+            <input
+              required
+              type="text"
+              placeholder="Enter the exact hospital address"
+              className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/30 p-3 rounded-xl text-sm text-[#5A1827] font-semibold focus:outline-none focus:border-[#5A1827] transition"
+              value={formData.hospitalLocation}
+              onChange={(e) => setFormData((prev) => ({ ...prev, hospitalLocation: e.target.value }))}
+            />
+          </div>
+
+          <div className="md:col-span-2 text-sm font-bold text-slate-600">
+            {matching ? 'Finding nearest matching donor...' : matchMessage}
           </div>
 
           <div className="space-y-1.5">
