@@ -1,15 +1,11 @@
 import mongoose from 'mongoose';
-import dns from 'dns';
 
-// DNS SRV lookup resolve karne ke liye Google DNS set karein
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+const cached = globalThis.__lifepulseMongo || {
+  conn: null,
+  promise: null
+};
 
-// Vercel serverless environment ke liye connection cache variable
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
+globalThis.__lifepulseMongo = cached;
 
 const connectDB = async () => {
   if (!process.env.MONGODB_URI) {
@@ -20,26 +16,27 @@ const connectDB = async () => {
     return cached.conn;
   }
 
-  if (cached.conn && mongoose.connection.readyState !== 1) {
-    cached.conn = null;
-  }
-
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false, // Yeh buffering timeout error ko rokta hai
-      serverSelectionTimeoutMS: 5000,
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 10000,
+      maxPoolSize: 10
     };
 
-    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => {
-      console.log('>>> Database Connected Successfully! <<<');
-      return mongoose;
-    });
+    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts)
+      .then((connection) => {
+        console.log('MongoDB connected');
+        return connection;
+      })
+      .catch((error) => {
+        cached.promise = null;
+        throw error;
+      });
   }
 
   try {
     cached.conn = await cached.promise;
   } catch (e) {
-    cached.promise = null;
     console.error('MongoDB Connection Error:', e.message);
     throw e;
   }

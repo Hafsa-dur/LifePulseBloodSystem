@@ -12,6 +12,8 @@ import PatientRequestsRoutes from './routes/patientRequestsRoutes.js';
 import DonorRecipientLog from './models/DonorRecipientLog.js'; // Donor Recipient Dispatch Log Model
 import donorRecipientRoutes from './routes/donorRecipientRoutes.js';
 import lifeImpactRoutes from './routes/lifeImpactRoutes.js';
+import Donation from './models/donationModel.js';
+import { findNearestMatchingDonor } from './controllers/donationController.js';
 
 
 // Load environment variables from .env and establish MongoDB connection
@@ -157,15 +159,42 @@ app.get('/api/hospital-requests', async (req, res) => {
 // 2. CREATE & SAVE HOSPITAL REQUEST (Saves to MongoDB database and triggers live broadcast)
 app.post('/api/hospital-requests', async (req, res) => {
   try {
-    const { hospitalName, bloodGroup, unitsRequired, urgencyLevel, contactPerson, phone } = req.body;
+    const { hospitalName, hospitalLocation, bloodGroup, unitsRequired, urgencyLevel, contactPerson, phone, donorId, donorName, donorEmail } = req.body;
+    const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
+    const savedHospitalLocation = String(hospitalLocation || '').trim();
+    const requestedUnits = Number(unitsRequired);
+    if (!savedHospitalLocation) {
+      return res.status(400).json({ success: false, message: 'Hospital location is required.' });
+    }
+    let selectedDonor = null;
+    if (donorId) {
+      selectedDonor = await Donation.findOne({
+        _id: donorId,
+        bloodGroup: new RegExp(`^${normalizedBloodGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+        units: { $gte: requestedUnits },
+        status: { $ne: 'Dispatched' }
+      });
+    } else {
+      selectedDonor = await findNearestMatchingDonor({
+        bloodGroup: normalizedBloodGroup,
+        units: requestedUnits,
+        location: savedHospitalLocation
+      });
+    }
 
     const newRequest = await HospitalRequest.create({
       hospitalName,
-      bloodGroup,
-      unitsRequired: Number(unitsRequired),
+      hospitalLocation: savedHospitalLocation,
+      bloodGroup: normalizedBloodGroup,
+      unitsRequired: requestedUnits,
       urgencyLevel: urgencyLevel || 'Critical',
       contactPerson: contactPerson || 'Emergency Dept',
-      phone
+      phone,
+      donorId: selectedDonor?._id || null,
+      donorName: selectedDonor?.donorName || donorName || '',
+      donorEmail: selectedDonor?.email || donorEmail || '',
+      donorLocation: selectedDonor?.location || selectedDonor?.address || '',
+      sourceType: selectedDonor ? 'donor' : 'inventory'
     });
 
     io.emit('new_hospital_request', newRequest);
@@ -291,6 +320,19 @@ app.post('/api/emergency/send-sms', async (req, res) => {
   }
 });
 
-// Initialize and Start Express & Socket.io HTTP Server on PORT 5000 (or environment specified default)
+// Start the HTTP server locally. Vercel imports the Express app instead.
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`LifePulse Server running successfully on port ${PORT}`));
+
+if (!process.env.VERCEL) {
+  connectDB()
+    .then(() => {
+      server.listen(PORT, () => console.log(`LifePulse Server running successfully on port ${PORT}`));
+    })
+    .catch((error) => {
+      console.error('Unable to start LifePulse server:', error.message);
+      process.exit(1);
+    });
+}
+
+export { app, server };
+export default app;

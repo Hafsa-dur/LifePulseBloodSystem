@@ -11,6 +11,8 @@ const donorRecipientLogSchema = new mongoose.Schema({
     patientRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'PatientRequest' },
   patientName: { type: String, default: '' },       // Patient ka real naam
   hospitalName: { type: String, default: '' },      // Hospital ka real naam
+  donorLocation: { type: String, default: '' },
+  hospitalLocation: { type: String, default: '' },
   recipientName: { type: String, default: '' },
   sourceType: { type: String, enum: ['donor', 'inventory'], required: true },
   matchStatus: { type: String, enum: ['Matched', 'Fulfilled', 'Cancelled'], default: 'Matched' },

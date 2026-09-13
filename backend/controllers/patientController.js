@@ -2,6 +2,7 @@ import PatientRequest from '../models/PatientRequest.js';
 import Donation from '../models/donationModel.js';
 import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import mongoose from 'mongoose';
+import { findNearestMatchingDonor } from './donationController.js';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const realDonorFilter = {
@@ -68,11 +69,17 @@ export const approveRequest = async (req, res) => {
             }
 
             const assignedDonorIds = await DonorRecipientLog.distinct('donorId', {
-                sourceType: 'donor', donorId: { $ne: null }
+                sourceType: 'donor',
+                donorId: { $ne: null },
+                dispatchStatus: 'Pending'
             }).session(session);
-            const donor = allStock
-                .filter((item) => item.donorName && item.email && !/^(Direct Donor|System Stock|Inventory|Dispatched to:)/i.test(item.donorName))
-                .find((item) => item.units >= requiredUnits && !assignedDonorIds.some((assignedId) => String(assignedId) === String(item._id)));
+            const donor = await findNearestMatchingDonor({
+                bloodGroup,
+                units: requiredUnits,
+                location: request.hospitalLocation,
+                session,
+                excludeDonorIds: assignedDonorIds
+            });
             const sourceType = donor ? 'donor' : 'inventory';
             const donorName = donor ? donor.donorName.trim() : 'Inventory';
             const donorEmail = donor ? donor.email : undefined;
@@ -88,6 +95,8 @@ export const approveRequest = async (req, res) => {
                 pints: requiredUnits,
                 patientName: request.patientName.trim(),
                 hospitalName: request.hospitalName.trim(),
+                donorLocation: donor?.location || donor?.address || '',
+                hospitalLocation: request.hospitalLocation.trim(),
                 recipientName: request.hospitalName.trim(),
                 sourceType,
                 matchStatus: 'Matched',

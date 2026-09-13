@@ -5,6 +5,7 @@ const patientRequestSchema = new mongoose.Schema({
   bloodGroup: { type: String, required: true },
   unitsRequired: { type: Number, required: true },
   hospitalName: { type: String, required: true },
+  hospitalLocation: { type: String, required: true, trim: true },
   contactPhone: { type: String, required: true },
   donorName: { type: String, trim: true },
   donorEmail: { type: String, lowercase: true, trim: true },
@@ -14,8 +15,8 @@ const patientRequestSchema = new mongoose.Schema({
   allocationLogIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DonorRecipientLog' }],
   isAllocated: { type: Boolean, default: false },
   urgencyLevel: { type: String, default: 'Normal' },
-  city: { type: String, default: 'Peshawar' },
-  areaOrLocation: { type: String, default: 'Hospital Emergency Unit' },
+  city: { type: String, default: '' },
+  areaOrLocation: { type: String, default: '' },
   status: { 
     type: String, 
     enum: ['Pending', 'Approved', 'Rejected', 'Dispatched', 'Delivered'], 

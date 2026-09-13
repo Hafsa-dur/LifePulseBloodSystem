@@ -6,6 +6,11 @@ const hospitalRequestSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    hospitalLocation: {
+      type: String,
+      required: true,
+      trim: true
+    },
     bloodGroup: {
       type: String,
       required: true
@@ -26,6 +31,15 @@ const hospitalRequestSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    donorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Donation',
+      default: null
+    },
+    donorName: { type: String, default: '' },
+    donorEmail: { type: String, lowercase: true, trim: true, default: '' },
+    donorLocation: { type: String, default: '' },
+    sourceType: { type: String, enum: ['donor', 'inventory'], default: 'inventory' },
     status: {
       type: String,
       default: 'Pending'
