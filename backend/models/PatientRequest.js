@@ -16,6 +16,7 @@ const patientRequestSchema = new mongoose.Schema({
   allocationLogIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DonorRecipientLog' }],
   isAllocated: { type: Boolean, default: false },
   urgencyLevel: { type: String, default: 'Normal' },
+  department: { type: String, default: '' },
   city: { type: String, default: '' },
   areaOrLocation: { type: String, default: '' },
   status: { 

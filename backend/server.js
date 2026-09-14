@@ -17,6 +17,8 @@ import Donation from './models/donationModel.js';
 import { findNearestMatchingDonor } from './controllers/donationController.js';
 import { requireAuth, requireHospitalRole } from './middleware/auth.js';
 import jwt from 'jsonwebtoken';
+import HospitalSettings from './models/HospitalSettings.js';
+import { sendDonorEmergencyEmail } from './services/emailService.js';
 
 
 // Load environment variables from .env and establish MongoDB connection
@@ -213,7 +215,29 @@ app.post('/api/hospital-requests', requireAuth, requireHospitalRole, async (req,
       sourceType: selectedDonor ? 'donor' : 'inventory'
     });
 
-    io.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('new_hospital_request', newRequest);
+    const hospitalKey = req.user.hospitalId || req.user.hospitalName;
+    const settings = await HospitalSettings.findOne({ hospitalId: hospitalKey }).lean();
+    if (settings?.emergencyAlerts !== false && ['Critical', 'High', 'Urgent'].includes(urgencyLevel || 'Critical')) {
+      io.to(`hospital:${hospitalKey}`).emit('emergency_alert', {
+        requestId: newRequest._id,
+        hospitalName: newRequest.hospitalName,
+        bloodGroup: newRequest.bloodGroup,
+        unitsRequired: newRequest.unitsRequired,
+        urgencyLevel: newRequest.urgencyLevel
+      });
+    }
+    if (settings?.donorNotifications !== false && selectedDonor?.email) {
+      sendDonorEmergencyEmail({
+        donorEmail: selectedDonor.email,
+        donorName: selectedDonor.donorName,
+        bloodGroup: normalizedBloodGroup,
+        urgency: urgencyLevel || 'Critical',
+        hospitalName: req.user.hospitalName || hospitalName,
+        hospitalLocation: savedHospitalLocation,
+        unitsRequired: requestedUnits
+      }).catch((error) => console.error('Donor notification workflow failed:', error.message));
+    }
+    io.to(`hospital:${hospitalKey}`).emit('new_hospital_request', newRequest);
 
     return res.status(201).json({
       success: true,

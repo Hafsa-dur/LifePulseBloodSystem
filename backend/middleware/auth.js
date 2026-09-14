@@ -26,3 +26,13 @@ export const requireHospitalRole = (req, res, next) => {
   }
   next();
 };
+
+export const requireAdmin = (req, res, next) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ success: false, message: 'Administrator access required.' });
+  next();
+};
+
+export const requirePermission = (permission) => (req, res, next) => {
+  if (req.user?.role === 'admin' || req.user?.permissions?.includes(permission)) return next();
+  return res.status(403).json({ success: false, message: `Permission required: ${permission}.` });
+};

@@ -1,15 +1,17 @@
 import express from 'express';
-import { requireAuth, requireHospitalRole } from '../middleware/auth.js';
-import { createStaff, getStaff, updateStaff, deleteStaff, getHospitalSettings, updateHospitalSettings, getHospitalAnalytics, updateAccount } from '../controllers/hospitalController.js';
+import { requireAuth, requireHospitalRole, requireAdmin } from '../middleware/auth.js';
+import { createStaff, getStaff, updateStaff, deleteStaff, getHospitalSettings, updateHospitalSettings, getHospitalAnalytics, updateAccount, listHospitals, onboardHospitalAdmin } from '../controllers/hospitalController.js';
 
 const router = express.Router();
+router.get('/directory', listHospitals);
+router.post('/onboard', onboardHospitalAdmin);
 router.use(requireAuth, requireHospitalRole);
-router.get('/staff', getStaff);
-router.post('/staff', createStaff);
-router.patch('/staff/:id', updateStaff);
-router.delete('/staff/:id', deleteStaff);
-router.get('/settings', getHospitalSettings);
-router.put('/settings', updateHospitalSettings);
+router.get('/staff', requireAdmin, getStaff);
+router.post('/staff', requireAdmin, createStaff);
+router.patch('/staff/:id', requireAdmin, updateStaff);
+router.delete('/staff/:id', requireAdmin, deleteStaff);
+router.get('/settings', requireAdmin, getHospitalSettings);
+router.put('/settings', requireAdmin, updateHospitalSettings);
 router.get('/analytics', getHospitalAnalytics);
 router.patch('/account', updateAccount);
 

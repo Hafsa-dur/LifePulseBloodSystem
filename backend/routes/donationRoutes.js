@@ -5,18 +5,21 @@ import {
   addDonation, 
   getDonorHistory, 
   dispatchBlood,
-  findMatchingDonors
+  findMatchingDonors,
+  getPublicDonationStats
 } from '../controllers/donationController.js';
+import { requireAuth, requireHospitalRole } from '../middleware/auth.js';
 
 
 const router = express.Router();
 
 // Pure Donation & Stock Routes
-router.get('/', getAllDonations);                           // Stock Inventory (All entries + dispatches)
-router.get('/dashboard', getDashboardDonations);             // Dashboard / Registered Donors (Real donors only)
+router.get('/public-stats', getPublicDonationStats);
+router.get('/', requireAuth, getAllDonations);                           // Hospital/donor-scoped inventory
+router.get('/dashboard', requireAuth, requireHospitalRole, getDashboardDonations);             // Hospital-scoped dashboard stock
 router.post('/', addDonation);                               // Add new donation with duplicate email check
 router.get('/history/:donorName', getDonorHistory);          // Get specific donor history
-router.get('/match', async (req, res) => {
+router.get('/match', requireAuth, requireHospitalRole, async (req, res) => {
   try {
     const rankedDonors = await findMatchingDonors(req.query);
     return res.status(200).json({

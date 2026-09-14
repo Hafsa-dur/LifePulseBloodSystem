@@ -27,7 +27,9 @@ export const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const safeRole = ['admin', 'staff', 'donor'].includes(String(role).toLowerCase()) ? String(role).toLowerCase() : 'donor';
+    // Public registration can only create donor accounts. Hospital admins are
+    // created through the hospital onboarding endpoint after hospital binding.
+    const safeRole = 'donor';
 
     const user = await User.create({
       name: String(name || '').trim(),
@@ -57,6 +59,7 @@ export const registerUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        staffRole: user.staffRole,
         hospitalId: user.hospitalId,
         hospitalName: user.hospitalName,
         hospitalLocation: user.hospitalLocation,
@@ -88,6 +91,7 @@ export const loginUser = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          staffRole: user.staffRole,
           hospitalId: user.hospitalId,
           hospitalName: user.hospitalName,
           hospitalLocation: user.hospitalLocation,

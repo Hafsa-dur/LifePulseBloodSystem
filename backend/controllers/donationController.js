@@ -90,7 +90,14 @@ export const findNearestMatchingDonor = async (options) => {
 // 1. Fetch All Donations (For Stock Inventory & Directory & Radar)
 export const getAllDonations = async (req, res) => {
   try {
-    const donations = await Donation.find().sort({ createdAt: -1 });
+    const filter = req.user?.hospitalId
+      ? { hospitalId: req.user.hospitalId }
+      : req.user?.hospitalName
+        ? { hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName)}$`, 'i') }
+        : req.user?.role === 'donor'
+          ? { email: req.user.email }
+          : {};
+    const donations = await Donation.find(filter).sort({ createdAt: -1 });
     
     // Clean and normalize blood groups for seamless radar/search matching
     const sanitizedDonations = donations.map(item => {
@@ -118,12 +125,8 @@ export const getDashboardDonations = async (req, res) => {
         { donorName: { $not: /^Dispatched to/i } }
       ]
     };
-    if (req.query.hospitalId || req.query.hospitalName) {
-      filter.$or = [
-        req.query.hospitalId ? { hospitalId: req.query.hospitalId } : null,
-        req.query.hospitalName ? { hospitalName: new RegExp(`^${escapeRegex(String(req.query.hospitalName))}$`, 'i') } : null
-      ].filter(Boolean);
-    }
+    if (req.user?.hospitalId) filter.$and.push({ hospitalId: req.user.hospitalId });
+    else if (req.user?.hospitalName) filter.$and.push({ hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName)}$`, 'i') });
     const donations = await Donation.find(filter).sort({ createdAt: -1 });
     
     res.status(200).json(donations);
@@ -181,10 +184,8 @@ export const addDonation = async (req, res) => {
     res.status(201).json(savedDonation);
   } catch (error) {
     console.error('Error in addDonation:', error);
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'This email already exists in the database! Duplicate donations are not allowed.' });
-    }
-    res.status(500).json({ message: error.message });
+    if (error.code === 11000) return res.status(400).json({ message: 'This email already exists in the database! Duplicate donations are not allowed.' });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -291,5 +292,16 @@ export const dispatchBlood = async (req, res) => {
     });
   } finally {
     await session.endSession();
+  }
+};
+
+export const getPublicDonationStats = async (req, res) => {
+  try {
+    const donations = await Donation.find({ units: { $gt: 0 }, status: { $ne: 'Dispatched' } }).select('bloodGroup units donorName').lean();
+    const groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    const criticalGroups = groups.filter((group) => donations.filter((item) => item.bloodGroup === group).reduce((sum, item) => sum + (Number(item.units) || 0), 0) <= 3);
+    return res.json({ success: true, criticalGroups, totalDonors: new Set(donations.map((item) => item.donorName)).size });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

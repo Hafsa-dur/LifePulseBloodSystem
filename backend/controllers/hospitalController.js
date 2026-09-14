@@ -3,10 +3,60 @@ import User from '../models/User.js';
 import HospitalSettings from '../models/HospitalSettings.js';
 import Donation from '../models/donationModel.js';
 import PatientRequest from '../models/PatientRequest.js';
+import Hospital from '../models/Hospital.js';
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 const hospitalFilter = (user) => user.hospitalId
   ? { hospitalId: user.hospitalId }
   : { hospitalName: user.hospitalName || '' };
+
+const publicUser = (user) => {
+  const value = user.toObject ? user.toObject() : { ...user };
+  delete value.password;
+  return value;
+};
+
+export const listHospitals = async (req, res) => {
+  try {
+    const hospitals = await Hospital.find({ isActive: true }).select('hospitalId name location contactPhone').sort({ name: 1 }).lean();
+    return res.json({ success: true, hospitals });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const onboardHospitalAdmin = async (req, res) => {
+  try {
+    const { name, email, password, hospitalId, hospitalName, hospitalLocation, contactPhone = '' } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Admin name, email, and password are required.' });
+    if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
+
+    let hospital;
+    if (hospitalId) {
+      hospital = await Hospital.findOne({ hospitalId, isActive: true });
+      if (!hospital) return res.status(404).json({ success: false, message: 'Selected hospital was not found.' });
+    } else {
+      const cleanName = String(hospitalName || '').trim();
+      const cleanLocation = String(hospitalLocation || '').trim();
+      if (!cleanName || !cleanLocation) return res.status(400).json({ success: false, message: 'New hospital name and location are required.' });
+      const generatedId = `HOSP-${new mongoose.Types.ObjectId().toString().slice(-10).toUpperCase()}`;
+      hospital = await Hospital.create({ hospitalId: generatedId, name: cleanName, location: cleanLocation, contactPhone });
+    }
+
+    const admin = await User.create({
+      name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'admin',
+      hospitalId: hospital.hospitalId, hospitalName: hospital.name, hospitalLocation: hospital.location,
+      phone: String(req.body.phone || '').trim(), isActive: true,
+      permissions: ['dashboard', 'requests', 'dispatch', 'staff', 'settings', 'reports']
+    });
+    const token = jwt.sign({ id: admin._id, role: admin.role, hospitalId: admin.hospitalId, hospitalName: admin.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return res.status(201).json({ success: true, token, user: publicUser(admin), hospital });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 export const getStaff = async (req, res) => {
   try {
@@ -21,15 +71,22 @@ export const getStaff = async (req, res) => {
 export const createStaff = async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can add staff.' });
-    const { name, email, password, phone = '', permissions = [] } = req.body;
+    const { name, email, password, phone = '', staffRole = 'General Staff', permissions = [] } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
     if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
 
+    const rolePermissions = {
+      'Blood Bank Staff': ['dashboard', 'inventory', 'requests', 'account'],
+      'Emergency Staff': ['dashboard', 'requests', 'emergency', 'tracking', 'account'],
+      'Dispatch Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account'],
+      'General Staff': ['dashboard', 'requests', 'account']
+    };
     const staff = await User.create({
       name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'staff',
+      staffRole,
       hospitalId: req.user.hospitalId || '', hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '',
-      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : ['dashboard', 'requests', 'dispatch'], isActive: true
+      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : rolePermissions[staffRole] || rolePermissions['General Staff'], isActive: true
     });
     const safeStaff = staff.toObject();
     delete safeStaff.password;
@@ -77,7 +134,7 @@ export const updateHospitalSettings = async (req, res) => {
     const hospitalId = req.user.hospitalId || req.user.hospitalName;
     const settings = await HospitalSettings.findOneAndUpdate(
       { hospitalId },
-      { ...req.body, hospitalId, hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '', updatedBy: req.user._id },
+      { emergencyAlerts: req.body.emergencyAlerts !== false, autoDispatch: req.body.autoDispatch !== false, donorNotifications: req.body.donorNotifications !== false, hospitalId, hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '', updatedBy: req.user._id },
       { new: true, upsert: true, runValidators: true }
     );
     return res.json({ success: true, settings });
@@ -112,7 +169,7 @@ export const getHospitalAnalytics = async (req, res) => {
 
 export const updateAccount = async (req, res) => {
   try {
-    const allowed = ['name', 'phone', 'profile', 'hospitalName', 'hospitalLocation'];
+    const allowed = ['name', 'phone', 'profile'];
     const updates = {};
     for (const key of allowed) if (req.body[key] !== undefined) updates[key] = String(req.body[key]).trim();
     if (req.body.password) updates.password = await bcrypt.hash(String(req.body.password), 10);
