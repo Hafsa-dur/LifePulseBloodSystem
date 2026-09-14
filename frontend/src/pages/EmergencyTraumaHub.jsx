@@ -24,16 +24,21 @@ const EmergencyTraumaHub = () => {
     const handleDeleteRequest = (deletedId) => {
       setCases((prev) => prev.filter((item) => (item._id || item.id) !== deletedId));
     };
+      const handleEmergencyAlert = (alertData) => {
+        window.alert(`Emergency alert: ${alertData.bloodGroup} blood, ${alertData.unitsRequired} unit(s) required at ${alertData.hospitalName}.`);
+      };
 
     socket.auth = { token: localStorage.getItem('token') || '' };
     if (!socket.connected) socket.connect();
 
     socket.on('new_hospital_request', handleNewRequest);
     socket.on('delete_hospital_request', handleDeleteRequest);
+      socket.on('emergency_alert', handleEmergencyAlert);
 
     return () => {
       socket.off('new_hospital_request', handleNewRequest);
       socket.off('delete_hospital_request', handleDeleteRequest);
+        socket.off('emergency_alert', handleEmergencyAlert);
     };
   }, []);
 

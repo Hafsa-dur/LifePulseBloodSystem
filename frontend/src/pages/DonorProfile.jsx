@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { User, Mail, ShieldCheck, Droplet, Calendar, Clock } from 'lucide-react';
-import { API_URL } from '../api';
+import { API_URL, authHeaders } from '../api';
 
 const Profile = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
@@ -12,7 +12,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchUserDonations = async () => {
       try {
-        const response = await axios.get(`${API_URL}/donations`);
+        const response = await axios.get(`${API_URL}/donations`, { headers: authHeaders() });
         // Filter user's specific donations
         const myDonations = response.data.filter(
           (item) => item.donorName?.toLowerCase() === user?.name?.toLowerCase() || item.email === user?.email

@@ -187,6 +187,10 @@ const Register = () => {
           <Link to="/login" className="font-black text-[#990000] hover:underline">
             Sign in
           </Link>
+          <span className="mx-2">|</span>
+          <Link to="/hospital-onboarding" className="font-black text-[#990000] hover:underline">
+            Create hospital admin
+          </Link>
         </div>
 
       </div>

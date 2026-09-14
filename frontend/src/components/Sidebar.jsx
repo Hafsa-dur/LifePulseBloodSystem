@@ -25,6 +25,7 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user.role || 'donor';
   const isHospitalRole = userRole === 'admin' || userRole === 'staff';
+  const can = (permission) => userRole === 'admin' || (user.permissions || []).includes(permission);
 
   // Handle user logout action and clear storage
   const handleLogout = () => {
@@ -38,18 +39,16 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
     if (isHospitalRole) {
       return [
         { path: '/dashboard', label: 'System Overview', icon: LayoutDashboard },
-        { path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle },
-        { path: '/blood-list', label: 'Stock Directory', icon: Droplets },
+        ...(can('inventory') ? [{ path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle }, { path: '/blood-list', label: 'Stock Directory', icon: Droplets }] : []),
         { path: '/patient-requests', label: 'Patient Requests', icon: GitPullRequest },
-        { path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio },
-        { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList },
-        { path: '/tracking', label: 'Live Transport Tracking', icon: Truck },
-        { path: '/trauma-network', label: 'Emergency Network', icon: Activity },
+        { path: '/patient-request', label: 'Submit Patient Request', icon: ClipboardList },
+        ...(can('dispatch') ? [{ path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio }, { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList }] : []),
+        ...(can('tracking') ? [{ path: '/tracking', label: 'Live Transport Tracking', icon: Truck }] : []),
+        ...(can('emergency') ? [{ path: '/trauma-network', label: 'Emergency Network', icon: Activity }] : []),
         { path: '/hospital-request', label: 'Hospital Request', icon: Hospital },
-        { path: '/reports', label: 'Reports & Analytics', icon: Activity },
-        { path: '/staff-management', label: 'Staff Management', icon: User },
+        ...(userRole === 'admin' ? [{ path: '/reports', label: 'Reports & Analytics', icon: Activity }, { path: '/staff-management', label: 'Staff Management', icon: User }] : []),
         { path: '/account-center', label: 'Account Center', icon: User },
-        { path: '/settings', label: 'Settings', icon: Hospital },
+        ...(userRole === 'admin' ? [{ path: '/settings', label: 'Settings', icon: Hospital }] : []),
       ];
     } else {
       // Donor Portal Menu Items (Updated with Life Impact Board)
@@ -103,21 +102,6 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
           );
         })}
 
-        {/* Add Blood Entry link */}
-        <NavLink
-          to="/add-blood-record"
-          onClick={onClose}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all duration-200 ${
-              isActive 
-                ? 'bg-[#E5C158] text-[#5A1827] shadow-lg shadow-amber-500/20 border-2 border-white/30 font-extrabold' 
-                : 'text-rose-100 hover:bg-[#6B1D2F] hover:text-[#E5C158] border-2 border-transparent'
-            }`
-          }
-        >
-          <PlusCircle className="w-4 h-4 transition-transform duration-200" />
-          <span className="sidebar-link-label">Add Blood Entry</span>
-        </NavLink>
       </nav>
 
       {/* Logout Footer Section */}

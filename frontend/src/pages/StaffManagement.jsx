@@ -12,7 +12,7 @@ const StaffManagement = () => {
   const hospitalName = user.hospitalName || 'Current Hospital';
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', staffRole: 'General Staff' });
 
   useEffect(() => {
     fetch(`${API_URL}/hospital/staff`, { headers: authHeaders() })
@@ -28,7 +28,7 @@ const StaffManagement = () => {
     const data = await parseResponse(response);
     if (!response.ok) return alert(data.message || 'Unable to add staff member.');
     setStaff((items) => [data.staff, ...items]);
-    setForm({ name: '', email: '', password: '', phone: '' });
+    setForm({ name: '', email: '', password: '', phone: '', staffRole: 'General Staff' });
   };
 
   const toggleStaff = async (member) => {
@@ -120,11 +120,12 @@ const StaffManagement = () => {
           <h2 className="text-xl font-black text-[#4A1521] mb-4">Hospital team</h2>
           {user.role === 'admin' && <form onSubmit={addStaff} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
             {['name', 'email', 'password', 'phone'].map((field) => <input key={field} required={field !== 'phone'} type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'} placeholder={field[0].toUpperCase() + field.slice(1)} value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />)}
+            <select value={form.staffRole} onChange={(event) => setForm({ ...form, staffRole: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm"><option>General Staff</option><option>Blood Bank Staff</option><option>Emergency Staff</option><option>Dispatch Staff</option></select>
             <button className="bg-[#5A1827] text-white rounded-xl font-black text-xs uppercase">Add staff</button>
           </form>}
           <div className="space-y-2">
             {!loading && staff.map((member) => <div key={member._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-[#6B1D2F]/10 rounded-xl p-3 bg-[#FAF9F6]">
-              <div><p className="font-black text-[#4A1521]">{member.name}</p><p className="text-xs text-slate-500">{member.email} {member.phone ? `· ${member.phone}` : ''}</p></div>
+              <div><p className="font-black text-[#4A1521]">{member.name}</p><p className="text-xs text-slate-500">{member.staffRole || 'General Staff'} · {member.email} {member.phone ? `· ${member.phone}` : ''}</p></div>
               <div className="flex items-center gap-2"><button onClick={() => toggleStaff(member)} className={`px-3 py-2 rounded-lg text-xs font-black ${member.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{member.isActive ? 'Active' : 'Inactive'}</button>{user.role === 'admin' && <button onClick={() => removeStaff(member)} className="px-3 py-2 rounded-lg text-xs font-black bg-rose-100 text-rose-700">Remove</button>}</div>
             </div>)}
             {!loading && staff.length === 0 && <p className="text-sm text-slate-500">No staff accounts found for this hospital.</p>}

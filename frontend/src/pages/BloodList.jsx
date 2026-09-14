@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL } from '../api';
+import { API_URL, authHeaders } from '../api';
 
 
 const InventoryList = () => {
@@ -14,7 +14,7 @@ const InventoryList = () => {
       try {
         let res;
         try {
-          res = await axios.get(`${API_URL}/donations`);
+          res = await axios.get(`${API_URL}/donations`, { headers: authHeaders() });
         } catch {
           res = await axios.get(`${API_URL}/donations/history`);
         }

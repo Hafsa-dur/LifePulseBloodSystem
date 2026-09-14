@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import heroBg from '../assets/hero.png';
 import { API_URL, parseResponse } from '../api';
+import AddBlood from './AddBlood';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -17,18 +18,11 @@ const Home = () => {
   useEffect(() => {
     const fetchPublicStats = async () => {
       try {
-        const res = await fetch(`${API_URL}/donations`);
+        const res = await fetch(`${API_URL}/donations/public-stats`);
         if (res.ok) {
           const data = await parseResponse(res);
-          const groups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
-          const criticals = groups.filter((g) => {
-            const count = data
-              .filter((item) => item.bloodGroup === g)
-              .reduce((sum, item) => sum + (Number(item.units) || 1), 0);
-            return count <= 3;
-          });
-
-          const uniqueDonors = new Set(data.map((item) => item.donorName)).size;
+          const criticals = data.criticalGroups || [];
+          const uniqueDonors = data.totalDonors || 0;
 
           setSystemStats({
             criticalNeed: criticals.length > 0 ? criticals.slice(0, 2).join(' & ') + ' Negative' : 'None',
@@ -46,11 +40,7 @@ const Home = () => {
   }, []);
 
   const handleDonateClick = () => {
-    if (token) {
-      navigate('/add-blood');
-    } else {
-      navigate('/login');
-    }
+    document.getElementById('public-donation-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handlePortalRedirect = () => {
@@ -167,17 +157,25 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 2. HOSPITAL PORTAL ACCESS */}
+      {/* 2. PUBLIC BLOOD DONATION FORM */}
+      <section id="public-donation-form" className="py-16 bg-[#FAF9F6] px-4 border-b border-[#5A1827]/10">
+        <div className="max-w-6xl mx-auto">
+          <AddBlood />
+        </div>
+      </section>
+
+      {/* 3. HOSPITAL PORTAL ACCESS */}
       <section className="py-20 bg-[#FAF9F6] px-4 border-b border-[#5A1827]/10" id="hospital-portal">
         <div className="max-w-3xl mx-auto bg-white border-2 border-[#5A1827]/15 rounded-[2rem] p-8 sm:p-12 shadow-2xl text-center">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#E5C158]/20 text-[#5A1827] border border-[#E5C158]/40 rounded-full text-xs font-black uppercase tracking-widest">
             Hospital Workflow
           </span>
           <h2 className="mt-5 text-2xl sm:text-3xl font-black text-[#5A1827] tracking-tight uppercase">
-            Patient requisitions are handled inside the hospital portal
+            Hospitals / Hospital Staff
           </h2>
+          <h3 className="mt-3 text-xl sm:text-2xl font-black text-[#990000]">Need Blood for a Patient?</h3>
           <p className="mt-4 text-slate-600 text-xs sm:text-sm font-medium max-w-2xl mx-auto">
-            LifePulse keeps hospital patient requests, donor matching, approval, dispatch, and location intelligence inside the authorized hospital environment to prevent cross-hospital data leakage and maintain accurate hospital-scoped operations.
+            Submit Patient Request from Hospital Dashboard. Patient requisitions, donor matching, approval, dispatch, and location intelligence stay inside the authorized hospital environment.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
@@ -186,7 +184,7 @@ const Home = () => {
               onClick={handlePortalRedirect}
               className="px-8 py-4 bg-[#5A1827] hover:bg-[#4A121F] text-[#E5C158] font-black uppercase tracking-widest rounded-2xl transition-all duration-300 cursor-pointer shadow-xl border-2 border-[#E5C158]/50 text-sm hover:scale-[0.99]"
             >
-              {token ? 'Open Hospital Portal' : 'Login to Hospital Portal'}
+              {token ? 'Open Hospital Dashboard' : 'Login to Hospital Dashboard'}
             </button>
             {!token && (
               <button

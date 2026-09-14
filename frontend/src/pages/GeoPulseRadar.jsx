@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Navigation, Send, X, Building2, Droplet, User } from 'lucide-react';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const GeoPulseRadar = () => {
   const [donors, setDonors] = useState([]);
@@ -18,7 +18,7 @@ const GeoPulseRadar = () => {
 
   const fetchRealDonors = async () => {
     try {
-      const response = await fetch(`${API_URL}/donations`);
+      const response = await fetch(`${API_URL}/donations`, { headers: authHeaders() });
       if (response.ok) {
         const data = await parseResponse(response);
         

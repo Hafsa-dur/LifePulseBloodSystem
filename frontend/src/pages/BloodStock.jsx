@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Send, AlertTriangle, CheckCircle, PackageCheck, Droplets, User, Building2, Calendar, FileText, Radio, X, Hash, Clock } from 'lucide-react';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const BloodStock = () => {
   const [activeTab, setActiveTab] = useState('donors'); // 'donors' | 'patients' | 'dispatches'
@@ -37,8 +37,8 @@ const BloodStock = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const donationsRes = await fetch(`${API_URL}/donations`);
-      const requestsRes = await fetch(`${API_URL}/patient-requests`);
+      const donationsRes = await fetch(`${API_URL}/donations`, { headers: authHeaders() });
+      const requestsRes = await fetch(`${API_URL}/patient-requests`, { headers: authHeaders() });
 
       if (donationsRes.ok) {
         const donationsData = await parseResponse(donationsRes);
@@ -372,10 +372,10 @@ const BloodStock = () => {
       )}
 
       {/* Summary Cards at Bottom */}
-      <div className="blood-stock-summary-grid grid grid-cols-1 md:grid-cols-3 items-start gap-5 pt-2">
+      <div className="blood-stock-summary-grid grid grid-cols-1 md:grid-cols-3 items-stretch gap-5 pt-2 min-w-0 overflow-hidden">
         
         {/* Card 1: Available Stock Summary */}
-        <div className="blood-stock-summary-card blood-stock-summary-card--list bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-between text-center">
+        <div className="blood-stock-summary-card blood-stock-summary-card--list min-w-0 overflow-hidden bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-between text-center">
           <div className="flex items-center gap-2 mb-2 w-full justify-center">
             <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0" />
             <h3 className="text-[#5A1827] font-black text-xs uppercase tracking-wider">
@@ -396,7 +396,7 @@ const BloodStock = () => {
         </div>
 
         {/* Card 2: Recent Dispatches Count */}
-        <div className="blood-stock-summary-card bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center">
+        <div className="blood-stock-summary-card min-w-0 overflow-hidden bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-3 w-full justify-center">
             <PackageCheck className="w-5 h-5 text-blue-700 shrink-0" />
             <h3 className="text-[#5A1827] font-black text-xs uppercase tracking-wider">
@@ -414,7 +414,7 @@ const BloodStock = () => {
         </div>
 
         {/* Card 3: Critical Shortage Alert */}
-        <div className="blood-stock-summary-card bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center">
+        <div className="blood-stock-summary-card min-w-0 overflow-hidden bg-white border-2 border-[#6B1D2F] p-5 rounded-2xl shadow-md flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-3 w-full justify-center">
             <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
             <h3 className="text-[#5A1827] font-black text-xs uppercase tracking-wider">
@@ -426,7 +426,7 @@ const BloodStock = () => {
               <>
                 <p className="text-xs text-rose-900 font-semibold mb-2">⚠️ Immediate Attention Required</p>
                 <span className="font-black text-rose-700 text-xl underline decoration-rose-600 block">
-                  {criticalGroups.join(', ')}
+                  <span className="max-w-full break-words">{criticalGroups.join(', ')}</span>
                 </span>
                 <p className="text-[11px] text-rose-800 font-medium mt-2">(Less than 2 Pints)</p>
               </>

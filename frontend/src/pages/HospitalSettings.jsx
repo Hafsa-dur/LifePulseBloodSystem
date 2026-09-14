@@ -46,11 +46,11 @@ const HospitalSettings = () => {
             <div className="space-y-4 text-sm text-slate-600">
               <div className="bg-[#FAF9F6] border border-[#6B1D2F]/10 rounded-xl p-3">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Hospital Name</p>
-                <p className="mt-1 text-base font-black text-[#4A1521]">{settings.hospitalScope}</p>
+                <p className="mt-1 text-base font-black text-[#4A1521]">{settings.hospitalName || settings.hospitalScope || user.hospitalName || 'Hospital name not set'}</p>
               </div>
               <div className="bg-[#FAF9F6] border border-[#6B1D2F]/10 rounded-xl p-3">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Location</p>
-                <p className="mt-1 text-base font-black text-[#4A1521]">{user.hospitalLocation || 'Location not set'}</p>
+                <p className="mt-1 text-base font-black text-[#4A1521]">{settings.hospitalLocation || user.hospitalLocation || 'Location not set'}</p>
               </div>
             </div>
           </div>

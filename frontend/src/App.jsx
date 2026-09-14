@@ -19,11 +19,12 @@ import DonorProfile from './pages/DonorProfile';
 import DispatchModal from './pages/DispatchModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AddBlood from './pages/AddBlood';
+import HospitalOnboarding from './pages/HospitalOnboarding';
 import GeoPulseRadar from './pages/GeoPulseRadar';
 import EmergencyTraumaHub from './pages/EmergencyTraumaHub';
 import HospitalEmergencyForm from './pages/HospitalEmergencyForm';
 import PatientRequests from './pages/PatientRequests';
+import PatientRequestForm from './pages/PatientRequestForm';
 import Home from './pages/Home';
 import FAQPage from './pages/FAQPage';
 import AboutUsPage from './pages/AboutUsPage';
@@ -38,7 +39,7 @@ import ReportsAnalytics from './pages/ReportsAnalytics';
 import './styles/Responsive.css';
 
 // Simplified Protected Route Guard
-const ProtectedRoute = ({ allowedRole }) => {
+const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false }) => {
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -52,6 +53,9 @@ const ProtectedRoute = ({ allowedRole }) => {
   if (allowedRoles.length && !allowedRoles.includes(userRole)) {
     return <Navigate to={userRole === 'admin' || userRole === 'staff' ? '/dashboard' : '/profile'} replace />;
   }
+
+  if (adminOnly && userRole !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (requiredPermission && userRole !== 'admin' && !(user.permissions || []).includes(requiredPermission)) return <Navigate to="/dashboard" replace />;
 
   return <Outlet />;
 };
@@ -96,6 +100,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/hospital-onboarding" element={<HospitalOnboarding />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/about" element={<AboutUsPage />} />
         </Route>
@@ -104,7 +109,6 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/profile" element={<DonorProfile />} />
-            <Route path="/add-blood-record" element={<AddBlood />} />
           </Route>
         </Route>
 
@@ -112,19 +116,21 @@ function App() {
         <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/add-blood" element={<BloodStock />} />
-            <Route path="/blood-list" element={<BloodList />} />
-            <Route path="/dispatch" element={<DispatchModal isOpen={true} onClose={() => {}} />} />
-            <Route path="/hospital-request" element={<HospitalEmergencyForm />} />
-            <Route path="/trauma-network" element={<EmergencyTraumaHub />} />
-            <Route path="/geopulse-radar" element={<GeoPulseRadar />} />
-            <Route path="/patient-requests" element={<PatientRequests />} />
-            <Route path="/donor-recipient-dispatch-log" element={<DonorRecipientDispatchLog />} />
-            <Route path="/tracking" element={<LiveTracking />} />
-            <Route path="/staff-management" element={<StaffManagement />} />
+            <Route element={<ProtectedRoute requiredPermission="inventory" />}>
+              <Route path="/blood-list" element={<BloodList />} />
+              <Route path="/add-blood" element={<BloodStock />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="dispatch" />}>
+              <Route path="/dispatch" element={<DispatchModal isOpen={true} onClose={() => {}} />} />
+              <Route path="/donor-recipient-dispatch-log" element={<DonorRecipientDispatchLog />} />
+            </Route>
+            <Route element={<ProtectedRoute requiredPermission="emergency" />}><Route path="/hospital-request" element={<HospitalEmergencyForm />} /></Route>
+            <Route element={<ProtectedRoute requiredPermission="emergency" />}><Route path="/trauma-network" element={<EmergencyTraumaHub />} /></Route>
+            <Route element={<ProtectedRoute requiredPermission="dispatch" />}><Route path="/geopulse-radar" element={<GeoPulseRadar />} /></Route>
+            <Route element={<ProtectedRoute requiredPermission="requests" />}><Route path="/patient-requests" element={<PatientRequests />} /><Route path="/patient-request" element={<PatientRequestForm />} /></Route>
+            <Route element={<ProtectedRoute requiredPermission="tracking" />}><Route path="/tracking" element={<LiveTracking />} /></Route>
             <Route path="/account-center" element={<AccountCenter />} />
-            <Route path="/settings" element={<HospitalSettings />} />
-            <Route path="/reports" element={<ReportsAnalytics />} />
+            <Route element={<ProtectedRoute adminOnly />}><Route path="/settings" element={<HospitalSettings />} /><Route path="/staff-management" element={<StaffManagement />} /><Route path="/reports" element={<ReportsAnalytics />} /></Route>
           </Route>
         </Route>
 
