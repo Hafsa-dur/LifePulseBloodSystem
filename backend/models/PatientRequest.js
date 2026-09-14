@@ -4,6 +4,7 @@ const patientRequestSchema = new mongoose.Schema({
   patientName: { type: String, required: true },
   bloodGroup: { type: String, required: true },
   unitsRequired: { type: Number, required: true },
+  hospitalId: { type: String, default: '' },
   hospitalName: { type: String, required: true },
   hospitalLocation: { type: String, required: true, trim: true },
   contactPhone: { type: String, required: true },
@@ -22,7 +23,8 @@ const patientRequestSchema = new mongoose.Schema({
     enum: ['Pending', 'Approved', 'Rejected', 'Dispatched', 'Delivered'], 
     default: 'Pending' 
   },
-  currentLocationNote: { type: String, default: 'Blood bag packed and ready for dispatch.' }
+  currentLocationNote: { type: String, default: 'Blood bag packed and ready for dispatch.' },
+  createdBy: { type: String, default: '' }
 }, { timestamps: true });
 
 export default mongoose.model('PatientRequest', patientRequestSchema);

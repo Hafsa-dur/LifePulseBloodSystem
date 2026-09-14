@@ -1,4 +1,5 @@
 import express from 'express';
+import { requireAuth, requireHospitalRole } from '../middleware/auth.js';
 import { 
     createPatientRequest, 
     getPatientRequests, 
@@ -8,6 +9,8 @@ import {
 } from '../controllers/patientController.js';
 
 const router = express.Router();
+
+router.use(requireAuth, requireHospitalRole);
 
 router.post('/', createPatientRequest);
 router.get('/', getPatientRequests);

@@ -10,6 +10,7 @@ const donationSchema = new mongoose.Schema({
   address: { type: String, default: '' },
   location: { type: String, default: '' },
   city: { type: String, default: '' },
+  hospitalId: { type: String, default: '' },
   hospitalName: { type: String, default: '' },
   notes: { type: String, default: '' },
   donationDate: { type: Date, default: Date.now },

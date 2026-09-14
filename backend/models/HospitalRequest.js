@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const hospitalRequestSchema = new mongoose.Schema(
   {
+    hospitalId: {
+      type: String,
+      default: ''
+    },
     hospitalName: {
       type: String,
       required: true

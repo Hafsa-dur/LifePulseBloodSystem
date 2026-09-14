@@ -111,13 +111,20 @@ export const getAllDonations = async (req, res) => {
 // 2. Fetch Dashboard Donations (Strictly for Dashboard / Registered Donors)
 export const getDashboardDonations = async (req, res) => {
   try {
-    const donations = await Donation.find({
+    const filter = {
       $and: [
         { status: { $ne: 'Dispatched' } },
         { units: { $gt: 0 } },
         { donorName: { $not: /^Dispatched to/i } }
       ]
-    }).sort({ createdAt: -1 });
+    };
+    if (req.query.hospitalId || req.query.hospitalName) {
+      filter.$or = [
+        req.query.hospitalId ? { hospitalId: req.query.hospitalId } : null,
+        req.query.hospitalName ? { hospitalName: new RegExp(`^${escapeRegex(String(req.query.hospitalName))}$`, 'i') } : null
+      ].filter(Boolean);
+    }
+    const donations = await Donation.find(filter).sort({ createdAt: -1 });
     
     res.status(200).json(donations);
   } catch (error) {
@@ -128,7 +135,7 @@ export const getDashboardDonations = async (req, res) => {
 // 3. Add New Donation with Strict Duplicate Email Check
 export const addDonation = async (req, res) => {
   try {
-    const { donorName, email, bloodGroup, units, phone, address, location, notes, hospitalName, donationDate, lastDonationDate } = req.body;
+    const { donorName, email, bloodGroup, units, phone, address, location, notes, hospitalId, hospitalName, donationDate, lastDonationDate } = req.body;
     const formattedEmail = email ? email.toLowerCase().trim() : '';
 
     if (!formattedEmail) {
@@ -156,6 +163,7 @@ export const addDonation = async (req, res) => {
       phone: phone || '03000000000',
       address: address || location || '',
       location: location || address || '',
+      hospitalId: hospitalId || '',
       hospitalName: hospitalName || notes || 'General Donation',
       notes: notes || hospitalName || 'General Donation',
       donationDate: donationDate || Date.now(),

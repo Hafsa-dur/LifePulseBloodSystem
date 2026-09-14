@@ -12,8 +12,11 @@ import PatientRequestsRoutes from './routes/patientRequestsRoutes.js';
 import DonorRecipientLog from './models/DonorRecipientLog.js'; // Donor Recipient Dispatch Log Model
 import donorRecipientRoutes from './routes/donorRecipientRoutes.js';
 import lifeImpactRoutes from './routes/lifeImpactRoutes.js';
+import hospitalRoutes from './routes/hospitalRoutes.js';
 import Donation from './models/donationModel.js';
 import { findNearestMatchingDonor } from './controllers/donationController.js';
+import { requireAuth, requireHospitalRole } from './middleware/auth.js';
+import jwt from 'jsonwebtoken';
 
 
 // Load environment variables from .env and establish MongoDB connection
@@ -59,6 +62,14 @@ app.use((req, res, next) => {
 io.on('connection', (socket) => {
   console.log(`Socket Connected Successfully: ${socket.id}`);
 
+  try {
+    const token = socket.handshake.auth?.token;
+    const decoded = token ? jwt.verify(token, process.env.JWT_SECRET) : null;
+    if (decoded?.hospitalId || decoded?.hospitalName) socket.join(`hospital:${decoded.hospitalId || decoded.hospitalName}`);
+  } catch (error) {
+    console.warn('Socket connected without a valid hospital token.');
+  }
+
   socket.on('disconnect', () => {
     console.log(`Socket Disconnected: ${socket.id}`);
   });
@@ -72,6 +83,7 @@ app.use('/api/donations', donationRoutes);
 app.use('/api/patient-requests', PatientRequestsRoutes);
 app.use('/api/donor-recipient-logs', donorRecipientRoutes);
 app.use('/api/life-impact', lifeImpactRoutes);
+app.use('/api/hospital', hospitalRoutes);
 // ==========================================
 // 🩸 DONOR & RECIPIENT DISPATCH LOG ROUTES
 // ==========================================
@@ -146,9 +158,12 @@ app.put('/api/donor-recipient-logs/dispatch/:id', async (req, res) => {
 // ==========================================
 
 // 1. GET ALL HOSPITAL REQUESTS (Fetches persistent emergency logs from MongoDB)
-app.get('/api/hospital-requests', async (req, res) => {
+app.get('/api/hospital-requests', requireAuth, requireHospitalRole, async (req, res) => {
   try {
-    const requests = await HospitalRequest.find().sort({ createdAt: -1 });
+    const filters = req.user.hospitalId
+      ? { hospitalId: req.user.hospitalId }
+      : { hospitalName: new RegExp(`^${String(req.user.hospitalName || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
+    const requests = await HospitalRequest.find(filters).sort({ createdAt: -1 });
     return res.status(200).json(requests);
   } catch (error) {
     console.error('Error fetching hospital requests:', error);
@@ -157,11 +172,11 @@ app.get('/api/hospital-requests', async (req, res) => {
 });
 
 // 2. CREATE & SAVE HOSPITAL REQUEST (Saves to MongoDB database and triggers live broadcast)
-app.post('/api/hospital-requests', async (req, res) => {
+app.post('/api/hospital-requests', requireAuth, requireHospitalRole, async (req, res) => {
   try {
-    const { hospitalName, hospitalLocation, bloodGroup, unitsRequired, urgencyLevel, contactPerson, phone, donorId, donorName, donorEmail } = req.body;
+    const { hospitalId, hospitalName, hospitalLocation, bloodGroup, unitsRequired, urgencyLevel, contactPerson, phone, donorId, donorName, donorEmail } = req.body;
     const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
-    const savedHospitalLocation = String(hospitalLocation || '').trim();
+    const savedHospitalLocation = String(req.user.hospitalLocation || hospitalLocation || '').trim();
     const requestedUnits = Number(unitsRequired);
     if (!savedHospitalLocation) {
       return res.status(400).json({ success: false, message: 'Hospital location is required.' });
@@ -183,7 +198,8 @@ app.post('/api/hospital-requests', async (req, res) => {
     }
 
     const newRequest = await HospitalRequest.create({
-      hospitalName,
+      hospitalId: req.user.hospitalId || '',
+      hospitalName: req.user.hospitalName || hospitalName,
       hospitalLocation: savedHospitalLocation,
       bloodGroup: normalizedBloodGroup,
       unitsRequired: requestedUnits,
@@ -197,7 +213,7 @@ app.post('/api/hospital-requests', async (req, res) => {
       sourceType: selectedDonor ? 'donor' : 'inventory'
     });
 
-    io.emit('new_hospital_request', newRequest);
+    io.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('new_hospital_request', newRequest);
 
     return res.status(201).json({
       success: true,
@@ -215,12 +231,13 @@ app.post('/api/hospital-requests', async (req, res) => {
 });
 
 // 3. RESOLVE / DELETE HOSPITAL REQUEST (Removes document from DB and syncs client UIs)
-app.delete('/api/hospital-requests/:id', async (req, res) => {
+app.delete('/api/hospital-requests/:id', requireAuth, requireHospitalRole, async (req, res) => {
   try {
     const { id } = req.params;
-    await HospitalRequest.findByIdAndDelete(id);
+    const filter = req.user.hospitalId ? { _id: id, hospitalId: req.user.hospitalId } : { _id: id, hospitalName: req.user.hospitalName };
+    await HospitalRequest.findOneAndDelete(filter);
 
-    io.emit('delete_hospital_request', id);
+    io.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('delete_hospital_request', id);
 
     return res.status(200).json({
       success: true,

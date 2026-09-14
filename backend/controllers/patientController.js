@@ -16,11 +16,28 @@ const stockFilter = {
     status: { $ne: 'Dispatched' }
 };
 
+const hospitalScope = (user) => user.hospitalId
+    ? { hospitalId: user.hospitalId }
+    : { hospitalName: new RegExp(`^${escapeRegex(String(user.hospitalName || ''))}$`, 'i') };
+
 // Create a new patient request
 export const createPatientRequest = async (req, res) => {
     try {
-        const newRequest = new PatientRequest(req.body);
+        const payload = {
+            ...req.body,
+            hospitalId: req.user.hospitalId || '',
+            hospitalName: req.user.hospitalName || req.body.hospitalName || '',
+            hospitalLocation: req.user.hospitalLocation || req.body.hospitalLocation || '',
+            createdBy: String(req.user._id)
+        };
+
+        if (!payload.hospitalName || !payload.hospitalLocation || !payload.patientName || !payload.contactPhone) {
+            return res.status(400).json({ success: false, message: 'Hospital, patient, and contact details are required.' });
+        }
+
+        const newRequest = new PatientRequest(payload);
         const savedRequest = await newRequest.save();
+        req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('new_patient_request', savedRequest);
         res.status(201).json({ success: true, message: 'Request submitted successfully', data: savedRequest });
     } catch (err) {
         console.error("Error saving patient request:", err);
@@ -28,10 +45,11 @@ export const createPatientRequest = async (req, res) => {
     }
 };
 
-// Get all patient requests
+// Get all patient requests for the current hospital scope when provided
 export const getPatientRequests = async (req, res) => {
     try {
-        const requests = await PatientRequest.find().sort({ createdAt: -1 });
+        const filters = hospitalScope(req.user);
+        const requests = await PatientRequest.find(filters).sort({ createdAt: -1 });
         res.status(200).json(requests);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -46,7 +64,7 @@ export const approveRequest = async (req, res) => {
         let approvedRequest;
         let matchLog;
         await session.withTransaction(async () => {
-            const request = await PatientRequest.findById(id).session(session);
+            const request = await PatientRequest.findOne({ _id: id, ...hospitalScope(req.user) }).session(session);
             if (!request) throw Object.assign(new Error('Patient request not found'), { status: 404 });
             if (request.status !== 'Pending') throw Object.assign(new Error('Request already processed'), { status: 400 });
 
@@ -120,6 +138,7 @@ export const approveRequest = async (req, res) => {
         if (approvedRequest.status === 'Rejected') {
             return res.status(200).json({ success: false, autoRejected: true, message: 'No matching blood inventory is available.', request: approvedRequest });
         }
+        req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('update_patient_request', approvedRequest);
         return res.status(200).json({ success: true, message: `Request matched to ${matchLog.sourceType}.`, request: approvedRequest, match: matchLog });
     } catch (err) {
         console.error("Error approving request:", err);
@@ -137,7 +156,7 @@ export const dispatchRequest = async (req, res) => {
         let dispatchedRequest;
         let allocationLogs = [];
         await session.withTransaction(async () => {
-            const request = await PatientRequest.findById(id).session(session);
+            const request = await PatientRequest.findOne({ _id: id, ...hospitalScope(req.user) }).session(session);
             if (!request) throw Object.assign(new Error('Patient request not found'), { status: 404 });
             if (request.status !== 'Approved') throw Object.assign(new Error('Only approved requests can be dispatched'), { status: 400 });
 
@@ -198,6 +217,7 @@ export const dispatchRequest = async (req, res) => {
             allocationLogs = [matchLog];
             dispatchedRequest = request;
         });
+        req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('update_patient_request', dispatchedRequest);
         return res.status(200).json({ success: true, message: 'Blood request dispatched and inventory updated.', request: dispatchedRequest, allocations: allocationLogs });
     } catch (err) {
         console.error("Error in dispatching request:", err);
@@ -211,11 +231,13 @@ export const dispatchRequest = async (req, res) => {
 export const rejectRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const request = await PatientRequest.findByIdAndUpdate(
-            id,
+        const request = await PatientRequest.findOneAndUpdate(
+            { _id: id, ...hospitalScope(req.user) },
             { status: 'Rejected' },
             { new: true }
         );
+
+        req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('update_patient_request', request);
 
         return res.status(200).json({
             success: true,

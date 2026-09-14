@@ -4,30 +4,67 @@ import jwt from 'jsonwebtoken';
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    const normalizedEmail = email.toLowerCase().trim();
+    const {
+      name,
+      email,
+      password,
+      role = 'donor',
+      hospitalId = '',
+      hospitalName = '',
+      hospitalLocation = '',
+      phone = '',
+      profile = ''
+    } = req.body;
+
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
 
     const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
-      return res.status(400).json({ success: false, message: "Email already registered" });
+      return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const role = (normalizedEmail === 'hafsa@gmail.com' && name.toLowerCase().trim() === 'hafsa') ? 'admin' : 'donor';
+    const safeRole = ['admin', 'staff', 'donor'].includes(String(role).toLowerCase()) ? String(role).toLowerCase() : 'donor';
 
     const user = await User.create({
-      name,
+      name: String(name || '').trim(),
       email: normalizedEmail,
       password: hashedPassword,
-      role
+      role: safeRole,
+      hospitalId: String(hospitalId || '').trim(),
+      hospitalName: String(hospitalName || '').trim(),
+      hospitalLocation: String(hospitalLocation || '').trim(),
+      phone: String(phone || '').trim(),
+      profile: String(profile || '').trim(),
+      isActive: true,
+      permissions: safeRole === 'admin'
+        ? ['dashboard', 'requests', 'dispatch', 'staff', 'settings']
+        : safeRole === 'staff'
+          ? ['dashboard', 'requests', 'dispatch']
+          : ['profile', 'history']
     });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user._id, role: user.role, hospitalId: user.hospitalId, hospitalName: user.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
     res.status(201).json({
       success: true,
       token,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role }
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        hospitalId: user.hospitalId,
+        hospitalName: user.hospitalName,
+        hospitalLocation: user.hospitalLocation,
+        phone: user.phone,
+        profile: user.profile,
+        isActive: user.isActive,
+        permissions: user.permissions
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -37,19 +74,31 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
 
     const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+      const token = jwt.sign({ id: user._id, role: user.role, hospitalId: user.hospitalId, hospitalName: user.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
       return res.status(200).json({
         success: true,
         token,
-        user: { _id: user._id, name: user.name, email: user.email, role: user.role }
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          hospitalId: user.hospitalId,
+          hospitalName: user.hospitalName,
+          hospitalLocation: user.hospitalLocation,
+          phone: user.phone,
+          profile: user.profile,
+          isActive: user.isActive,
+          permissions: user.permissions
+        }
       });
     } else {
-      return res.status(401).json({ success: false, message: "Invalid email or password" });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
