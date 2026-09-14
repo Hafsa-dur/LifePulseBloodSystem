@@ -31,6 +31,10 @@ import DonorRecipientDispatchLog from './pages/DonorRecipientDispatchLog';
 import LiveTracking from './pages/LiveTracking';
 import GamificationRewards from './pages/GamificationRewards';
 import LifeImpactBoard from './pages/LifeImpactBoard';
+import StaffManagement from './pages/StaffManagement';
+import AccountCenter from './pages/AccountCenter';
+import HospitalSettings from './pages/HospitalSettings';
+import ReportsAnalytics from './pages/ReportsAnalytics';
 import './styles/Responsive.css';
 
 // Simplified Protected Route Guard
@@ -43,9 +47,10 @@ const ProtectedRoute = ({ allowedRole }) => {
   }
 
   const userRole = (user?.role || 'donor').toString().trim().toLowerCase();
+  const allowedRoles = Array.isArray(allowedRole) ? allowedRole : [allowedRole].filter(Boolean);
 
-  if (allowedRole && allowedRole !== userRole) {
-    return <Navigate to={userRole === 'admin' ? '/dashboard' : '/profile'} replace />;
+  if (allowedRoles.length && !allowedRoles.includes(userRole)) {
+    return <Navigate to={userRole === 'admin' || userRole === 'staff' ? '/dashboard' : '/profile'} replace />;
   }
 
   return <Outlet />;
@@ -104,7 +109,7 @@ function App() {
         </Route>
 
         {/* STRICT ADMIN ROUTES */}
-        <Route element={<ProtectedRoute allowedRole="admin" />}>
+        <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/add-blood" element={<BloodStock />} />
@@ -116,6 +121,10 @@ function App() {
             <Route path="/patient-requests" element={<PatientRequests />} />
             <Route path="/donor-recipient-dispatch-log" element={<DonorRecipientDispatchLog />} />
             <Route path="/tracking" element={<LiveTracking />} />
+            <Route path="/staff-management" element={<StaffManagement />} />
+            <Route path="/account-center" element={<AccountCenter />} />
+            <Route path="/settings" element={<HospitalSettings />} />
+            <Route path="/reports" element={<ReportsAnalytics />} />
           </Route>
         </Route>
 

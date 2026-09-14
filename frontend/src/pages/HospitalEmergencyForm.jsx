@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Building2, Send } from 'lucide-react';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const HospitalEmergencyForm = () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [formData, setFormData] = useState({
-    hospitalName: '',
-    hospitalLocation: '',
+    hospitalId: user.hospitalId || '',
+    hospitalName: user.hospitalName || '',
+    hospitalLocation: user.hospitalLocation || '',
     bloodGroup: 'O+',
     unitsRequired: 1,
     urgencyLevel: 'Critical',
@@ -31,7 +33,7 @@ const HospitalEmergencyForm = () => {
       setMatching(true);
       setMatchedDonor(null);
       try {
-        const res = await fetch(`${API_URL}/donations/match?bloodGroup=${encodeURIComponent(formData.bloodGroup)}&units=${Number(formData.unitsRequired) || 1}&location=${encodeURIComponent(location)}`, { signal: controller.signal });
+        const res = await fetch(`${API_URL}/donations/match?bloodGroup=${encodeURIComponent(formData.bloodGroup)}&units=${Number(formData.unitsRequired) || 1}&location=${encodeURIComponent(location)}`, { signal: controller.signal, headers: authHeaders() });
         const data = await parseResponse(res);
         if (!res.ok) {
           throw new Error(data.message || `Donor matching failed (${res.status})`);
@@ -61,6 +63,7 @@ const HospitalEmergencyForm = () => {
         headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json'
+          , ...authHeaders()
         },
         body: JSON.stringify({
           ...formData,
@@ -86,8 +89,9 @@ const HospitalEmergencyForm = () => {
       if (data.success) {
         alert('✅ Emergency Request Live Broadcasted!');
         setFormData({
-          hospitalName: '',
-          hospitalLocation: '',
+          hospitalId: user.hospitalId || '',
+          hospitalName: user.hospitalName || '',
+          hospitalLocation: user.hospitalLocation || '',
           bloodGroup: 'O+',
           unitsRequired: 1,
           urgencyLevel: 'Critical',

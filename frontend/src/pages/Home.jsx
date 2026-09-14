@@ -13,22 +13,6 @@ const Home = () => {
     totalDonors: '0 Registered Donors'
   });
 
-  // Quick Request Form State
-  const [formData, setFormData] = useState({
-    patientName: '',
-    bloodGroup: 'A+',
-    unitsRequired: 1,
-    hospitalName: '',
-    hospitalLocation: '',
-    contactPhone: '',
-    urgencyLevel: 'Normal'
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState(null);
-
-  const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-
   // Fetch Hero Stats
   useEffect(() => {
     const fetchPublicStats = async () => {
@@ -69,44 +53,14 @@ const Home = () => {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatus(null);
-
-    try {
-      const res = await fetch(`${API_URL}/patient-requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await parseResponse(res);
-
-      if (res.ok && data.success) {
-        setStatus({ type: 'success', msg: 'Request Submitted Successfully! Admin will process it shortly.' });
-        setFormData({
-          patientName: '',
-          bloodGroup: 'A+',
-          unitsRequired: 1,
-          hospitalName: '',
-          hospitalLocation: '',
-          contactPhone: '',
-          urgencyLevel: 'Normal'
-        });
-      } else {
-        setStatus({ type: 'error', msg: data.message || 'Submission failed. Please try again.' });
-      }
-    } catch (err) {
-      console.error(err);
-      setStatus({ type: 'error', msg: 'Server connection error.' });
-    } finally {
-      setLoading(false);
+  const handlePortalRedirect = () => {
+    if (token) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const role = (user.role || '').toLowerCase();
+      navigate(role === 'admin' || role === 'staff' ? '/dashboard' : '/profile');
+      return;
     }
+    navigate('/login');
   };
 
   const blogs = [
@@ -213,138 +167,37 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 2. QUICK PATIENT BLOOD REQUEST FORM */}
-      <section className="py-20 bg-[#FAF9F6] px-4 border-b border-[#5A1827]/10" id="quick-request">
-        <div className="max-w-3xl mx-auto bg-white border-2 border-[#5A1827]/15 rounded-[2rem] p-8 sm:p-12 shadow-2xl">
-          
-          <div className="text-center mb-10 space-y-3">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#E5C158]/20 text-[#5A1827] border border-[#E5C158]/40 rounded-full text-xs font-black uppercase tracking-widest">
-              Emergency Assistance
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#5A1827] tracking-tight uppercase">
-              Quick Patient Blood Request
-            </h2>
-            <p className="text-slate-600 text-xs sm:text-sm font-medium">
-              Fill out this quick form and our network will verify & process your request immediately.
-            </p>
-          </div>
+      {/* 2. HOSPITAL PORTAL ACCESS */}
+      <section className="py-20 bg-[#FAF9F6] px-4 border-b border-[#5A1827]/10" id="hospital-portal">
+        <div className="max-w-3xl mx-auto bg-white border-2 border-[#5A1827]/15 rounded-[2rem] p-8 sm:p-12 shadow-2xl text-center">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#E5C158]/20 text-[#5A1827] border border-[#E5C158]/40 rounded-full text-xs font-black uppercase tracking-widest">
+            Hospital Workflow
+          </span>
+          <h2 className="mt-5 text-2xl sm:text-3xl font-black text-[#5A1827] tracking-tight uppercase">
+            Patient requisitions are handled inside the hospital portal
+          </h2>
+          <p className="mt-4 text-slate-600 text-xs sm:text-sm font-medium max-w-2xl mx-auto">
+            LifePulse keeps hospital patient requests, donor matching, approval, dispatch, and location intelligence inside the authorized hospital environment to prevent cross-hospital data leakage and maintain accurate hospital-scoped operations.
+          </p>
 
-          {status && (
-            <div className={`mb-6 p-4 rounded-2xl text-xs font-black tracking-wide shadow-sm ${
-              status.type === 'success' 
-                ? 'bg-emerald-50 border-2 border-emerald-300 text-emerald-800' 
-                : 'bg-rose-50 border-2 border-rose-300 text-rose-800'
-            }`}>
-              {status.msg}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Patient Full Name</label>
-                <input
-                  type="text"
-                  name="patientName"
-                  required
-                  value={formData.patientName}
-                  onChange={handleChange}
-                  placeholder="e.g. Ali Khan"
-                  className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Contact Phone Number</label>
-                <input
-                  type="text"
-                  name="contactPhone"
-                  required
-                  value={formData.contactPhone}
-                  onChange={handleChange}
-                  placeholder="e.g. 0300-1234567"
-                  className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <div>
-                <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Blood Group</label>
-                <select
-                  name="bloodGroup"
-                  value={formData.bloodGroup}
-                  onChange={handleChange}
-                  className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition cursor-pointer"
-                >
-                  {bloodGroups.map((group) => (
-                    <option key={group} value={group}>{group}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Units Needed</label>
-                <input
-                  type="number"
-                  name="unitsRequired"
-                  min="1"
-                  required
-                  value={formData.unitsRequired}
-                  onChange={handleChange}
-                  className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Urgency Level</label>
-                <select
-                  name="urgencyLevel"
-                  value={formData.urgencyLevel}
-                  onChange={handleChange}
-                  className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition cursor-pointer"
-                >
-                  <option value="Normal">Normal</option>
-                  <option value="Urgent">Urgent</option>
-                  <option value="Critical">Critical</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Hospital Name</label>
-              <input
-                type="text"
-                name="hospitalName"
-                required
-                value={formData.hospitalName}
-                onChange={handleChange}
-                placeholder="e.g. Lady Reading Hospital"
-                className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#5A1827] mb-2 font-black uppercase tracking-wider">Hospital Location / Address</label>
-              <input
-                type="text"
-                name="hospitalLocation"
-                required
-                value={formData.hospitalLocation}
-                onChange={handleChange}
-                placeholder="Enter the exact hospital address"
-                className="w-full bg-[#FAF9F6] border-2 border-[#5A1827]/20 rounded-2xl px-4 py-3.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#E5C158] focus:ring-2 focus:ring-[#E5C158]/30 shadow-inner transition"
-              />
-            </div>
-
+          <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 py-4 bg-[#5A1827] hover:bg-[#4A121F] text-[#E5C158] font-black uppercase tracking-widest rounded-2xl transition-all duration-300 cursor-pointer shadow-xl border-2 border-[#E5C158]/50 disabled:opacity-50 text-sm hover:scale-[0.99]"
+              type="button"
+              onClick={handlePortalRedirect}
+              className="px-8 py-4 bg-[#5A1827] hover:bg-[#4A121F] text-[#E5C158] font-black uppercase tracking-widest rounded-2xl transition-all duration-300 cursor-pointer shadow-xl border-2 border-[#E5C158]/50 text-sm hover:scale-[0.99]"
             >
-              {loading ? 'Submitting Request...' : 'Submit Emergency Request'}
+              {token ? 'Open Hospital Portal' : 'Login to Hospital Portal'}
             </button>
-          </form>
+            {!token && (
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="px-8 py-4 bg-[#E5C158] hover:bg-[#d4b04d] text-[#5A1827] font-black uppercase tracking-widest rounded-2xl transition-all duration-300 cursor-pointer shadow-xl text-sm hover:scale-[0.99] border-2 border-[#5A1827]/20"
+              >
+                Create Account
+              </button>
+            )}
+          </div>
         </div>
       </section>
 

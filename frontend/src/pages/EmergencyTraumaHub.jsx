@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import { AlertCircle, Send, ShieldAlert } from 'lucide-react';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const EmergencyTraumaHub = () => {
   const [cases, setCases] = useState([]);
   const [processingId, setProcessingId] = useState(null);
 
   useEffect(() => {
-    // 1. Fetch initial requests
-    fetch(`${API_URL}/hospital-requests`)
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const params = new URLSearchParams();
+    if (user.hospitalId) params.set('hospitalId', user.hospitalId);
+    if (user.hospitalName) params.set('hospitalName', user.hospitalName);
+
+    // 1. Fetch initial requests scoped to the logged-in hospital
+    fetch(`${API_URL}/hospital-requests${params.toString() ? `?${params.toString()}` : ''}`, { headers: authHeaders() })
       .then((res) => parseResponse(res))
       .then((data) => setCases(Array.isArray(data) ? data : data.requests || []))
       .catch((err) => console.error('Error loading requests:', err));
@@ -20,6 +25,7 @@ const EmergencyTraumaHub = () => {
       setCases((prev) => prev.filter((item) => (item._id || item.id) !== deletedId));
     };
 
+    socket.auth = { token: localStorage.getItem('token') || '' };
     if (!socket.connected) socket.connect();
 
     socket.on('new_hospital_request', handleNewRequest);
@@ -61,7 +67,8 @@ const EmergencyTraumaHub = () => {
       }
 
       const resolveRes = await fetch(`${API_URL}/hospital-requests/${itemId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders()
       });
 
       if (!resolveRes.ok) {

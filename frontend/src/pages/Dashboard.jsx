@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import DispatchModal from './DispatchModal';
 import StockAlertModal from '../components/StockAlertModal';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const Dashboard = () => {
   // State management for dashboard analytics and metrics
@@ -36,7 +36,12 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const donationsRes = await fetch(`${API_URL}/donations/dashboard`);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const params = new URLSearchParams();
+        if (user.hospitalId) params.set('hospitalId', user.hospitalId);
+        if (user.hospitalName) params.set('hospitalName', user.hospitalName);
+
+        const donationsRes = await fetch(`${API_URL}/donations/dashboard${params.toString() ? `?${params.toString()}` : ''}`, { headers: authHeaders() });
         let donationsData = [];
         let groupDonationUnits = { 'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0, 'O+': 0, 'O-': 0, 'AB+': 0, 'AB-': 0 };
         let totalUnits = 0;
@@ -59,7 +64,7 @@ const Dashboard = () => {
           uniqueDonors = new Set(donationsData.map((item) => item.donorName)).size;
         }
 
-        const requestsRes = await fetch(`${API_URL}/patient-requests`);
+        const requestsRes = await fetch(`${API_URL}/patient-requests${params.toString() ? `?${params.toString()}` : ''}`, { headers: authHeaders() });
         let pendingCount = 0;
         let distributedUnits = 0;
 

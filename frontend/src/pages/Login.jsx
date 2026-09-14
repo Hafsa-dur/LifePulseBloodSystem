@@ -48,7 +48,7 @@ const Login = () => {
       // Safe & case-insensitive role verification
       const userRole = data.user?.role?.toString().trim().toLowerCase();
 
-      if (userRole === 'admin') {
+      if (userRole === 'admin' || userRole === 'staff') {
         navigate('/dashboard');
       } else {
         navigate('/profile');

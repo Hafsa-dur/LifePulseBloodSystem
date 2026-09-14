@@ -6,5 +6,10 @@ const SOCKET_URL = API_URL.replace(/\/api\/?$/, '');
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,
+  auth: { token: localStorage.getItem('token') || '' },
   transports: ['websocket', 'polling'], // yeh add karna zaroori hai taake Vercel par connection stable rahe
+});
+
+socket.on('connect', () => {
+  socket.auth = { token: localStorage.getItem('token') || '' };
 });

@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import { Users, CheckCircle, XCircle, Clock, AlertCircle, Truck } from 'lucide-react';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const PatientRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loadingId, setLoadingId] = useState(null);
 
   useEffect(() => {
-    // 1. Fetch initial patient requests
-    fetch(`${API_URL}/patient-requests`)
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const hospitalId = user.hospitalId || '';
+    const hospitalName = user.hospitalName || '';
+    const params = new URLSearchParams();
+    if (hospitalId) params.set('hospitalId', hospitalId);
+    if (hospitalName) params.set('hospitalName', hospitalName);
+
+    // 1. Fetch initial patient requests scoped to the logged-in hospital
+    fetch(`${API_URL}/patient-requests${params.toString() ? `?${params.toString()}` : ''}`, { headers: authHeaders() })
       .then(async (res) => {
         const data = await parseResponse(res);
         if (!res.ok) {
@@ -28,6 +35,7 @@ const PatientRequests = () => {
       );
     };
 
+    socket.auth = { token: localStorage.getItem('token') || '' };
     if (!socket.connected) socket.connect();
 
     socket.on('new_patient_request', handleNewRequest);
@@ -46,6 +54,7 @@ const PatientRequests = () => {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+              ...authHeaders(),
             }
         });
         
@@ -73,6 +82,7 @@ const PatientRequests = () => {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+              ...authHeaders(),
             }
         });
         
@@ -99,6 +109,7 @@ const PatientRequests = () => {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+              ...authHeaders(),
           },
           body: JSON.stringify({
             currentLocationNote: 'Dispatched securely from blood bank.'

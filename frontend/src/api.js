@@ -16,3 +16,8 @@ export const parseResponse = async (response) => {
 		return {};
 	}
 };
+
+export const authHeaders = (json = false) => ({
+	...(json ? { 'Content-Type': 'application/json' } : {}),
+	...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
+});

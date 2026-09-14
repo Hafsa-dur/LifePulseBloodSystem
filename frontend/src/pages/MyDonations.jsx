@@ -55,26 +55,10 @@ const MyDonations = ({ currentUserName }) => {
       }
       const email = storedUser.email || localStorage.getItem('userEmail') || '';
       const impactQuery = email ? `email=${encodeURIComponent(email)}` : `donorName=${encodeURIComponent(targetName)}`;
-      const [response, impactResponse] = await Promise.all([
-        fetch(`${API_URL}/donations`),
-        fetch(`${API_URL}/life-impact?${impactQuery}`)
-      ]);
-      if (response.ok) {
-        const data = await parseResponse(response);
-        const dataList = Array.isArray(data) ? data : data.donations || [];
-        
-        // Strict Filter: Sirf usi donor ki donations aayengi jo profile khol kar baitha hai
-        const userRecords = dataList.filter((item) => {
-          const recordDonor = (item.donorName || item.name || '').trim().toLowerCase();
-          const currentLoggedIn = targetName.trim().toLowerCase();
-          
-          return recordDonor === currentLoggedIn || recordDonor.includes(currentLoggedIn) || currentLoggedIn.includes(recordDonor);
-        });
-
-        setDonations(userRecords);
-      }
+      const impactResponse = await fetch(`${API_URL}/life-impact?${impactQuery}`);
       if (impactResponse.ok) {
         const impactData = await parseResponse(impactResponse);
+        setDonations(impactData.donations || []);
         setImpactLogs(impactData.impactLogs || []);
       }
     } catch (error) {
@@ -95,6 +79,8 @@ const MyDonations = ({ currentUserName }) => {
   const totalPintsDonated = donations.reduce((acc, item) => {
     return acc + Number(item.units || item.pints || 1);
   }, 0);
+
+  const displayRows = impactLogs.length > 0 ? impactLogs : donations;
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#5A1827] py-8 px-4 sm:px-6 lg:px-8 font-sans">
@@ -151,43 +137,52 @@ const MyDonations = ({ currentUserName }) => {
                   <th className="py-4 px-6">Date</th>
                   <th className="py-4 px-6">Patient</th>
                   <th className="py-4 px-6">Hospital</th>
+                  <th className="py-4 px-6">Dispatch Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#6B1D2F]/10 font-medium text-[#5A1827]">
                 {loading ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-12 text-slate-600 font-bold animate-pulse">
+                    <td colSpan="8" className="text-center py-12 text-slate-600 font-bold animate-pulse">
                       Loading your profile records...
                     </td>
                   </tr>
-                ) : donations.length > 0 ? (
-                  donations.map((item, idx) => (
+                ) : displayRows.length > 0 ? (
+                  displayRows.map((item, idx) => {
+                    const sourceDonation = donations.find((donation) => String(donation._id) === String(item.sourceDonationId));
+                    const bloodType = item.bloodType || item.bloodGroup || sourceDonation?.bloodGroup;
+                    const units = item.pints || item.units || sourceDonation?.units || 0;
+                    const donationDate = item.lastDonationDate || sourceDonation?.createdAt || sourceDonation?.donationDate;
+
+                    return (
                     <tr key={item._id || idx} className="hover:bg-rose-50/50 transition-colors">
                       <td className="py-4 px-6 font-mono text-[#990000] font-black tracking-wide">
-                        {formatUnitId(item, idx)}
+                        {formatUnitId(sourceDonation || item, idx)}
                       </td>
                       <td className="py-4 px-6">
                         <span className="px-3 py-1 font-black text-xs text-[#990000] bg-rose-100 border border-rose-300 rounded-xl shadow-sm">
-                          {item.bloodGroup || item.group}
+                          {bloodType}
                         </span>
                       </td>
                       <td className="py-4 px-6 font-black text-[#5A1827]">
-                        {item.units || item.pints || 1} Pints
+                        {units} Pints
                       </td>
                       <td className="py-4 px-6 font-black text-[#5A1827]">
                         {item.donorName || item.name}
                       </td>
                       <td className="py-4 px-6 text-slate-600 font-bold">
                         <Calendar className="w-3.5 h-3.5 text-[#5A1827]" />
-                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : (item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A')}
+                        {donationDate ? new Date(donationDate).toLocaleDateString() : 'N/A'}
                       </td>
-                      <td className="py-4 px-6">{impactLogs.find((log) => String(log.sourceDonationId) === String(item._id))?.patientName || 'Not allocated'}</td>
-                      <td className="py-4 px-6">{impactLogs.find((log) => String(log.sourceDonationId) === String(item._id))?.hospitalName || 'Not allocated'}</td>
+                      <td className="py-4 px-6">{item.patientName || 'Not allocated'}</td>
+                      <td className="py-4 px-6">{item.hospitalName || item.recipientName || 'Not allocated'}</td>
+                      <td className="py-4 px-6 font-semibold">{item.status || 'Recorded'}</td>
                     </tr>
-                  ))
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="7" className="text-center py-12 text-slate-500 italic">
+                    <td colSpan="8" className="text-center py-12 text-slate-500 italic">
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="w-6 h-6 text-[#990000]" />
                         <span className="font-bold">No donation records found for "{activeDonorName || 'Current User'}".</span>

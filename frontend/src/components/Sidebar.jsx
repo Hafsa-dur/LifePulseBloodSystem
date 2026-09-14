@@ -23,7 +23,8 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
 
   // Retrieve user details from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userRole = user.role || 'donor'; 
+  const userRole = user.role || 'donor';
+  const isHospitalRole = userRole === 'admin' || userRole === 'staff';
 
   // Handle user logout action and clear storage
   const handleLogout = () => {
@@ -34,18 +35,21 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
 
   // Define sidebar menu items based on user role (admin vs donor)
   const getMenuItems = () => {
-    if (userRole === 'admin') {
+    if (isHospitalRole) {
       return [
         { path: '/dashboard', label: 'System Overview', icon: LayoutDashboard },
         { path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle },
         { path: '/blood-list', label: 'Stock Directory', icon: Droplets },
+        { path: '/patient-requests', label: 'Patient Requests', icon: GitPullRequest },
+        { path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio },
         { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList },
         { path: '/tracking', label: 'Live Transport Tracking', icon: Truck },
-        { path: '/profile', label: 'Account Center', icon: User },
-        { path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio },
         { path: '/trauma-network', label: 'Emergency Network', icon: Activity },
-        { path: '/patient-requests', label: 'Patient Requests', icon: GitPullRequest },
         { path: '/hospital-request', label: 'Hospital Request', icon: Hospital },
+        { path: '/reports', label: 'Reports & Analytics', icon: Activity },
+        { path: '/staff-management', label: 'Staff Management', icon: User },
+        { path: '/account-center', label: 'Account Center', icon: User },
+        { path: '/settings', label: 'Settings', icon: Hospital },
       ];
     } else {
       // Donor Portal Menu Items (Updated with Life Impact Board)
@@ -71,7 +75,7 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         <div>
           <h1 className="text-base font-black text-white tracking-wider">LifePulse</h1>
           <p className="text-[10px] text-[#E5C158] font-black uppercase tracking-widest">
-            {userRole === 'admin' ? 'Admin Portal' : 'Donor Portal'}
+            {isHospitalRole ? (userRole === 'staff' ? 'Staff Portal' : 'Admin Portal') : 'Donor Portal'}
           </p>
         </div>
       </div>

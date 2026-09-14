@@ -42,6 +42,8 @@ const AddBlood = () => {
 
     try {
       const response = await axios.post(`${API_URL}/donations`, {
+        hospitalId: JSON.parse(localStorage.getItem('user') || '{}').hospitalId || '',
+        hospitalName: JSON.parse(localStorage.getItem('user') || '{}').hospitalName || '',
         donorName: formData.donorName,
         email: formData.email.toLowerCase().trim(),
         bloodGroup: formData.bloodGroup,

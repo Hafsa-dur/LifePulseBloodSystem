@@ -4,7 +4,7 @@ import { Menu, Search } from 'lucide-react';
 const Topbar = ({ onMenuClick = () => {} }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user.role || 'donor';
-  const userName = user.name || (userRole === 'admin' ? 'Hafsa Sohail' : 'Aqsa');
+  const userName = user.name || (userRole === 'admin' || userRole === 'staff' ? 'Hospital Team Member' : 'Aqsa');
   const userEmail = user.email || `${userName.toLowerCase().replace(/\s+/g, '')}@gmail.com`;
 
   const avatarInitial = userName.charAt(0).toUpperCase();
@@ -35,7 +35,7 @@ const Topbar = ({ onMenuClick = () => {} }) => {
             <div className="topbar-email-row">
               <p className="text-rose-200 text-[10px] font-semibold">{userEmail}</p>
               <span className="topbar-role px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-full border shadow-sm bg-[#E5C158] text-[#5A1827] border-amber-400">
-                {userRole === 'admin' ? 'Admin' : 'Donor'}
+                {userRole === 'admin' ? 'Admin' : userRole === 'staff' ? 'Staff' : 'Donor'}
               </span>
             </div>
           </div>

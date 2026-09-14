@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Truck, Thermometer, MapPin, ArrowLeft, AlertCircle, Clock, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
+import { socket } from '../socket';
 
 const LiveTracking = () => {
   const [activeDispatch, setActiveDispatch] = useState(null);
@@ -10,7 +11,7 @@ const LiveTracking = () => {
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes delivery countdown
 
   useEffect(() => {
-    fetch(`${API_URL}/patient-requests`)
+    const loadActiveDispatch = () => fetch(`${API_URL}/patient-requests`, { headers: authHeaders() })
       .then(res => parseResponse(res))
       .then(data => {
         const requests = Array.isArray(data) ? data : data.data || [];
@@ -52,6 +53,17 @@ const LiveTracking = () => {
         console.error('Error fetching requests for tracking:', err);
         setLoading(false);
       });
+
+    const handleUpdate = () => loadActiveDispatch();
+    socket.auth = { token: localStorage.getItem('token') || '' };
+    if (!socket.connected) socket.connect();
+    socket.on('update_patient_request', handleUpdate);
+    const refreshTimer = setInterval(loadActiveDispatch, 15000);
+    loadActiveDispatch();
+    return () => {
+      socket.off('update_patient_request', handleUpdate);
+      clearInterval(refreshTimer);
+    };
   }, []);
 
   useEffect(() => {
