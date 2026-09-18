@@ -2,7 +2,7 @@ import PatientRequest from '../models/PatientRequest.js';
 import Donation from '../models/donationModel.js';
 import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import mongoose from 'mongoose';
-import { findNearestMatchingDonor } from './donationController.js';
+import { findMatchingDonors } from './donationController.js';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const realDonorFilter = {
@@ -35,7 +35,30 @@ export const createPatientRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Hospital, patient, and contact details are required.' });
         }
 
-        const newRequest = new PatientRequest(payload);
+        const bloodGroup = String(payload.bloodGroup || '').trim().toUpperCase();
+        const unitsRequired = Number(payload.unitsRequired);
+        if (!['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(bloodGroup) || !Number.isInteger(unitsRequired) || unitsRequired <= 0) {
+            return res.status(400).json({ success: false, message: 'A valid blood group and positive whole number of units are required.' });
+        }
+        const rankedDonors = await findMatchingDonors({
+            bloodGroup,
+            units: unitsRequired,
+            location: payload.hospitalLocation
+        });
+        const nearestMatch = rankedDonors?.[0] || null;
+        const newRequest = new PatientRequest({
+            ...payload,
+            bloodGroup,
+            unitsRequired,
+            donorId: nearestMatch?.donor?._id || null,
+            donorName: nearestMatch?.donor?.donorName || '',
+            donorEmail: nearestMatch?.donor?.email || '',
+            donorLocation: nearestMatch?.donor?.location || nearestMatch?.donor?.address || '',
+            donorDistance: Number.isFinite(nearestMatch?.distance) ? Number(nearestMatch.distance.toFixed(2)) : null,
+            sourceType: nearestMatch ? 'donor' : 'inventory',
+            matchStatus: nearestMatch ? 'Matched' : undefined,
+            locationMatchStatus: nearestMatch ? 'Matched' : 'No Donor'
+        });
         const savedRequest = await newRequest.save();
         req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('new_patient_request', savedRequest);
         res.status(201).json({ success: true, message: 'Request submitted successfully', data: savedRequest });
@@ -76,8 +99,13 @@ export const approveRequest = async (req, res) => {
             }
 
             const groupFilter = { bloodGroup: new RegExp(`^${escapeRegex(bloodGroup)}$`, 'i') };
-            const allStock = await Donation.find({ ...groupFilter, ...stockFilter })
-                .sort({ createdAt: 1, _id: 1 }).session(session);
+            const hospitalInventoryFilter = req.user.hospitalId
+                ? { hospitalId: req.user.hospitalId }
+                : { hospitalName: new RegExp(`^${escapeRegex(String(req.user.hospitalName || ''))}$`, 'i') };
+            const allStock = request.sourceType === 'donor' && request.donorId
+                ? await Donation.find({ ...groupFilter, ...stockFilter, _id: request.donorId }).session(session)
+                : await Donation.find({ ...groupFilter, ...stockFilter, ...hospitalInventoryFilter })
+                    .sort({ createdAt: 1, _id: 1 }).session(session);
             const availableUnits = allStock.reduce((total, donation) => total + donation.units, 0);
             if (availableUnits <= 0) {
                 request.status = 'Rejected';
@@ -86,19 +114,10 @@ export const approveRequest = async (req, res) => {
                 return;
             }
 
-            const assignedDonorIds = await DonorRecipientLog.distinct('donorId', {
-                sourceType: 'donor',
-                donorId: { $ne: null },
-                dispatchStatus: 'Pending'
-            }).session(session);
-            const donor = await findNearestMatchingDonor({
-                bloodGroup,
-                units: requiredUnits,
-                location: request.hospitalLocation,
-                session,
-                excludeDonorIds: assignedDonorIds
-            });
-            const sourceType = donor ? 'donor' : 'inventory';
+            const donor = request.sourceType === 'donor' && request.donorId
+                ? allStock[0]
+                : null;
+            const sourceType = request.sourceType === 'donor' && donor ? 'donor' : 'inventory';
             const donorName = donor ? donor.donorName.trim() : 'Inventory';
             const donorEmail = donor ? donor.email : undefined;
 
@@ -130,6 +149,7 @@ export const approveRequest = async (req, res) => {
             request.donorEmail = donorEmail;
             request.sourceType = sourceType;
             request.matchStatus = 'Matched';
+            request.locationMatchStatus = request.sourceType === 'donor' ? 'Matched' : 'No Donor';
             request.allocationLogIds = [matchLog._id];
             await request.save({ session });
             approvedRequest = request;

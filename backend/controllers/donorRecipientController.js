@@ -24,6 +24,7 @@ export const getCombinedDispatchLogs = async (req, res) => {
     const userEmailQuery = req.query.email?.trim().toLowerCase();
     const userNameQuery = req.query.donorName?.trim();
     const filter = {};
+    if (req.user?.hospitalName) filter.hospitalName = new RegExp(`^${req.user.hospitalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     if (userEmailQuery) filter.donorEmail = userEmailQuery;
     if (userNameQuery) filter.donorName = new RegExp(`^${userNameQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 

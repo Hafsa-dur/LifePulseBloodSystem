@@ -71,22 +71,23 @@ export const getStaff = async (req, res) => {
 export const createStaff = async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can add staff.' });
-    const { name, email, password, phone = '', staffRole = 'General Staff', permissions = [] } = req.body;
+    const { name, email, password, phone = '', staffRole = 'Emergency Staff', permissions = [] } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
+    if (!['Blood Bank Staff', 'Emergency Staff'].includes(String(staffRole || '').trim())) {
+      return res.status(400).json({ success: false, message: 'Only Emergency Staff and Blood Bank Staff roles are allowed.' });
+    }
     if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
 
     const rolePermissions = {
-      'Blood Bank Staff': ['dashboard', 'inventory', 'requests', 'account'],
-      'Emergency Staff': ['dashboard', 'requests', 'emergency', 'tracking', 'account'],
-      'Dispatch Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account'],
-      'General Staff': ['dashboard', 'requests', 'account']
+      'Blood Bank Staff': ['dashboard', 'inventory', 'dispatch', 'requests', 'account', 'tracking'],
+      'Emergency Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account']
     };
     const staff = await User.create({
       name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'staff',
-      staffRole,
+      staffRole: String(staffRole).trim(),
       hospitalId: req.user.hospitalId || '', hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '',
-      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : rolePermissions[staffRole] || rolePermissions['General Staff'], isActive: true
+      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : rolePermissions[String(staffRole).trim()] || rolePermissions['Emergency Staff'], isActive: true
     });
     const safeStaff = staff.toObject();
     delete safeStaff.password;
