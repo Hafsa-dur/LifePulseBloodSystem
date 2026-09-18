@@ -4,6 +4,7 @@ import { API_URL, authHeaders, parseResponse } from '../api';
 
 const GeoPulseRadar = () => {
   const [donors, setDonors] = useState([]);
+  const [requestMatches, setRequestMatches] = useState([]);
 
   // Modal State for Sending Web3Forms Email
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -47,6 +48,10 @@ const GeoPulseRadar = () => {
       await fetchRealDonors();
     };
     loadDonors();
+    fetch(`${API_URL}/patient-requests`, { headers: authHeaders() })
+      .then(parseResponse)
+      .then((data) => setRequestMatches(Array.isArray(data) ? data.filter((request) => request.locationMatchStatus) : []))
+      .catch((error) => console.error('Error fetching request matches:', error));
   }, []);
 
   // Open Email Dispatch Modal
@@ -150,6 +155,28 @@ const GeoPulseRadar = () => {
           <span className="text-amber-950 bg-gradient-to-r from-[#FCD34D] to-[#F59E0B] border-2 border-[#D97706] px-3.5 py-1 rounded-xl font-black text-base shadow-md tracking-wide">
             {donors.length}
           </span>
+        </div>
+      </div>
+
+      <div className="bg-white border-2 border-[#6B1D2F] rounded-2xl overflow-hidden shadow-md w-full">
+        <div className="p-5 border-b-2 border-[#6B1D2F]/15">
+          <h2 className="text-xl font-black text-[#5A1827]">Nearest Donor Matches</h2>
+          <p className="text-xs text-slate-600 font-medium mt-1">Matches are calculated from the saved donor and hospital locations when a request is submitted.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[#FAF9F6] text-[#5A1827] text-xs uppercase font-black"><tr><th className="p-4">Patient</th><th className="p-4">Group</th><th className="p-4">Hospital / Location</th><th className="p-4">Matched Donor / Location</th><th className="p-4">Distance</th><th className="p-4">Availability</th></tr></thead>
+            <tbody className="divide-y divide-[#6B1D2F]/10">
+              {requestMatches.length > 0 ? requestMatches.map((request) => <tr key={request._id}>
+                <td className="p-4 font-black text-[#5A1827]">{request.patientName}</td>
+                <td className="p-4 font-black text-rose-700">{request.bloodGroup}</td>
+                <td className="p-4"><div className="font-bold">{request.hospitalName}</div><div className="text-xs text-slate-500">{request.hospitalLocation}</div></td>
+                <td className="p-4"><div className="font-black">{request.donorName || 'No suitable donor found'}</div><div className="text-xs text-slate-500">{request.donorLocation || 'Inventory fallback'}</div></td>
+                <td className="p-4 font-bold">{request.donorDistance !== null && request.donorDistance !== undefined ? `${request.donorDistance} km` : 'N/A'}</td>
+                <td className="p-4"><span className={`px-2 py-1 rounded-lg text-xs font-black ${request.locationMatchStatus === 'Matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{request.locationMatchStatus === 'Matched' ? 'Nearest Donor Selected' : 'No suitable donor found'}</span></td>
+              </tr>) : <tr><td colSpan="6" className="p-8 text-center text-slate-500 italic">No patient request matches available yet.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </div>
 

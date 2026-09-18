@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const DonorRecipientDispatchLog = () => {
   const [combinedLogs, setCombinedLogs] = useState([]);
@@ -8,7 +8,7 @@ const DonorRecipientDispatchLog = () => {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch(`${API_URL}/donor-recipient-logs/combined`);
+      const res = await fetch(`${API_URL}/donor-recipient-logs/combined`, { headers: authHeaders() });
       if (!res.ok) {
         throw new Error('Failed to fetch combined dispatch logs.');
       }

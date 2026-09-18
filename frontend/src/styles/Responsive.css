@@ -98,12 +98,16 @@ table {
 
 .blood-stock-summary-card {
 	min-height: 15rem;
-	height: 15rem;
+	height: auto;
+	box-sizing: border-box;
+	overflow: hidden;
 }
 
 .blood-stock-summary-card--list {
 	min-height: 18rem;
-	height: 18rem;
+	height: auto;
+	box-sizing: border-box;
+	overflow: hidden;
 }
 
 .public-nav-links {

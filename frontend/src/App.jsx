@@ -11,9 +11,9 @@ import Sidebar from './components/Sidebar';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import BloodStock from './pages/BloodStock'; 
+import BloodStock from './pages/BloodStock';
 import BloodList from './pages/BloodList';
-import MyDonations from './pages/MyDonations'; 
+import MyDonations from './pages/MyDonations';
 import DonorPassport from './pages/DonorPassport';
 import DonorProfile from './pages/DonorProfile';
 import DispatchModal from './pages/DispatchModal';
@@ -21,14 +21,12 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import HospitalOnboarding from './pages/HospitalOnboarding';
 import GeoPulseRadar from './pages/GeoPulseRadar';
-import EmergencyTraumaHub from './pages/EmergencyTraumaHub';
-import HospitalEmergencyForm from './pages/HospitalEmergencyForm';
 import PatientRequests from './pages/PatientRequests';
 import PatientRequestForm from './pages/PatientRequestForm';
 import Home from './pages/Home';
 import FAQPage from './pages/FAQPage';
 import AboutUsPage from './pages/AboutUsPage';
-import DonorRecipientDispatchLog from './pages/DonorRecipientDispatchLog'; 
+import DonorRecipientDispatchLog from './pages/DonorRecipientDispatchLog';
 import LiveTracking from './pages/LiveTracking';
 import GamificationRewards from './pages/GamificationRewards';
 import LifeImpactBoard from './pages/LifeImpactBoard';
@@ -38,24 +36,30 @@ import HospitalSettings from './pages/HospitalSettings';
 import ReportsAnalytics from './pages/ReportsAnalytics';
 import './styles/Responsive.css';
 
-// Simplified Protected Route Guard
-const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false }) => {
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+const getUser = () => JSON.parse(localStorage.getItem('user') || '{}');
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
+const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false, allowedStaffRoles = [] }) => {
+  const token = localStorage.getItem('token');
+  const user = getUser();
+
+  if (!token) return <Navigate to="/login" replace />;
 
   const userRole = (user?.role || 'donor').toString().trim().toLowerCase();
+  const staffRole = user?.staffRole || '';
   const allowedRoles = Array.isArray(allowedRole) ? allowedRole : [allowedRole].filter(Boolean);
+  const safeAllowedStaffRoles = Array.isArray(allowedStaffRoles) ? allowedStaffRoles : [allowedStaffRoles].filter(Boolean);
 
   if (allowedRoles.length && !allowedRoles.includes(userRole)) {
     return <Navigate to={userRole === 'admin' || userRole === 'staff' ? '/dashboard' : '/profile'} replace />;
   }
 
   if (adminOnly && userRole !== 'admin') return <Navigate to="/dashboard" replace />;
-  if (requiredPermission && userRole !== 'admin' && !(user.permissions || []).includes(requiredPermission)) return <Navigate to="/dashboard" replace />;
+  if (safeAllowedStaffRoles.length && userRole === 'staff' && !safeAllowedStaffRoles.includes(staffRole)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  if (requiredPermission && userRole !== 'admin' && !(user.permissions || []).includes(requiredPermission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return <Outlet />;
 };
@@ -70,24 +74,20 @@ const PublicLayout = () => (
   </div>
 );
 
-const DashboardLayout = () => (
-  <DashboardShell />
-);
-
 const DashboardShell = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-  <div className="dashboard-layout flex h-screen overflow-hidden bg-slate-950 text-slate-100">
-    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-    {sidebarOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <Topbar onMenuClick={() => setSidebarOpen(true)} />
-      <main className="dashboard-content flex-1 overflow-y-auto p-8 bg-slate-950">
-        <Outlet />
-      </main>
+    <div className="dashboard-layout flex h-screen overflow-hidden bg-slate-950 text-slate-100">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {sidebarOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <main className="dashboard-content flex-1 overflow-y-auto p-8 bg-slate-950">
+          <Outlet />
+        </main>
+      </div>
     </div>
-  </div>
   );
 };
 
@@ -95,7 +95,6 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* PUBLIC ROUTES */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -105,46 +104,45 @@ function App() {
           <Route path="/about" element={<AboutUsPage />} />
         </Route>
 
-        {/* SHARED PROTECTED ROUTES (Both Admin & Donor can access smoothly) */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<DashboardLayout />}>
-            <Route path="/profile" element={<DonorProfile />} />
-          </Route>
-        </Route>
-
-        {/* STRICT ADMIN ROUTES */}
         <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} />}>
-          <Route element={<DashboardLayout />}>
+          <Route element={<DashboardShell />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route element={<ProtectedRoute requiredPermission="inventory" />}>
-              <Route path="/blood-list" element={<BloodList />} />
-              <Route path="/add-blood" element={<BloodStock />} />
+            <Route path="/account-center" element={<AccountCenter />} />
+
+            <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="requests" />}>
+              <Route path="/request-management" element={<PatientRequests />} />
+              <Route path="/patient-request" element={<PatientRequestForm />} />
             </Route>
-            <Route element={<ProtectedRoute requiredPermission="dispatch" />}>
-              <Route path="/dispatch" element={<DispatchModal isOpen={true} onClose={() => {}} />} />
+
+            <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="dispatch" />}>
+              <Route path="/geopulse-radar" element={<GeoPulseRadar />} />
+              <Route path="/tracking" element={<LiveTracking />} />
               <Route path="/donor-recipient-dispatch-log" element={<DonorRecipientDispatchLog />} />
             </Route>
-            <Route element={<ProtectedRoute requiredPermission="emergency" />}><Route path="/hospital-request" element={<HospitalEmergencyForm />} /></Route>
-            <Route element={<ProtectedRoute requiredPermission="emergency" />}><Route path="/trauma-network" element={<EmergencyTraumaHub />} /></Route>
-            <Route element={<ProtectedRoute requiredPermission="dispatch" />}><Route path="/geopulse-radar" element={<GeoPulseRadar />} /></Route>
-            <Route element={<ProtectedRoute requiredPermission="requests" />}><Route path="/patient-requests" element={<PatientRequests />} /><Route path="/patient-request" element={<PatientRequestForm />} /></Route>
-            <Route element={<ProtectedRoute requiredPermission="tracking" />}><Route path="/tracking" element={<LiveTracking />} /></Route>
-            <Route path="/account-center" element={<AccountCenter />} />
-            <Route element={<ProtectedRoute adminOnly />}><Route path="/settings" element={<HospitalSettings />} /><Route path="/staff-management" element={<StaffManagement />} /><Route path="/reports" element={<ReportsAnalytics />} /></Route>
+
+            <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} allowedStaffRoles={['Blood Bank Staff']} requiredPermission="inventory" />}>
+              <Route path="/add-blood" element={<BloodStock />} />
+              <Route path="/blood-list" element={<BloodList />} />
+            </Route>
+
+            <Route element={<ProtectedRoute adminOnly />}>
+              <Route path="/settings" element={<HospitalSettings />} />
+              <Route path="/staff-management" element={<StaffManagement />} />
+              <Route path="/reports" element={<ReportsAnalytics />} />
+            </Route>
           </Route>
         </Route>
 
-        {/* STRICT DONOR ROUTES */}
         <Route element={<ProtectedRoute allowedRole="donor" />}>
-          <Route element={<DashboardLayout />}>
+          <Route element={<DashboardShell />}>
+            <Route path="/profile" element={<DonorProfile />} />
             <Route path="/history" element={<MyDonations />} />
             <Route path="/donor-qr" element={<DonorPassport />} />
             <Route path="/donor/gamification" element={<GamificationRewards />} />
-          <Route path="/life-impact-board" element={<LifeImpactBoard />} />
+            <Route path="/life-impact-board" element={<LifeImpactBoard />} />
           </Route>
         </Route>
 
-        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

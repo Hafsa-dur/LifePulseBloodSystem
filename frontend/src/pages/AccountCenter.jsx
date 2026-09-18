@@ -17,9 +17,9 @@ const AccountCenter = () => {
   const summary = useMemo(() => [
     { label: 'Name', value: profile.name || 'Not set' },
     { label: 'Email', value: profile.email || 'Not set' },
-    { label: 'Role', value: profile.role === 'staff' ? 'Staff' : 'Admin' },
+    { label: 'Role', value: profile.role === 'admin' ? 'Admin' : profile.role === 'staff' ? (user.staffRole || 'Staff') : 'Donor' },
     { label: 'Hospital', value: profile.hospitalName || 'Not set' },
-  ], [profile]);
+  ], [profile, user.staffRole]);
 
   const handleSave = () => {
     fetch(`${API_URL}/hospital/account`, { method: 'PATCH', headers: authHeaders(true), body: JSON.stringify(profile) })

@@ -43,16 +43,6 @@ const Home = () => {
     document.getElementById('public-donation-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handlePortalRedirect = () => {
-    if (token) {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const role = (user.role || '').toLowerCase();
-      navigate(role === 'admin' || role === 'staff' ? '/dashboard' : '/profile');
-      return;
-    }
-    navigate('/login');
-  };
-
   const blogs = [
     {
       id: 1,
@@ -123,7 +113,7 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Dynamic Live System Status Card (With Interactive Hover Effects) */}
+          {/* Dynamic Live System Status Card */}
           <div className="flex-1 w-full max-w-md">
             <div className="bg-white/10 backdrop-blur-md p-8 rounded-[2rem] border-2 border-white/20 shadow-2xl space-y-6 transition-all duration-300 hover:bg-white/15 hover:border-[#E5C158]/50 hover:shadow-[0_0_30px_rgba(229,193,88,0.2)]">
               <div className="flex items-center justify-between">
@@ -157,45 +147,10 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 2. PUBLIC BLOOD DONATION FORM */}
-      <section id="public-donation-form" className="py-16 bg-[#FAF9F6] px-4 border-b border-[#5A1827]/10">
-        <div className="max-w-6xl mx-auto">
+       {/* 2. PUBLIC BLOOD DONATION FORM SECTION */}
+      <section id="public-donation-form" className="py-20 bg-[#FAF9F6] px-4">
+        <div className="max-w-xl mx-auto">
           <AddBlood />
-        </div>
-      </section>
-
-      {/* 3. HOSPITAL PORTAL ACCESS */}
-      <section className="py-20 bg-[#FAF9F6] px-4 border-b border-[#5A1827]/10" id="hospital-portal">
-        <div className="max-w-3xl mx-auto bg-white border-2 border-[#5A1827]/15 rounded-[2rem] p-8 sm:p-12 shadow-2xl text-center">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#E5C158]/20 text-[#5A1827] border border-[#E5C158]/40 rounded-full text-xs font-black uppercase tracking-widest">
-            Hospital Workflow
-          </span>
-          <h2 className="mt-5 text-2xl sm:text-3xl font-black text-[#5A1827] tracking-tight uppercase">
-            Hospitals / Hospital Staff
-          </h2>
-          <h3 className="mt-3 text-xl sm:text-2xl font-black text-[#990000]">Need Blood for a Patient?</h3>
-          <p className="mt-4 text-slate-600 text-xs sm:text-sm font-medium max-w-2xl mx-auto">
-            Submit Patient Request from Hospital Dashboard. Patient requisitions, donor matching, approval, dispatch, and location intelligence stay inside the authorized hospital environment.
-          </p>
-
-          <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-            <button
-              type="button"
-              onClick={handlePortalRedirect}
-              className="px-8 py-4 bg-[#5A1827] hover:bg-[#4A121F] text-[#E5C158] font-black uppercase tracking-widest rounded-2xl transition-all duration-300 cursor-pointer shadow-xl border-2 border-[#E5C158]/50 text-sm hover:scale-[0.99]"
-            >
-              {token ? 'Open Hospital Dashboard' : 'Login to Hospital Dashboard'}
-            </button>
-            {!token && (
-              <button
-                type="button"
-                onClick={() => navigate('/register')}
-                className="px-8 py-4 bg-[#E5C158] hover:bg-[#d4b04d] text-[#5A1827] font-black uppercase tracking-widest rounded-2xl transition-all duration-300 cursor-pointer shadow-xl text-sm hover:scale-[0.99] border-2 border-[#5A1827]/20"
-              >
-                Create Account
-              </button>
-            )}
-          </div>
         </div>
       </section>
 

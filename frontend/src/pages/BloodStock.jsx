@@ -199,7 +199,7 @@ const BloodStock = () => {
               : 'bg-[#FAF9F6] text-[#5A1827] hover:bg-slate-100 border border-[#6B1D2F]/20'
           }`}
         >
-          <FileText className="w-4 h-4" /> Patient Requests ({patientRequests.length})
+          <FileText className="w-4 h-4" /> Request Management ({patientRequests.length})
         </button>
 
         <button

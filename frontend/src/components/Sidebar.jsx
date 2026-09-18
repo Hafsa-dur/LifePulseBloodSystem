@@ -21,52 +21,77 @@ import {
 const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   const navigate = useNavigate();
 
-  // Retrieve user details from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user.role || 'donor';
   const isHospitalRole = userRole === 'admin' || userRole === 'staff';
+  const staffRole = user.staffRole || '';
   const can = (permission) => userRole === 'admin' || (user.permissions || []).includes(permission);
 
-  // Handle user logout action and clear storage
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
-  // Define sidebar menu items based on user role (admin vs donor)
   const getMenuItems = () => {
     if (isHospitalRole) {
-      return [
+      const adminItems = [
         { path: '/dashboard', label: 'System Overview', icon: LayoutDashboard },
-        ...(can('inventory') ? [{ path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle }, { path: '/blood-list', label: 'Stock Directory', icon: Droplets }] : []),
-        { path: '/patient-requests', label: 'Patient Requests', icon: GitPullRequest },
-        { path: '/patient-request', label: 'Submit Patient Request', icon: ClipboardList },
-        ...(can('dispatch') ? [{ path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio }, { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList }] : []),
-        ...(can('tracking') ? [{ path: '/tracking', label: 'Live Transport Tracking', icon: Truck }] : []),
-        ...(can('emergency') ? [{ path: '/trauma-network', label: 'Emergency Network', icon: Activity }] : []),
-        { path: '/hospital-request', label: 'Hospital Request', icon: Hospital },
-        ...(userRole === 'admin' ? [{ path: '/reports', label: 'Reports & Analytics', icon: Activity }, { path: '/staff-management', label: 'Staff Management', icon: User }] : []),
         { path: '/account-center', label: 'Account Center', icon: User },
-        ...(userRole === 'admin' ? [{ path: '/settings', label: 'Settings', icon: Hospital }] : []),
       ];
-    } else {
-      // Donor Portal Menu Items (Updated with Life Impact Board)
-      return [
-        { path: '/history', label: 'My Donations', icon: History },
-        { path: '/donor-qr', label: 'Digital Passport', icon: QrCode },
-        { path: '/donor/gamification', label: 'Rewards & Gamification', icon: Award },
-        { path: '/life-impact-board', label: 'Life Impact Board', icon: HeartHandshake },
-        { path: '/profile', label: 'Donor Profile', icon: User },
+
+      const emergencyItems = [
+        { path: '/dashboard', label: 'System Overview', icon: LayoutDashboard },
+        { path: '/request-management', label: 'Request Management', icon: GitPullRequest },
+        { path: '/patient-request', label: 'Submit Patient Request', icon: ClipboardList },
+        { path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio },
+        { path: '/tracking', label: 'Live Transport Tracking', icon: Truck },
+        { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList },
+        { path: '/account-center', label: 'Account Center', icon: User },
       ];
+
+      const bloodBankItems = [
+        { path: '/dashboard', label: 'System Overview', icon: LayoutDashboard },
+        { path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle },
+        { path: '/blood-list', label: 'Stock Directory', icon: Droplets },
+        { path: '/request-management', label: 'Request Management', icon: GitPullRequest },
+        { path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio },
+        { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList },
+        { path: '/tracking', label: 'Live Transport Tracking', icon: Truck },
+        { path: '/account-center', label: 'Account Center', icon: User },
+      ];
+
+      if (userRole === 'admin') {
+        return [
+          ...adminItems,
+          ...(can('inventory') ? [{ path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle }, { path: '/blood-list', label: 'Stock Directory', icon: Droplets }] : []),
+          ...(can('requests') ? [{ path: '/request-management', label: 'Request Management', icon: GitPullRequest }, { path: '/patient-request', label: 'Submit Patient Request', icon: ClipboardList }] : []),
+          ...(can('dispatch') ? [{ path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio }, { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList }] : []),
+          ...(can('tracking') ? [{ path: '/tracking', label: 'Live Transport Tracking', icon: Truck }] : []),
+          { path: '/reports', label: 'Reports & Analytics', icon: Activity },
+          { path: '/staff-management', label: 'Staff Management', icon: User },
+          { path: '/settings', label: 'Settings', icon: Hospital },
+        ];
+      }
+
+      if (staffRole === 'Emergency Staff') return emergencyItems;
+      if (staffRole === 'Blood Bank Staff') return bloodBankItems;
+      return adminItems;
     }
+
+    return [
+      { path: '/history', label: 'My Donations', icon: History },
+      { path: '/donor-qr', label: 'Digital Passport', icon: QrCode },
+      { path: '/donor/gamification', label: 'Rewards & Gamification', icon: Award },
+      { path: '/life-impact-board', label: 'Life Impact Board', icon: HeartHandshake },
+      { path: '/profile', label: 'Donor Profile', icon: User },
+    ];
   };
 
   const menuItems = getMenuItems();
 
   return (
     <aside className={`sidebar-responsive ${isOpen ? 'sidebar-open' : ''} w-64 bg-[#5A1827] border-r-2 border-[#E5C158]/30 flex flex-col h-screen sticky top-0 z-40 font-sans shadow-xl shrink-0`}>
-      {/* Brand Header Section */}
       <div className="p-6 border-b-2 border-[#E5C158]/20 flex items-center gap-3 bg-[#4A121F]">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#E5C158] to-amber-300 flex items-center justify-center text-[#5A1827] font-black shadow-lg border border-white/20">
           LP
@@ -74,7 +99,7 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         <div>
           <h1 className="text-base font-black text-white tracking-wider">LifePulse</h1>
           <p className="text-[10px] text-[#E5C158] font-black uppercase tracking-widest">
-            {isHospitalRole ? (userRole === 'staff' ? 'Staff Portal' : 'Admin Portal') : 'Donor Portal'}
+            {userRole === 'admin' ? 'Admin Portal' : userRole === 'staff' ? (staffRole === 'Emergency Staff' ? 'Emergency Portal' : staffRole === 'Blood Bank Staff' ? 'Blood Bank Portal' : 'Staff Portal') : 'Donor Portal'}
           </p>
         </div>
       </div>

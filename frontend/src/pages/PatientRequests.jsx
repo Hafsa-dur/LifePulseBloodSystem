@@ -143,13 +143,13 @@ const PatientRequests = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-[#5A1827]/15 pb-4 gap-4">
           <div>
             <span className="px-3.5 py-1 bg-[#E5C158]/20 border border-[#E5C158] text-[#7A6305] font-bold text-xs rounded-full uppercase tracking-wider">
-              Patient Management
+              Request Management
             </span>
             <h2 className="text-3xl font-black text-[#5A1827] flex items-center gap-2.5 mt-2">
-              <Users className="text-rose-600 w-7 h-7" /> Patient Blood Requests
+              <Users className="text-rose-600 w-7 h-7" /> Request Management
             </h2>
             <p className="text-sm text-slate-600 font-medium mt-1">
-              Review and manage incoming blood requests from patients in real-time.
+              Review matched donors, approve requisitions, and dispatch patient requests in real-time.
             </p>
           </div>
 
@@ -203,6 +203,7 @@ const PatientRequests = () => {
                       <td className="py-4 px-5 text-xs">
                         <div className="font-black text-[#5A1827]">{row.donorName || 'Stock Inventory'}</div>
                         {row.donorLocation && <div className="text-slate-500">{row.donorLocation}</div>}
+                        <div className="text-[10px] font-black uppercase text-emerald-700">{row.locationMatchStatus === 'Matched' ? `Nearest · ${row.donorDistance ?? 'N/A'} km` : 'Inventory fallback'}</div>
                       </td>
                       <td className="py-4 px-5">
                         <span
