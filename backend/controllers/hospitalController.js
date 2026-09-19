@@ -119,17 +119,13 @@ export const createStaffInvitation = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only hospital administrators can create staff invitations.' });
     }
 
-    const { email, expiresInMinutes = 60 } = req.body || {};
+    const { email } = req.body || {};
     const staffRole = 'Hospital Staff';
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!normalizedEmail) {
       return res.status(400).json({ success: false, message: 'Invited staff email is required.' });
     }
 
-    const expiryMinutes = Number(expiresInMinutes);
-    if (!Number.isFinite(expiryMinutes) || expiryMinutes < 15 || expiryMinutes > 1440) {
-      return res.status(400).json({ success: false, message: 'Invitation expiry must be between 15 minutes and 24 hours.' });
-    }
     const configuredFrontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
     const frontendUrl = configuredFrontendUrl || (process.env.NODE_ENV === 'production'
       ? 'https://life-pulse-blood-system.vercel.app'
@@ -143,7 +139,7 @@ export const createStaffInvitation = async (req, res) => {
 
     const token = crypto.randomBytes(24).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const invitation = await StaffInvitation.create({
       tokenHash,
