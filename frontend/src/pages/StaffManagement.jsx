@@ -16,7 +16,7 @@ const StaffManagement = () => {
   const [invite, setInvite] = useState({ email: '', expiresInMinutes: 60, staffRole: 'Hospital Staff' });
   const [inviteLink, setInviteLink] = useState('');
   const [inviteStatus, setInviteStatus] = useState({ type: '', text: '' });
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', staffRole: 'Emergency Staff' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', staffRole: 'Hospital Staff' });
 
   useEffect(() => {
     fetch(`${API_URL}/hospital/staff`, { headers: authHeaders() })
@@ -32,7 +32,7 @@ const StaffManagement = () => {
     const data = await parseResponse(response);
     if (!response.ok) return alert(data.message || 'Unable to add staff member.');
     setStaff((items) => [data.staff, ...items]);
-    setForm({ name: '', email: '', password: '', phone: '', staffRole: 'Emergency Staff' });
+    setForm({ name: '', email: '', password: '', phone: '', staffRole: 'Hospital Staff' });
   };
 
   const generateInvitation = async (event) => {
@@ -145,6 +145,7 @@ const StaffManagement = () => {
               <form onSubmit={addStaff} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
                 {['name', 'email', 'password', 'phone'].map((field) => <input key={field} required={field !== 'phone'} type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'} placeholder={field[0].toUpperCase() + field.slice(1)} value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />)}
                 <select value={form.staffRole} onChange={(event) => setForm({ ...form, staffRole: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm">
+                  <option>Hospital Staff</option>
                   <option>Emergency Staff</option>
                   <option>Blood Bank Staff</option>
                 </select>

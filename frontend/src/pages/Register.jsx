@@ -1,199 +1,112 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API_URL, parseResponse } from '../api';
 
 const Register = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    bloodGroup: 'O+',
-    password: '',
-    confirmPassword: '',
+  const [searchParams] = useSearchParams();
+  const [role, setRole] = useState('donor');
+  const [hospitals, setHospitals] = useState([]);
+  const [mode, setMode] = useState('existing');
+  const [form, setForm] = useState({
+    name: '', email: '', password: '', confirmPassword: '', bloodGroup: 'O+', phone: '',
+    hospitalId: '', hospitalName: '', hospitalLocation: '', token: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-
-  // Handle Input Field Changes
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // Handle Registration Request to Express/MongoDB Backend API
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      return setError('Passwords do not match');
+  useEffect(() => {
+    if (role !== 'donor') {
+      fetch(`${API_URL}/hospital/directory`)
+        .then(parseResponse)
+        .then((data) => setHospitals(data.hospitals || []))
+        .catch(() => setHospitals([]));
     }
+  }, [role]);
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) setForm((current) => ({ ...current, token }));
+  }, [searchParams]);
+
+  const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
+    if (role === 'hospital_staff' && !form.token) return setError('Hospital Staff registration requires an Admin invitation token/link.');
 
     setLoading(true);
-
     try {
-      // POST Request to Node.js/Express MongoDB Auth Register Endpoint
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          bloodGroup: formData.bloodGroup,
-          password: formData.password,
-          role: 'donor', // Default Role
-        }),
-      });
+      let endpoint = `${API_URL}/auth/register`;
+      let body = { name: form.name, email: form.email, password: form.password, phone: form.phone, role: 'donor', bloodGroup: form.bloodGroup };
 
-      const data = await parseResponse(response);
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed. Please try again.');
+      if (role === 'hospital_admin') {
+        endpoint = `${API_URL}/hospital/onboard`;
+        body = { name: form.name, email: form.email, password: form.password, phone: form.phone, hospitalId: mode === 'existing' ? form.hospitalId : '', hospitalName: mode === 'new' ? form.hospitalName : '', hospitalLocation: mode === 'new' ? form.hospitalLocation : '' };
+      } else if (role === 'hospital_staff') {
+        endpoint = `${API_URL}/auth/staff/register`;
+        body = { token: form.token, name: form.name, email: form.email, password: form.password, phone: form.phone };
       }
 
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await parseResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Registration failed.');
+      if (data.token && data.user) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        navigate(role === 'donor' ? '/profile' : '/dashboard', { replace: true });
+      } else {
+        navigate('/login');
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
       setLoading(false);
-      navigate('/login');
-
-    } catch (err) {
-      setLoading(false);
-      setError(err.message || 'Server connection error. Please try again.');
     }
   };
 
+  const showHospitalFields = role === 'hospital_admin';
+  const isStaff = role === 'hospital_staff';
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#FAF9F6] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-3xl shadow-2xl border-2 border-[#5A1827]/20">
-        
-        {/* Header Section */}
+    <div className="min-h-[calc(100vh-4rem)] bg-[#FAF9F6] flex items-center justify-center py-12 px-4 font-sans">
+      <div className="w-full max-w-2xl space-y-6 bg-white p-8 rounded-3xl shadow-2xl border-2 border-[#5A1827]/20">
         <div className="text-center">
-          <div className="mx-auto w-12 h-12 bg-rose-100 border-2 border-rose-300 rounded-2xl flex items-center justify-center mb-3 shadow-inner">
-            <span className="text-2xl font-black text-[#990000]">+</span>
-          </div>
-          <h2 className="text-3xl font-black text-[#5A1827] tracking-tight">
-            Create an Account
-          </h2>
-          <p className="mt-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Join LifePulse as a blood donor or recipient
-          </p>
+          <h1 className="text-3xl font-black text-[#5A1827]">Create an Account</h1>
+          <p className="mt-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Choose the account type that matches your LifePulse access.</p>
         </div>
 
-        {/* Dynamic Error Notification Banner */}
-        {error && (
-          <div className="bg-rose-100 border-2 border-rose-300 text-[#990000] px-4 py-3 rounded-2xl text-xs font-bold shadow-sm">
-            {error}
-          </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {[['donor', 'Donor'], ['hospital_admin', 'Hospital Admin'], ['hospital_staff', 'Hospital Staff']].map(([value, label]) => (
+            <button type="button" key={value} onClick={() => setRole(value)} className={`rounded-xl border-2 px-3 py-3 text-xs font-black uppercase ${role === value ? 'bg-[#5A1827] text-white border-[#5A1827]' : 'bg-[#FAF9F6] text-[#5A1827] border-[#5A1827]/20'}`}>{label}</button>
+          ))}
+        </div>
 
-        {/* Input Form */}
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-xs font-black text-[#5A1827] uppercase tracking-wider mb-1">
-              Full Name
-            </label>
-            <input
-              type="text"
-              name="name"
-              required
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="John Doe"
-              className="w-full px-4 py-3 rounded-2xl bg-[#FAF9F6] border-2 border-[#5A1827]/30 focus:outline-none focus:border-[#5A1827] text-[#5A1827] font-bold text-sm transition-all placeholder:text-slate-400 shadow-inner"
-            />
-          </div>
+        {error && <div className="rounded-xl border-2 border-rose-300 bg-rose-100 px-4 py-3 text-xs font-bold text-rose-800">{error}</div>}
+        {isStaff && <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">Hospital Staff accounts are created only through a Hospital Admin invitation. Paste the token from your invitation link below.</div>}
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
-              <label className="block text-xs font-black text-[#5A1827] uppercase tracking-wider mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="name@example.com"
-                className="w-full px-4 py-3 rounded-2xl bg-[#FAF9F6] border-2 border-[#5A1827]/30 focus:outline-none focus:border-[#5A1827] text-[#5A1827] font-bold text-sm transition-all placeholder:text-slate-400 shadow-inner"
-              />
-            </div>
+        {showHospitalFields && <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setMode('existing')} className={`rounded-xl border-2 p-3 text-xs font-black uppercase ${mode === 'existing' ? 'bg-[#5A1827] text-white border-[#5A1827]' : 'border-[#5A1827]/20'}`}>Existing Hospital</button>
+          <button type="button" onClick={() => setMode('new')} className={`rounded-xl border-2 p-3 text-xs font-black uppercase ${mode === 'new' ? 'bg-[#5A1827] text-white border-[#5A1827]' : 'border-[#5A1827]/20'}`}>Create New Hospital</button>
+        </div>}
 
-            <div>
-              <label className="block text-xs font-black text-[#5A1827] uppercase tracking-wider mb-1">
-                Blood Group
-              </label>
-              <select
-                name="bloodGroup"
-                value={formData.bloodGroup}
-                onChange={handleChange}
-                className="w-full px-3 py-3 rounded-2xl bg-[#FAF9F6] border-2 border-[#5A1827]/30 focus:outline-none focus:border-[#5A1827] text-[#5A1827] font-black text-sm transition-all shadow-inner cursor-pointer"
-              >
-                {bloodGroups.map((bg) => (
-                  <option key={bg} value={bg} className="bg-white text-[#5A1827] font-bold">
-                    {bg}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-black text-[#5A1827] uppercase tracking-wider mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              required
-              minLength="6"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-2xl bg-[#FAF9F6] border-2 border-[#5A1827]/30 focus:outline-none focus:border-[#5A1827] text-[#5A1827] font-bold text-sm transition-all placeholder:text-slate-400 shadow-inner"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-black text-[#5A1827] uppercase tracking-wider mb-1">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              required
-              minLength="6"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-2xl bg-[#FAF9F6] border-2 border-[#5A1827]/30 focus:outline-none focus:border-[#5A1827] text-[#5A1827] font-bold text-sm transition-all placeholder:text-slate-400 shadow-inner"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 px-4 bg-[#5A1827] hover:bg-[#4A121F] text-[#E5C158] font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-rose-950/20 active:scale-[0.99] disabled:opacity-50 mt-2 border-2 border-[#E5C158]/50 cursor-pointer"
-          >
-            {loading ? 'Creating Account...' : 'Register'}
-          </button>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input required placeholder="Full name" value={form.name} onChange={(event) => update('name', event.target.value)} className="field" />
+          <input required type="email" placeholder="Email address" value={form.email} onChange={(event) => update('email', event.target.value)} className="field" />
+          <input required minLength="6" type="password" placeholder="Password" value={form.password} onChange={(event) => update('password', event.target.value)} className="field" />
+          <input required minLength="6" type="password" placeholder="Confirm password" value={form.confirmPassword} onChange={(event) => update('confirmPassword', event.target.value)} className="field" />
+          {role === 'donor' && <select value={form.bloodGroup} onChange={(event) => update('bloodGroup', event.target.value)} className="field">{bloodGroups.map((group) => <option key={group}>{group}</option>)}</select>}
+          <input placeholder="Phone (optional)" value={form.phone} onChange={(event) => update('phone', event.target.value)} className="field" />
+          {showHospitalFields && (mode === 'existing' ? <select required value={form.hospitalId} onChange={(event) => update('hospitalId', event.target.value)} className="field"><option value="">Select hospital</option>{hospitals.map((hospital) => <option key={hospital.hospitalId} value={hospital.hospitalId}>{hospital.name} · {hospital.location}</option>)}</select> : <><input required placeholder="New hospital name" value={form.hospitalName} onChange={(event) => update('hospitalName', event.target.value)} className="field" /><input required placeholder="Hospital location" value={form.hospitalLocation} onChange={(event) => update('hospitalLocation', event.target.value)} className="field" /></>)}
+          {isStaff && <input required placeholder="Invitation token" value={form.token} onChange={(event) => update('token', event.target.value)} className="field md:col-span-2" />}
+          <button disabled={loading} className="md:col-span-2 rounded-xl bg-[#5A1827] py-3 text-xs font-black uppercase tracking-widest text-[#E5C158] disabled:opacity-50">{loading ? 'Creating account...' : role === 'hospital_admin' ? 'Create Hospital Admin' : role === 'hospital_staff' ? 'Complete Staff Registration' : 'Register as Donor'}</button>
         </form>
 
-        {/* Navigation Footer */}
-        <div className="text-center text-xs font-bold text-slate-500 pt-4 border-t-2 border-[#5A1827]/10">
-          Already registered?{' '}
-          <Link to="/login" className="font-black text-[#990000] hover:underline">
-            Sign in
-          </Link>
-          <span className="mx-2">|</span>
-          <Link to="/hospital-onboarding" className="font-black text-[#990000] hover:underline">
-            Create hospital admin
-          </Link>
-        </div>
-
+        <div className="text-center text-xs font-bold text-slate-500 pt-4 border-t-2 border-[#5A1827]/10">Already registered? <Link to="/login" className="font-black text-[#990000] hover:underline">Sign in</Link></div>
       </div>
+      <style>{`.field{width:100%;border:2px solid rgba(90,24,39,.2);background:#FAF9F6;border-radius:.75rem;padding:.75rem;font-size:.875rem;font-weight:600;color:#5A1827;outline:none}.field:focus{border-color:#5A1827}`}</style>
     </div>
   );
 };
