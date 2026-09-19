@@ -25,7 +25,7 @@ export const requireAuth = async (req, res, next) => {
 
     user.role = normalizeUserRole(user.role);
     if (user.role === 'staff' && user.staffRole && !VALID_STAFF_ROLES.has(user.staffRole)) {
-      return res.status(403).json({ success: false, message: 'Only Emergency Staff and Blood Bank Staff accounts are allowed.' });
+      return res.status(403).json({ success: false, message: 'Only Hospital Staff, Emergency Staff, and Blood Bank Staff accounts are allowed.' });
     }
 
     req.user = user;

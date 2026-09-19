@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireAuth, requireHospitalRole, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireHospitalRole, requireAdmin, requirePermission } from '../middleware/auth.js';
 import { createStaff, getStaff, updateStaff, deleteStaff, getHospitalSettings, updateHospitalSettings, getHospitalAnalytics, updateAccount, listHospitals, onboardHospitalAdmin, createStaffInvitation } from '../controllers/hospitalController.js';
 import { sendDonorEmergencyEmail } from '../services/emailService.js';
 import Donation from '../models/donationModel.js';
@@ -17,7 +17,7 @@ router.get('/settings', requireAdmin, getHospitalSettings);
 router.put('/settings', requireAdmin, updateHospitalSettings);
 router.get('/analytics', getHospitalAnalytics);
 router.patch('/account', updateAccount);
-router.post('/send-donor-email', async (req, res) => {
+router.post('/send-donor-email', requirePermission('dispatch'), async (req, res) => {
   try {
     const { donorId, hospitalName, hospitalLocation, unitsRequired, customMessage, urgency = 'Urgent' } = req.body || {};
     if (!donorId) {

@@ -5,6 +5,7 @@ import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import { sendDonorThankYouEmail } from '../services/emailService.js';
 
 const locationCache = new Map();
+const DONATION_ELIGIBILITY_DAYS = 56;
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -48,15 +49,28 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, session,
     return null;
   }
 
+  const eligibilityDate = new Date(Date.now() - DONATION_ELIGIBILITY_DAYS * 24 * 60 * 60 * 1000);
+
   const donorQuery = Donation.find({
     bloodGroup: new RegExp(`^${escapeRegex(normalizedBloodGroup)}$`, 'i'),
     units: { $gte: requestedUnits },
     status: { $ne: 'Dispatched' },
     donorName: { $exists: true, $nin: ['', null], $not: /^(Direct Donor|System Stock|Inventory|Dispatched to:)/i },
     email: { $exists: true, $nin: ['', null] },
-    $or: [
-      { location: { $exists: true, $nin: ['', null] } },
-      { address: { $exists: true, $nin: ['', null] } }
+    $and: [
+      {
+        $or: [
+          { lastDonationDate: { $lte: eligibilityDate } },
+          { lastDonationDate: null, donationDate: { $lte: eligibilityDate } },
+          { lastDonationDate: { $exists: false }, donationDate: { $lte: eligibilityDate } }
+        ]
+      },
+      {
+        $or: [
+          { location: { $exists: true, $nin: ['', null] } },
+          { address: { $exists: true, $nin: ['', null] } }
+        ]
+      }
     ]
   }).sort({ createdAt: 1, _id: 1 });
   if (session) donorQuery.session(session);
@@ -70,11 +84,12 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, session,
     const donorLocation = String(donor.location || donor.address || '').trim();
     const coordinates = await geocodeLocation(donorLocation);
     const exactLocation = donorLocation.toLowerCase() === savedLocation.toLowerCase();
+    if (!exactLocation && (!targetCoordinates || !coordinates)) return null;
     return {
       donor,
       distance: exactLocation ? 0 : distanceInKilometers(targetCoordinates, coordinates)
     };
-  }));
+  })).then((matches) => matches.filter(Boolean));
 
   rankedDonors.sort((first, second) => first.distance - second.distance
     || new Date(first.donor.createdAt) - new Date(second.donor.createdAt)

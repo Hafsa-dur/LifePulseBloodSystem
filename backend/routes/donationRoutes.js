@@ -8,7 +8,7 @@ import {
   findMatchingDonors,
   getPublicDonationStats
 } from '../controllers/donationController.js';
-import { requireAuth, requireHospitalRole } from '../middleware/auth.js';
+import { requireAuth, requireHospitalRole, requirePermission } from '../middleware/auth.js';
 
 
 const router = express.Router();
@@ -34,5 +34,5 @@ router.get('/match', requireAuth, requireHospitalRole, async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 });
-router.post('/dispatch', dispatchBlood);                     // Dispatch blood units
+router.post('/dispatch', requireAuth, requireHospitalRole, requirePermission('dispatch'), dispatchBlood);                     // Dispatch blood units
 export default router;
