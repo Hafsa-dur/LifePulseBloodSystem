@@ -5,8 +5,6 @@ import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import { sendDonorThankYouEmail } from '../services/emailService.js';
 
 const locationCache = new Map();
-const DONATION_ELIGIBILITY_DAYS = 56;
-
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const geocodeLocation = async (location) => {
@@ -14,23 +12,41 @@ const geocodeLocation = async (location) => {
   if (!normalizedLocation) return null;
   if (locationCache.has(normalizedLocation)) return locationCache.get(normalizedLocation);
 
-  const locationParts = normalizedLocation.split('/').map((part) => part.trim()).filter(Boolean);
+  const locationParts = normalizedLocation.split(/[\/,]/).map((part) => part.trim()).filter(Boolean);
   const cityContext = normalizedLocation.includes(',') ? normalizedLocation.slice(normalizedLocation.lastIndexOf(',') + 1).trim() : '';
-  const contextualParts = cityContext
-    ? locationParts.map((part) => `${part}, ${cityContext}`)
-    : locationParts;
-  const searchLocations = [...new Set([normalizedLocation, ...contextualParts])];
+  const contextualParts = cityContext ? locationParts.slice(0, -1).map((part) => `${part}, ${cityContext}`) : locationParts;
+  const cityFallback = cityContext ? `${cityContext}, Pakistan` : '';
+  const searchLocations = [...new Set([normalizedLocation, ...contextualParts, cityFallback].filter(Boolean))];
   const request = (async () => {
     for (const searchLocation of searchLocations) {
       try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(searchLocation)}`, {
-          headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' }
-        });
+        const nominatimUrl = new URL('https://nominatim.openstreetmap.org/search');
+        nominatimUrl.searchParams.set('format', 'jsonv2');
+        nominatimUrl.searchParams.set('limit', '1');
+        nominatimUrl.searchParams.set('q', searchLocation);
+        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         if (!response.ok) continue;
         const results = await response.json();
-        if (results[0]) return { latitude: Number(results[0].lat), longitude: Number(results[0].lon) };
+        if (results[0]) return { latitude: Number(results[0].lat), longitude: Number(results[0].lon), precision: searchLocation === cityFallback ? 'city' : 'place' };
       } catch {
         // Try the next real location variant.
+      }
+    }
+
+    for (const searchLocation of searchLocations.slice(0, -1)) {
+      try {
+        const photonUrl = new URL('https://photon.komoot.io/api/');
+        photonUrl.searchParams.set('q', `${searchLocation}, Pakistan`);
+        photonUrl.searchParams.set('limit', '5');
+        const response = await fetch(photonUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
+        if (!response.ok) continue;
+        const result = await response.json();
+        const feature = result.features?.find((item) => /pakistan/i.test(String(item.properties?.country || '')));
+        if (feature?.geometry?.coordinates?.length === 2) {
+          return { latitude: Number(feature.geometry.coordinates[1]), longitude: Number(feature.geometry.coordinates[0]), precision: 'place' };
+        }
+      } catch {
+        // Keep trying real provider results.
       }
     }
     return null;
@@ -60,8 +76,6 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, session,
     return null;
   }
 
-  const eligibilityDate = new Date(Date.now() - DONATION_ELIGIBILITY_DAYS * 24 * 60 * 60 * 1000);
-
   const donorQuery = Donation.find({
     bloodGroup: new RegExp(`^${escapeRegex(normalizedBloodGroup)}$`, 'i'),
     units: { $gte: requestedUnits },
@@ -71,9 +85,9 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, session,
     $and: [
       {
         $or: [
-          { lastDonationDate: { $lte: eligibilityDate } },
-          { lastDonationDate: null, donationDate: { $lte: eligibilityDate } },
-          { lastDonationDate: { $exists: false }, donationDate: { $lte: eligibilityDate } }
+          { nextEligibleDate: { $exists: false } },
+          { nextEligibleDate: null },
+          { nextEligibleDate: { $lte: new Date() } }
         ]
       },
       {
@@ -201,6 +215,7 @@ export const addDonation = async (req, res) => {
       notes: notes || hospitalName || 'General Donation',
       donationDate: donationDate || Date.now(),
       lastDonationDate: lastDonationDate || donationDate || Date.now(),
+      nextEligibleDate: req.body.nextEligibleDate || undefined,
     });
 
     const savedDonation = await newDonation.save();

@@ -18,6 +18,7 @@ const donationSchema = new mongoose.Schema({
   notes: { type: String, default: '' },
   donationDate: { type: Date, default: Date.now },
   lastDonationDate: { type: Date },
+  nextEligibleDate: { type: Date },
   status: { type: String, default: 'Recorded' }
 }, { timestamps: true });
 
