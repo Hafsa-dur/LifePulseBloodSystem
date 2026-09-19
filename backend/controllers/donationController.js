@@ -16,9 +16,9 @@ const geocodeLocation = async (location) => {
   const cityContext = normalizedLocation.includes(',') ? normalizedLocation.slice(normalizedLocation.lastIndexOf(',') + 1).trim() : '';
   const contextualParts = cityContext ? locationParts.slice(0, -1).map((part) => `${part}, ${cityContext}`) : locationParts;
   const cityFallback = cityContext ? `${cityContext}, Pakistan` : '';
-  const searchLocations = [...new Set([normalizedLocation, ...contextualParts, cityFallback].filter(Boolean))];
+  const placeSearchLocations = [...new Set([normalizedLocation, ...contextualParts].filter(Boolean))];
   const request = (async () => {
-    for (const searchLocation of searchLocations) {
+    for (const searchLocation of placeSearchLocations) {
       try {
         const nominatimUrl = new URL('https://nominatim.openstreetmap.org/search');
         nominatimUrl.searchParams.set('format', 'jsonv2');
@@ -27,13 +27,14 @@ const geocodeLocation = async (location) => {
         const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         if (!response.ok) continue;
         const results = await response.json();
-        if (results[0]) return { latitude: Number(results[0].lat), longitude: Number(results[0].lon), precision: searchLocation === cityFallback ? 'city' : 'place' };
+        const placeResult = results.find((result) => !['city', 'state', 'country'].includes(String(result.type || '').toLowerCase()));
+        if (placeResult) return { latitude: Number(placeResult.lat), longitude: Number(placeResult.lon), precision: 'place' };
       } catch {
         // Try the next real location variant.
       }
     }
 
-    for (const searchLocation of searchLocations.slice(0, -1)) {
+    for (const searchLocation of placeSearchLocations) {
       try {
         const photonUrl = new URL('https://photon.komoot.io/api/');
         photonUrl.searchParams.set('q', `${searchLocation}, Pakistan`);
@@ -41,12 +42,31 @@ const geocodeLocation = async (location) => {
         const response = await fetch(photonUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         if (!response.ok) continue;
         const result = await response.json();
-        const feature = result.features?.find((item) => /pakistan/i.test(String(item.properties?.country || '')));
+        const feature = result.features?.find((item) => {
+          const properties = item.properties || {};
+          const country = String(properties.country || '');
+          const city = String(properties.city || properties.county || '');
+          return /pakistan|پاکستان/i.test(country) || /peshawar/i.test(city);
+        });
         if (feature?.geometry?.coordinates?.length === 2) {
           return { latitude: Number(feature.geometry.coordinates[1]), longitude: Number(feature.geometry.coordinates[0]), precision: 'place' };
         }
       } catch {
         // Keep trying real provider results.
+      }
+    }
+
+    if (cityFallback) {
+      try {
+        const cityUrl = new URL('https://nominatim.openstreetmap.org/search');
+        cityUrl.searchParams.set('format', 'jsonv2');
+        cityUrl.searchParams.set('limit', '1');
+        cityUrl.searchParams.set('q', cityFallback);
+        const response = await fetch(cityUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
+        const results = response.ok ? await response.json() : [];
+        if (results[0]) return { latitude: Number(results[0].lat), longitude: Number(results[0].lon), precision: 'city' };
+      } catch {
+        // No usable city fallback.
       }
     }
     return null;
@@ -132,7 +152,7 @@ export const findNearestMatchingDonor = async (options) => {
 export const getAllDonations = async (req, res) => {
   try {
     const filter = req.user?.hospitalId
-      ? { hospitalId: req.user.hospitalId }
+      ? { $or: [{ hospitalId: req.user.hospitalId }, { hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName || '')}$`, 'i') }] }
       : req.user?.hospitalName
         ? { hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName)}$`, 'i') }
         : req.user?.role === 'donor'
@@ -166,7 +186,7 @@ export const getDashboardDonations = async (req, res) => {
         { donorName: { $not: /^Dispatched to/i } }
       ]
     };
-    if (req.user?.hospitalId) filter.$and.push({ hospitalId: req.user.hospitalId });
+    if (req.user?.hospitalId) filter.$and.push({ $or: [{ hospitalId: req.user.hospitalId }, { hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName || '')}$`, 'i') }] });
     else if (req.user?.hospitalName) filter.$and.push({ hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName)}$`, 'i') });
     const donations = await Donation.find(filter).sort({ createdAt: -1 });
     
@@ -335,6 +355,7 @@ export const dispatchBlood = async (req, res) => {
         totalUnits: requestedUnits,
         availableUnits: 0,
         dispatchedUnits: requestedUnits,
+        hospitalId: req.user?.hospitalId || '',
         phone: 'N/A',
         hospitalName: hospitalName || 'General Hospital',
         notes: hospitalName || 'Direct Dispatch',

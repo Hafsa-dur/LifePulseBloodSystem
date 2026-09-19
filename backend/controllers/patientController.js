@@ -240,7 +240,7 @@ export const dispatchRequest = async (req, res) => {
             await new Donation({
                 donorName: `Dispatched to: ${request.patientName} (${request.hospitalName})`,
                 email: `dispatch-${new mongoose.Types.ObjectId()}@lifepulse.com`,
-                bloodGroup, units: -requiredUnits, totalUnits: requiredUnits, availableUnits: 0, dispatchedUnits: requiredUnits, hospitalName: request.hospitalName,
+                bloodGroup, units: -requiredUnits, totalUnits: requiredUnits, availableUnits: 0, dispatchedUnits: requiredUnits, hospitalId: request.hospitalId || req.user.hospitalId || '', hospitalName: request.hospitalName,
                 notes: request.hospitalName, status: 'Dispatched', donationDate: new Date()
             }).save({ session });
             request.status = 'Dispatched';
