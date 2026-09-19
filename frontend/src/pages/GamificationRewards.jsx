@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 import { Award, Gift, Sparkles, Star, Zap, ShieldCheck, Mail } from 'lucide-react';
 
 const GamificationRewards = () => {
   const [points, setPoints] = useState(420);
-  const [donorEmail, setDonorEmail] = useState('');
+  const [donorEmail] = useState(() => JSON.parse(localStorage.getItem('user') || '{}').email || '');
   const [loading, setLoading] = useState(false);
 
   const rewardOffers = [
@@ -29,21 +29,11 @@ const GamificationRewards = () => {
     try {
       setLoading(true);
 
-      // Web3Forms Clean JSON Payload
-      const formData = {
-        access_key: "086142c1-1ea1-4e42-9ddd-e2aa7c064067",
-        subject: ` LifePulse Reward Unlocked: ${offer.title}`,
-        from_name: "LifePulse Rewards System",
-        message: `A reward has been successfully redeemed!\n\nDonor Email: ${donorEmail}\nReward: ${offer.title}\nPartner Lab: ${offer.partner}\nPoints Deducted: ${offer.pointsCost} PTS\nVoucher Code: LP-VOUCHER-${Math.floor(100000 + Math.random() * 900000)}\n\nShow this code at the lab counter.`
-      };
-
-      const response = await fetch('https://api.web3forms.com/submit', {
+      const voucherCode = `LP-VOUCHER-${Math.floor(100000 + Math.random() * 900000)}`;
+      const response = await fetch(`${API_URL}/auth/rewards/send`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(formData)
+        headers: authHeaders(true),
+        body: JSON.stringify({ rewardTitle: offer.title, partner: offer.partner, points: offer.pointsCost, voucherCode })
       });
 
       const result = await parseResponse(response);
@@ -57,7 +47,7 @@ const GamificationRewards = () => {
       setDonorEmail('');
 
     } catch (error) {
-      console.error('Web3Forms Error:', error);
+      console.error('Reward email error:', error);
       alert('Error sending email: ' + error.message);
     } finally {
       setLoading(false);
@@ -97,13 +87,13 @@ const GamificationRewards = () => {
         </div>
         <div className="flex-1 w-full">
           <label className="block text-xs font-black uppercase tracking-wider text-[#5A1827] mb-1">
-            Enter Your Real Email Address for Voucher Delivery:
+            Registered Email Address for Voucher Delivery:
           </label>
           <input
             type="email"
             value={donorEmail}
-            onChange={(e) => setDonorEmail(e.target.value)}
-            placeholder="e.g. hafsa@gmail.com"
+            readOnly
+            placeholder="Your registered donor email"
             className="w-full px-4 py-2.5 rounded-xl border-2 border-[#5A1827]/20 focus:border-[#5A1827] outline-none text-sm font-semibold bg-[#FAF9F6]"
           />
         </div>

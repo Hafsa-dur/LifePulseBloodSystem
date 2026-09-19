@@ -17,12 +17,37 @@ const GeoPulseRadar = () => {
   const [patientName, setPatientName] = useState('');
   const [customMessage, setCustomMessage] = useState('');
 
-  const fetchRealDonors = async () => {
+  const getDonorProximityInfo = (donor, matches = []) => {
+    const donorKey = String(donor.donorName || donor.name || '').trim().toLowerCase();
+    const donorMatch = matches.find((request) => {
+      const requestDonor = String(request.donorName || '').trim().toLowerCase();
+      return requestDonor && donorKey && requestDonor === donorKey;
+    });
+
+    const explicitDistance = Number(donor.distance ?? donor.distanceInKilometers ?? donor.proximityKm ?? donor.estimatedDistance ?? NaN);
+    const nearestDistance = Number.isFinite(explicitDistance) ? explicitDistance : Number(donorMatch?.donorDistance ?? NaN);
+
+    if (Number.isFinite(nearestDistance)) {
+      return {
+        proximityKm: nearestDistance,
+        label: `Nearest match: ${nearestDistance.toFixed(1)} km from hospital`,
+        isNearest: true
+      };
+    }
+
+    return {
+      proximityKm: null,
+      label: 'Saved donor location used for matching',
+      isNearest: false
+    };
+  };
+
+  const fetchRealDonors = async (matches = []) => {
     try {
       const response = await fetch(`${API_URL}/donations`, { headers: authHeaders() });
       if (response.ok) {
         const data = await parseResponse(response);
-        
+
         const activeDonors = data.filter(item => {
           const donorNameStr = item.donorName || item.name || '';
           const lowerName = donorNameStr.toLowerCase();
@@ -31,12 +56,21 @@ const GeoPulseRadar = () => {
           return !lowerName.includes('dispatched to') && status !== 'dispatched' &&
             item.role !== 'patient' && Number(item.units || 0) > 0 && Boolean(donorLocation);
         });
-        setDonors(activeDonors.map((donor) => {
-          return {
-            ...donor,
-            physicalAddress: donor.location || donor.address || ''
-          };
+
+        const enrichedDonors = activeDonors.map((donor) => ({
+          ...donor,
+          physicalAddress: donor.location || donor.address || '',
+          ...getDonorProximityInfo(donor, matches)
         }));
+
+        enrichedDonors.sort((first, second) => {
+          if (first.proximityKm == null && second.proximityKm == null) return 0;
+          if (first.proximityKm == null) return 1;
+          if (second.proximityKm == null) return -1;
+          return first.proximityKm - second.proximityKm;
+        });
+
+        setDonors(enrichedDonors);
       }
     } catch (error) {
       console.error("Error fetching live donors:", error);
@@ -44,14 +78,19 @@ const GeoPulseRadar = () => {
   };
 
   useEffect(() => {
-    const loadDonors = async () => {
-      await fetchRealDonors();
+    const loadData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/patient-requests`, { headers: authHeaders() });
+        const data = await parseResponse(response);
+        const matchedRequests = Array.isArray(data) ? data.filter((request) => request.locationMatchStatus) : [];
+        setRequestMatches(matchedRequests);
+        await fetchRealDonors(matchedRequests);
+      } catch (error) {
+        console.error('Error fetching request matches:', error);
+      }
     };
-    loadDonors();
-    fetch(`${API_URL}/patient-requests`, { headers: authHeaders() })
-      .then(parseResponse)
-      .then((data) => setRequestMatches(Array.isArray(data) ? data.filter((request) => request.locationMatchStatus) : []))
-      .catch((error) => console.error('Error fetching request matches:', error));
+
+    loadData();
   }, []);
 
   // Open Email Dispatch Modal
@@ -74,29 +113,21 @@ const GeoPulseRadar = () => {
       const donorName = selectedDonor?.donorName || selectedDonor?.name || 'Registered Donor';
       const donorGroup = selectedDonor?.bloodGroup || selectedDonor?.group || 'A+';
       const donorPhone = selectedDonor?.phone || selectedDonor?.contact || 'N/A';
+      if (!selectedDonor?._id) {
+        throw new Error('This donor does not have a registered email address in the database.');
+      }
 
-      const formData = new FormData();
-      formData.append("access_key", "086142c1-1ea1-4e42-9ddd-e2aa7c064067");
-      formData.append("subject", `🚨 Emergency Blood Dispatch Alert: ${donorGroup} Needed!`);
-      formData.append("name", "LifePulse GeoPulse Radar");
-      formData.append("email", "hafsasohail557@gmail.com");
-      formData.append("message", `
-        === EMERGENCY BLOOD DISPATCH ALERT ===
-        Hospital Name: ${hospitalName}
-        Patient Name: ${patientName}
-        Blood Group Required: ${donorGroup}
-        
-        Selected Donor Details:
-        - Donor Name: ${donorName}
-        - Phone / Contact: ${donorPhone}
-        - Donor Physical Address: ${selectedDonor?.physicalAddress}
-        
-        Additional Notes: ${customMessage}
-      `);
-
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        body: formData
+      const response = await fetch(`${API_URL}/hospital/send-donor-email`, {
+        method: 'POST',
+        headers: authHeaders(true),
+        body: JSON.stringify({
+          donorId: selectedDonor._id,
+          hospitalName: hospitalName || 'LifePulse Hospital',
+          hospitalLocation: selectedDonor?.physicalAddress || 'Location not provided',
+          unitsRequired: 1,
+          customMessage: customMessage || `Urgent requirement for ${donorGroup} blood. Please respond immediately.`,
+          urgency: 'Urgent'
+        })
       });
 
       const data = await parseResponse(response);
@@ -106,7 +137,7 @@ const GeoPulseRadar = () => {
       }
 
       setEmailLoading(false);
-      setEmailStatus({ type: 'success', text: 'Email successfully sent via Web3Forms!' });
+      setEmailStatus({ type: 'success', text: 'Email successfully sent to the selected donor via LifePulse.' });
       
       setTimeout(() => {
         setIsEmailModalOpen(false);
@@ -141,7 +172,7 @@ const GeoPulseRadar = () => {
         </div>
 
         <button
-          onClick={fetchRealDonors}
+          onClick={() => fetchRealDonors(requestMatches)}
           className="bg-[#E5C158] hover:bg-[#D4AF37] text-slate-950 font-black px-6 py-3 rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 text-sm uppercase tracking-wider cursor-pointer"
         >
           <MapPin className="w-4 h-4 text-slate-950" />
@@ -222,8 +253,8 @@ const GeoPulseRadar = () => {
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="font-black text-amber-900 bg-[#E5C158]/20 border border-[#E5C158] px-3 py-1 rounded-lg text-xs shadow-inner inline-block">
-                          Saved donor location used for matching
+                        <span className={`font-black px-3 py-1 rounded-lg text-xs shadow-inner inline-block border ${donor.isNearest ? 'text-emerald-900 bg-emerald-100 border-emerald-300' : 'text-amber-900 bg-[#E5C158]/20 border-[#E5C158]'}`}>
+                          {donor.label}
                         </span>
                       </td>
                       <td className="py-4 px-6">

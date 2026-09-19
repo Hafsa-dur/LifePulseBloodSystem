@@ -45,10 +45,10 @@ const Login = () => {
 
       setLoading(false);
 
-      // Safe & case-insensitive role verification
-      const userRole = data.user?.role?.toString().trim().toLowerCase();
+      const userRole = String(data.user?.role || 'donor').trim().toLowerCase();
+      const normalizedRole = userRole === 'hospital_admin' || userRole === 'admin' ? 'hospital_admin' : userRole === 'hospital_staff' || userRole === 'staff' ? 'hospital_staff' : 'donor';
 
-      if (userRole === 'admin' || userRole === 'staff') {
+      if (normalizedRole === 'hospital_admin' || normalizedRole === 'hospital_staff') {
         navigate('/dashboard');
       } else {
         navigate('/profile');

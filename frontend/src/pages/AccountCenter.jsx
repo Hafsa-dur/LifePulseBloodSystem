@@ -10,16 +10,18 @@ const AccountCenter = () => {
     hospitalName: user.hospitalName || '',
     hospitalLocation: user.hospitalLocation || '',
     phone: user.phone || '',
-    role: user.role || 'staff',
+    role: String(user.role || 'hospital_staff').trim().toLowerCase(),
     password: '',
   });
+
+  const normalizedRole = profile.role === 'hospital_admin' || profile.role === 'admin' ? 'hospital_admin' : profile.role === 'hospital_staff' || profile.role === 'staff' ? 'hospital_staff' : 'donor';
 
   const summary = useMemo(() => [
     { label: 'Name', value: profile.name || 'Not set' },
     { label: 'Email', value: profile.email || 'Not set' },
-    { label: 'Role', value: profile.role === 'admin' ? 'Admin' : profile.role === 'staff' ? (user.staffRole || 'Staff') : 'Donor' },
+    { label: 'Role', value: normalizedRole === 'hospital_admin' ? 'Admin' : normalizedRole === 'hospital_staff' ? (user.staffRole || 'Staff') : 'Donor' },
     { label: 'Hospital', value: profile.hospitalName || 'Not set' },
-  ], [profile, user.staffRole]);
+  ], [normalizedRole, profile, user.staffRole]);
 
   const handleSave = () => {
     fetch(`${API_URL}/hospital/account`, { method: 'PATCH', headers: authHeaders(true), body: JSON.stringify(profile) })

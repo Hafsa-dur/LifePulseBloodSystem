@@ -19,6 +19,7 @@ import DonorProfile from './pages/DonorProfile';
 import DispatchModal from './pages/DispatchModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import StaffRegistration from './pages/StaffRegistration';
 import HospitalOnboarding from './pages/HospitalOnboarding';
 import GeoPulseRadar from './pages/GeoPulseRadar';
 import PatientRequests from './pages/PatientRequests';
@@ -38,26 +39,34 @@ import './styles/Responsive.css';
 
 const getUser = () => JSON.parse(localStorage.getItem('user') || '{}');
 
+const normalizeRole = (role) => {
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'hospital_admin' || value === 'admin') return 'hospital_admin';
+  if (value === 'hospital_staff' || value === 'staff') return 'hospital_staff';
+  return value || 'donor';
+};
+
 const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false, allowedStaffRoles = [] }) => {
   const token = localStorage.getItem('token');
   const user = getUser();
 
   if (!token) return <Navigate to="/login" replace />;
 
-  const userRole = (user?.role || 'donor').toString().trim().toLowerCase();
+  const userRole = normalizeRole(user?.role);
   const staffRole = user?.staffRole || '';
   const allowedRoles = Array.isArray(allowedRole) ? allowedRole : [allowedRole].filter(Boolean);
+  const normalizedAllowedRoles = allowedRoles.map((value) => normalizeRole(value));
   const safeAllowedStaffRoles = Array.isArray(allowedStaffRoles) ? allowedStaffRoles : [allowedStaffRoles].filter(Boolean);
 
-  if (allowedRoles.length && !allowedRoles.includes(userRole)) {
-    return <Navigate to={userRole === 'admin' || userRole === 'staff' ? '/dashboard' : '/profile'} replace />;
+  if (normalizedAllowedRoles.length && !normalizedAllowedRoles.includes(userRole)) {
+    return <Navigate to={userRole === 'hospital_admin' || userRole === 'hospital_staff' ? '/dashboard' : '/profile'} replace />;
   }
 
-  if (adminOnly && userRole !== 'admin') return <Navigate to="/dashboard" replace />;
-  if (safeAllowedStaffRoles.length && userRole === 'staff' && !safeAllowedStaffRoles.includes(staffRole)) {
+  if (adminOnly && userRole !== 'hospital_admin') return <Navigate to="/dashboard" replace />;
+  if (safeAllowedStaffRoles.length && userRole === 'hospital_staff' && !safeAllowedStaffRoles.includes(staffRole)) {
     return <Navigate to="/dashboard" replace />;
   }
-  if (requiredPermission && userRole !== 'admin' && !(user.permissions || []).includes(requiredPermission)) {
+  if (requiredPermission && userRole !== 'hospital_admin' && !(user.permissions || []).includes(requiredPermission)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -99,28 +108,29 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/staff-registration" element={<StaffRegistration />} />
           <Route path="/hospital-onboarding" element={<HospitalOnboarding />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/about" element={<AboutUsPage />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} />}>
+        <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} />}>
           <Route element={<DashboardShell />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/account-center" element={<AccountCenter />} />
 
-            <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="requests" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="requests" />}>
               <Route path="/request-management" element={<PatientRequests />} />
               <Route path="/patient-request" element={<PatientRequestForm />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="dispatch" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="dispatch" />}>
               <Route path="/geopulse-radar" element={<GeoPulseRadar />} />
               <Route path="/tracking" element={<LiveTracking />} />
               <Route path="/donor-recipient-dispatch-log" element={<DonorRecipientDispatchLog />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRole={['admin', 'staff']} allowedStaffRoles={['Blood Bank Staff']} requiredPermission="inventory" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Blood Bank Staff']} requiredPermission="inventory" />}>
               <Route path="/add-blood" element={<BloodStock />} />
               <Route path="/blood-list" element={<BloodList />} />
             </Route>
