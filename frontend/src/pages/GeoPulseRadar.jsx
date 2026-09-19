@@ -6,20 +6,18 @@ const GeoPulseRadar = () => {
   const [donors, setDonors] = useState([]);
   const [requestMatches, setRequestMatches] = useState([]);
 
-  // Modal State for Sending Web3Forms Email
+  // Modal state for sending a request-backed donor alert.
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailStatus, setEmailStatus] = useState({ type: '', text: '' });
-  
-  // Form fields for the Web3Forms Email modal
-  const [hospitalName, setHospitalName] = useState('');
-  const [patientName, setPatientName] = useState('');
   const [customMessage, setCustomMessage] = useState('');
 
   const getDonorProximityInfo = (donor, matches = []) => {
     const donorKey = String(donor.donorName || donor.name || '').trim().toLowerCase();
     const donorMatch = matches.find((request) => {
+      if (request.donorId && donor._id) return String(request.donorId) === String(donor._id);
       const requestDonor = String(request.donorName || '').trim().toLowerCase();
       return requestDonor && donorKey && requestDonor === donorKey;
     });
@@ -95,26 +93,25 @@ const GeoPulseRadar = () => {
 
   // Open Email Dispatch Modal
   const openEmailModal = (donor) => {
+    const donorRequest = requestMatches.find((request) => String(request.donorId || '') === String(donor._id || ''));
     setSelectedDonor(donor);
-    setHospitalName('');
-    setPatientName('');
-    setCustomMessage(`Urgent requirement for ${donor.bloodGroup || donor.group || 'A+'} blood near ${donor.physicalAddress}. Please respond immediately.`);
+    setSelectedRequest(donorRequest || null);
+    setCustomMessage(donorRequest
+      ? `Urgent requirement for ${donorRequest.bloodGroup} blood for patient ${donorRequest.patientName} at ${donorRequest.hospitalName}. Please respond immediately.`
+      : '');
     setEmailStatus({ type: '', text: '' });
     setIsEmailModalOpen(true);
   };
 
-  // Handle Web3Forms Email Submission directly to admin/email
+  // Send the selected donor alert through the backend mail service.
   const handleSendEmailSubmit = async (e) => {
     e.preventDefault();
     setEmailLoading(true);
     setEmailStatus({ type: '', text: '' });
 
     try {
-      const donorName = selectedDonor?.donorName || selectedDonor?.name || 'Registered Donor';
-      const donorGroup = selectedDonor?.bloodGroup || selectedDonor?.group || 'A+';
-      const donorPhone = selectedDonor?.phone || selectedDonor?.contact || 'N/A';
-      if (!selectedDonor?._id) {
-        throw new Error('This donor does not have a registered email address in the database.');
+      if (!selectedDonor?._id || !selectedRequest?._id) {
+        throw new Error('Select a donor linked to an active patient request before sending an email.');
       }
 
       const response = await fetch(`${API_URL}/hospital/send-donor-email`, {
@@ -122,10 +119,8 @@ const GeoPulseRadar = () => {
         headers: authHeaders(true),
         body: JSON.stringify({
           donorId: selectedDonor._id,
-          hospitalName: hospitalName || 'LifePulse Hospital',
-          hospitalLocation: selectedDonor?.physicalAddress || 'Location not provided',
-          unitsRequired: 1,
-          customMessage: customMessage || `Urgent requirement for ${donorGroup} blood. Please respond immediately.`,
+          patientRequestId: selectedRequest._id,
+          customMessage,
           urgency: 'Urgent'
         })
       });
@@ -143,9 +138,9 @@ const GeoPulseRadar = () => {
         setIsEmailModalOpen(false);
       }, 1500);
 
-    } catch {
+    } catch (error) {
       setEmailLoading(false);
-      setEmailStatus({ type: 'error', text: 'Something went wrong sending email. Please try again.' });
+      setEmailStatus({ type: 'error', text: error.message || 'Something went wrong sending email. Please try again.' });
     }
   };
 
@@ -288,7 +283,7 @@ const GeoPulseRadar = () => {
         </div>
       </div>
 
-      {/* Web3Forms Email Modal */}
+      {/* Backend Nodemailer Email Modal */}
       {isEmailModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-[#FAF9F6] border-2 border-[#5A1827] rounded-2xl p-6 w-full max-w-md text-[#5A1827] shadow-2xl relative font-sans">
@@ -297,7 +292,7 @@ const GeoPulseRadar = () => {
             <div className="flex justify-between items-center mb-4 border-b-2 border-[#5A1827]/15 pb-3">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-[#990000] animate-pulse" />
-                <h2 className="text-lg font-black text-[#5A1827]">Send Email Alert via Web3Forms</h2>
+                <h2 className="text-lg font-black text-[#5A1827]">Send Email Alert via LifePulse</h2>
               </div>
               <button 
                 onClick={() => setIsEmailModalOpen(false)} 
@@ -316,41 +311,20 @@ const GeoPulseRadar = () => {
 
             {/* Modal Form */}
             <form onSubmit={handleSendEmailSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[#5A1827] font-black uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-[#5A1827]" /> Hospital Name
-                </label>
-                <input 
-                  type="text" 
-                  required 
-                  value={hospitalName}
-                  onChange={(e) => setHospitalName(e.target.value)}
-                  placeholder="e.g. Rehman Medical Institute"
-                  className="w-full bg-white border-2 border-[#5A1827]/30 rounded-xl p-2.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#5A1827] shadow-inner text-xs"
-                />
-              </div>
+              {selectedRequest ? <div className="space-y-2 rounded-xl border-2 border-[#5A1827]/20 bg-white p-3 text-xs font-bold">
+                <p><span className="text-slate-500">Hospital:</span> {selectedRequest.hospitalName}</p>
+                <p><span className="text-slate-500">Patient:</span> {selectedRequest.patientName}</p>
+                <p><span className="text-slate-500">Blood group:</span> {selectedRequest.bloodGroup}</p>
+                <p><span className="text-slate-500">Hospital location:</span> {selectedRequest.hospitalLocation}</p>
+              </div> : <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-xs font-bold text-amber-800">This donor is not linked to a patient request yet. Create a request first.</div>}
 
               <div>
-                <label className="block text-[#5A1827] font-black uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-[#5A1827]" /> Patient Name
-                </label>
-                <input 
-                  type="text" 
-                  required 
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                  placeholder="e.g. Muhammad Ali"
-                  className="w-full bg-white border-2 border-[#5A1827]/30 rounded-xl p-2.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#5A1827] shadow-inner text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[#5A1827] font-black uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                  <Droplet className="w-3.5 h-3.5 text-[#990000]" /> Selected Donor Details & Message
+                  <label className="block text-[#5A1827] font-black uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Droplet className="w-3.5 h-3.5 text-[#990000]" /> Message
                 </label>
                 <textarea 
                   rows="3" 
-                  required 
+                  required={Boolean(selectedRequest)}
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
                   className="w-full bg-white border-2 border-[#5A1827]/30 rounded-xl p-2.5 text-[#5A1827] font-bold focus:outline-none focus:border-[#5A1827] shadow-inner resize-none text-xs"
@@ -368,7 +342,7 @@ const GeoPulseRadar = () => {
                 
                 <button 
                   type="submit" 
-                  disabled={emailLoading}
+                  disabled={emailLoading || !selectedRequest}
                   className="px-5 py-2 bg-[#5A1827] hover:bg-[#4A121F] text-[#E5C158] font-black uppercase tracking-widest rounded-2xl flex items-center gap-1.5 cursor-pointer transition-all shadow-md border border-[#E5C158]/50 disabled:opacity-50 text-xs"
                 >
                   <Send className="w-3.5 h-3.5" /> {emailLoading ? 'Sending Email...' : 'Send Email Alert'}
