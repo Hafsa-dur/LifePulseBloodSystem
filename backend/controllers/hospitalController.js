@@ -129,9 +129,12 @@ export const createStaffInvitation = async (req, res) => {
     if (!Number.isFinite(expiryMinutes) || expiryMinutes < 15 || expiryMinutes > 1440) {
       return res.status(400).json({ success: false, message: 'Invitation expiry must be between 15 minutes and 24 hours.' });
     }
-    const frontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
-    if (process.env.NODE_ENV === 'production' && (!frontendUrl || /localhost|127\.0\.0\.1/i.test(frontendUrl))) {
-      return res.status(500).json({ success: false, message: 'Production FRONTEND_URL is not configured. Invitation was not created.' });
+    const configuredFrontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
+    const frontendUrl = configuredFrontendUrl || (process.env.NODE_ENV === 'production'
+      ? 'https://life-pulse-blood-system.vercel.app'
+      : 'http://localhost:5173');
+    if (process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/i.test(frontendUrl)) {
+      return res.status(500).json({ success: false, message: 'Production FRONTEND_URL cannot be localhost. Invitation was not created.' });
     }
     if (!frontendUrl) {
       return res.status(500).json({ success: false, message: 'FRONTEND_URL is required to create a staff invitation.' });
