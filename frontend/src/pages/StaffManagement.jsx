@@ -13,8 +13,9 @@ const StaffManagement = () => {
   const hospitalName = user.hospitalName || 'Current Hospital';
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [invite, setInvite] = useState({ email: '', expiresInMinutes: 60 });
+  const [invite, setInvite] = useState({ email: '', expiresInMinutes: 60, staffRole: 'Hospital Staff' });
   const [inviteLink, setInviteLink] = useState('');
+  const [inviteStatus, setInviteStatus] = useState({ type: '', text: '' });
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', staffRole: 'Emergency Staff' });
 
   useEffect(() => {
@@ -36,15 +37,20 @@ const StaffManagement = () => {
 
   const generateInvitation = async (event) => {
     event.preventDefault();
+    setInviteStatus({ type: '', text: '' });
     const response = await fetch(`${API_URL}/hospital/staff/invite`, {
       method: 'POST',
       headers: authHeaders(true),
       body: JSON.stringify(invite)
     });
     const data = await parseResponse(response);
-    if (!response.ok) return alert(data.message || 'Unable to create staff invitation.');
+    if (!response.ok) {
+      setInviteStatus({ type: 'error', text: data.message || 'Unable to create staff invitation.' });
+      return;
+    }
     setInviteLink(data.invitation?.inviteLink || '');
-    setInvite({ email: '', expiresInMinutes: 60 });
+    setInviteStatus({ type: 'success', text: data.message || 'Invitation sent successfully.' });
+    setInvite({ email: '', expiresInMinutes: 60, staffRole: 'Hospital Staff' });
   };
 
   const toggleStaff = async (member) => {
@@ -144,11 +150,13 @@ const StaffManagement = () => {
                 </select>
                 <button className="bg-[#5A1827] text-white rounded-xl font-black text-xs uppercase">Add staff</button>
               </form>
-              <form onSubmit={generateInvitation} className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+              <form onSubmit={generateInvitation} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
                 <input type="email" required placeholder="Invite email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
                 <input type="number" min="15" max="1440" value={invite.expiresInMinutes} onChange={(event) => setInvite({ ...invite, expiresInMinutes: Number(event.target.value) || 60 })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
+                <input type="text" value="Hospital Staff" readOnly className="border-2 border-[#6B1D2F]/20 bg-slate-100 rounded-xl p-3 text-sm font-bold" />
                 <button className="bg-[#E5C158] text-[#5A1827] rounded-xl font-black text-xs uppercase">Generate Invite</button>
               </form>
+              {inviteStatus.text && <div className={`mb-5 rounded-xl border p-3 text-xs font-bold ${inviteStatus.type === 'error' ? 'border-rose-300 bg-rose-50 text-rose-800' : 'border-emerald-300 bg-emerald-50 text-emerald-800'}`}>{inviteStatus.text}</div>}
               {inviteLink && <div className="mb-5 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-800 font-bold break-all">Invite link: {inviteLink}</div>}
             </>
           ) : null}

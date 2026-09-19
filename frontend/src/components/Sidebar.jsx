@@ -76,6 +76,7 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
       }
 
       if (staffRole === 'Emergency Staff') return emergencyItems;
+      if (staffRole === 'Hospital Staff') return emergencyItems;
       if (staffRole === 'Blood Bank Staff') return bloodBankItems;
       return adminItems;
     }

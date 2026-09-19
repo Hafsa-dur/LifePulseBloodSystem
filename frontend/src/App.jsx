@@ -119,12 +119,12 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/account-center" element={<AccountCenter />} />
 
-            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="requests" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Hospital Staff', 'Emergency Staff']} requiredPermission="requests" />}>
               <Route path="/request-management" element={<PatientRequests />} />
               <Route path="/patient-request" element={<PatientRequestForm />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Emergency Staff']} requiredPermission="dispatch" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Hospital Staff', 'Emergency Staff']} requiredPermission="dispatch" />}>
               <Route path="/geopulse-radar" element={<GeoPulseRadar />} />
               <Route path="/tracking" element={<LiveTracking />} />
               <Route path="/donor-recipient-dispatch-log" element={<DonorRecipientDispatchLog />} />
