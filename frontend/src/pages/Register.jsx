@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API_URL, parseResponse } from '../api';
 
+const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
 const Register = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
