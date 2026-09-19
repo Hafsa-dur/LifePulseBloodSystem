@@ -8,7 +8,7 @@ const getTransporter = () => {
     host: process.env.EMAIL_HOST,
     port: Number(process.env.EMAIL_PORT),
     secure: String(process.env.EMAIL_SECURE || 'false') === 'true',
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD }
+    auth: { user: process.env.EMAIL_USER, pass: String(process.env.EMAIL_PASSWORD).replace(/\s+/g, '') }
   });
   return transporter;
 };
@@ -30,7 +30,7 @@ export const sendEmailMessage = async ({ to, subject, text, html }) => {
     return { sent: true };
   } catch (error) {
     console.error('Email delivery failed:', error.message);
-    return { sent: false, reason: 'send-failed' };
+    return { sent: false, reason: error.code || 'send-failed', error: error.message };
   }
 };
 
@@ -83,16 +83,16 @@ export const sendRewardEmail = async ({ donorEmail, donorName, rewardTitle, part
   });
 };
 
-export const sendStaffInvitationEmail = async ({ donorEmail, hospitalName, inviteLink, staffRole }) => {
-  const recipient = donorEmail;
+export const sendStaffInvitationEmail = async ({ recipientEmail, hospitalName, inviteLink, staffRole = 'Hospital Staff' }) => {
+  const recipient = recipientEmail;
   return sendEmailMessage({
     to: recipient,
-    subject: `Hospital staff invitation for ${hospitalName}`,
-    text: `You have been invited to join ${hospitalName} as a ${staffRole || 'Hospital Staff'} on the LifePulse platform.\n\nUse the following secure link to complete your registration:\n${inviteLink}\n\nThis invitation is time-limited and can only be used once.\n\nLifePulse Blood Bank Management System`,
+    subject: `LifePulse Hospital Staff invitation for ${hospitalName}`,
+    text: `You have been invited to join ${hospitalName} as Hospital Staff on the LifePulse platform.\n\nOpen this secure link to complete your staff registration:\n${inviteLink}\n\nThis invitation is time-limited and can only be used once.\n\nLifePulse Blood Bank Management System`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;">
         <h3 style="color: #5A1827;">LifePulse Staff Invitation</h3>
-        <p>You have been invited to join <strong>${hospitalName}</strong> as a <strong>${staffRole || 'Hospital Staff'}</strong>.</p>
+        <p>You have been invited to join <strong>${hospitalName}</strong> as <strong>Hospital Staff</strong>.</p>
         <p>Use the secure link below to complete your registration:</p>
         <p><a href="${inviteLink}">${inviteLink}</a></p>
         <p>This invitation is time-limited and can only be used once.</p>

@@ -1,10 +1,11 @@
 import express from 'express';
-import { registerUser, loginUser, registerStaffFromInvitation } from '../controllers/authController.js';
+import { registerUser, loginUser, registerStaffFromInvitation, validateStaffInvitation } from '../controllers/authController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendRewardEmail } from '../services/emailService.js';
 
 const router = express.Router();
 router.post('/register', registerUser);
+router.get('/staff/invitation/:token', validateStaffInvitation);
 router.post('/staff/register', registerStaffFromInvitation);
 router.post('/rewards/send', requireAuth, async (req, res) => {
 	try {

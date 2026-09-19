@@ -26,6 +26,27 @@ const safeUserPayload = (user) => ({
   permissions: user.permissions
 });
 
+const invitationHash = (token) => crypto.createHash('sha256').update(String(token || '').trim()).digest('hex');
+
+export const validateStaffInvitation = async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) return res.status(400).json({ success: false, valid: false, message: 'Invitation token is required.' });
+
+    const invitation = await StaffInvitation.findOne({ tokenHash: invitationHash(token) }).lean();
+    if (!invitation) return res.status(404).json({ success: false, valid: false, message: 'This invitation link is invalid.' });
+    if (invitation.status === 'used' || invitation.usedAt) return res.status(410).json({ success: false, valid: false, message: 'This invitation has already been used.' });
+    if (invitation.expiresAt <= new Date()) {
+      await StaffInvitation.updateOne({ _id: invitation._id, status: 'pending' }, { status: 'expired' });
+      return res.status(410).json({ success: false, valid: false, message: 'This invitation has expired.' });
+    }
+
+    return res.json({ success: true, valid: true, invitation: { email: invitation.email, hospitalName: invitation.hospitalName, expiresAt: invitation.expiresAt } });
+  } catch (error) {
+    return res.status(500).json({ success: false, valid: false, message: error.message });
+  }
+};
+
 export const registerUser = async (req, res) => {
   try {
     const {
@@ -87,7 +108,7 @@ export const registerStaffFromInvitation = async (req, res) => {
     }
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    const tokenHash = crypto.createHash('sha256').update(String(token).trim()).digest('hex');
+    const tokenHash = invitationHash(token);
     const invitation = await StaffInvitation.findOne({ tokenHash, status: 'pending', expiresAt: { $gt: new Date() } }).lean();
     const matchingInvitation = invitation || null;
     if (!matchingInvitation) {
@@ -104,24 +125,37 @@ export const registerStaffFromInvitation = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(String(password), 10);
-    const user = await User.create({
-      name: String(name).trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-      role: 'hospital_staff',
-      staffRole: 'Hospital Staff',
-      hospitalId: matchingInvitation.hospitalId,
-      hospitalName: matchingInvitation.hospitalName,
-      hospitalLocation: matchingInvitation.hospitalLocation,
-      phone: String(phone).trim(),
-      permissions: ['dashboard', 'requests', 'dispatch', 'tracking', 'account'],
-      isActive: true
-    });
+    const claimedInvitation = await StaffInvitation.findOneAndUpdate(
+      { _id: matchingInvitation._id, status: 'pending', expiresAt: { $gt: new Date() } },
+      { status: 'used', usedAt: new Date() },
+      { new: true }
+    ).lean();
+    if (!claimedInvitation) {
+      return res.status(409).json({ success: false, message: 'This invitation has already been used or expired.' });
+    }
+
+    let user;
+    try {
+      user = await User.create({
+        name: String(name).trim(),
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: 'hospital_staff',
+        staffRole: matchingInvitation.staffRole || 'Hospital Staff',
+        hospitalId: matchingInvitation.hospitalId,
+        hospitalName: matchingInvitation.hospitalName,
+        hospitalLocation: matchingInvitation.hospitalLocation,
+        phone: String(phone).trim(),
+        permissions: ['dashboard', 'requests', 'dispatch', 'tracking', 'account'],
+        isActive: true
+      });
+    } catch (error) {
+      await StaffInvitation.updateOne({ _id: matchingInvitation._id, status: 'used' }, { status: 'pending', usedAt: null });
+      throw error;
+    }
 
     const safeUser = safeUserPayload(user);
     safeUser.role = normalizeRole(safeUser.role);
-
-    await StaffInvitation.updateOne({ _id: matchingInvitation._id }, { status: 'used', usedAt: new Date() });
 
     const authToken = jwt.sign({ id: user._id, role: user.role, hospitalId: user.hospitalId, hospitalName: user.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
     return res.status(201).json({ success: true, token: authToken, user: safeUser });

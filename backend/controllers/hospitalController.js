@@ -8,6 +8,7 @@ import StaffInvitation from '../models/StaffInvitation.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import { sendStaffInvitationEmail } from '../services/emailService.js';
 
 const hospitalFilter = (user) => user.hospitalId
   ? { hospitalId: user.hospitalId }
@@ -117,29 +118,54 @@ export const createStaffInvitation = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only hospital administrators can create staff invitations.' });
     }
 
-    const { email, staffRole = 'Emergency Staff', expiresInMinutes = 60 } = req.body || {};
+    const { email, expiresInMinutes = 60 } = req.body || {};
+    const staffRole = 'Hospital Staff';
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!normalizedEmail) {
       return res.status(400).json({ success: false, message: 'Invited staff email is required.' });
     }
 
+    const expiryMinutes = Number(expiresInMinutes);
+    if (!Number.isFinite(expiryMinutes) || expiryMinutes < 15 || expiryMinutes > 1440) {
+      return res.status(400).json({ success: false, message: 'Invitation expiry must be between 15 minutes and 24 hours.' });
+    }
+    const frontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
+    if (process.env.NODE_ENV === 'production' && (!frontendUrl || /localhost|127\.0\.0\.1/i.test(frontendUrl))) {
+      return res.status(500).json({ success: false, message: 'Production FRONTEND_URL is not configured. Invitation was not created.' });
+    }
+    if (!frontendUrl) {
+      return res.status(500).json({ success: false, message: 'FRONTEND_URL is required to create a staff invitation.' });
+    }
+
     const token = crypto.randomBytes(24).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + Number(expiresInMinutes || 60) * 60 * 1000);
+    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
     const invitation = await StaffInvitation.create({
       tokenHash,
       hospitalId: req.user.hospitalId,
       hospitalName: req.user.hospitalName || '',
       hospitalLocation: req.user.hospitalLocation || '',
+      staffRole: String(staffRole).trim(),
       createdBy: req.user._id,
       email: normalizedEmail,
       expiresAt,
       status: 'pending'
     });
 
-    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/staff-registration?token=${token}`;
-    return res.status(201).json({ success: true, invitation: { _id: invitation._id, token, expiresAt, inviteLink }, message: 'Staff invitation created successfully.' });
+    const inviteLink = `${frontendUrl}/staff-registration?token=${encodeURIComponent(token)}`;
+    const emailResult = await sendStaffInvitationEmail({
+      recipientEmail: normalizedEmail,
+      hospitalName: req.user.hospitalName || 'LifePulse Hospital',
+      inviteLink,
+      staffRole: String(staffRole).trim()
+    });
+    if (!emailResult.sent) {
+      await StaffInvitation.deleteOne({ _id: invitation._id });
+      return res.status(502).json({ success: false, message: `Invitation email could not be sent to ${normalizedEmail}. SMTP error: ${emailResult.error || emailResult.reason || 'unknown error'}.` });
+    }
+
+    return res.status(201).json({ success: true, invitation: { _id: invitation._id, expiresAt, inviteLink, email: normalizedEmail }, message: `Invitation sent successfully to ${normalizedEmail}.` });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
