@@ -4,8 +4,10 @@ import HospitalSettings from '../models/HospitalSettings.js';
 import Donation from '../models/donationModel.js';
 import PatientRequest from '../models/PatientRequest.js';
 import Hospital from '../models/Hospital.js';
+import StaffInvitation from '../models/StaffInvitation.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const hospitalFilter = (user) => user.hospitalId
   ? { hospitalId: user.hospitalId }
@@ -14,7 +16,17 @@ const hospitalFilter = (user) => user.hospitalId
 const publicUser = (user) => {
   const value = user.toObject ? user.toObject() : { ...user };
   delete value.password;
+  if (value.role === 'admin') value.role = 'hospital_admin';
+  if (value.role === 'staff') value.role = 'hospital_staff';
   return value;
+};
+
+const normalizeRole = (role) => {
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'admin' || value === 'hospital_admin') return 'hospital_admin';
+  if (value === 'staff' || value === 'hospital_staff') return 'hospital_staff';
+  if (value === 'donor') return 'donor';
+  return value || 'donor';
 };
 
 export const listHospitals = async (req, res) => {
@@ -46,7 +58,7 @@ export const onboardHospitalAdmin = async (req, res) => {
     }
 
     const admin = await User.create({
-      name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'admin',
+      name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'hospital_admin',
       hospitalId: hospital.hospitalId, hospitalName: hospital.name, hospitalLocation: hospital.location,
       phone: String(req.body.phone || '').trim(), isActive: true,
       permissions: ['dashboard', 'requests', 'dispatch', 'staff', 'settings', 'reports']
@@ -60,8 +72,10 @@ export const onboardHospitalAdmin = async (req, res) => {
 
 export const getStaff = async (req, res) => {
   try {
-    const staff = await User.find({ ...hospitalFilter(req.user), role: { $in: ['admin', 'staff'] } })
-      .select('-password').sort({ createdAt: -1 }).lean();
+    const staff = await User.find({
+      ...hospitalFilter(req.user),
+      role: { $in: ['hospital_staff', 'staff'] }
+    }).select('-password').sort({ createdAt: -1 }).lean();
     return res.json({ success: true, staff });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -70,7 +84,7 @@ export const getStaff = async (req, res) => {
 
 export const createStaff = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can add staff.' });
+    if (normalizeRole(req.user.role) !== 'hospital_admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can add staff.' });
     const { name, email, password, phone = '', staffRole = 'Emergency Staff', permissions = [] } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
@@ -84,7 +98,7 @@ export const createStaff = async (req, res) => {
       'Emergency Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account']
     };
     const staff = await User.create({
-      name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'staff',
+      name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'hospital_staff',
       staffRole: String(staffRole).trim(),
       hospitalId: req.user.hospitalId || '', hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '',
       phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : rolePermissions[String(staffRole).trim()] || rolePermissions['Emergency Staff'], isActive: true
@@ -97,9 +111,43 @@ export const createStaff = async (req, res) => {
   }
 };
 
+export const createStaffInvitation = async (req, res) => {
+  try {
+    if (normalizeRole(req.user.role) !== 'hospital_admin') {
+      return res.status(403).json({ success: false, message: 'Only hospital administrators can create staff invitations.' });
+    }
+
+    const { email, staffRole = 'Emergency Staff', expiresInMinutes = 60 } = req.body || {};
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, message: 'Invited staff email is required.' });
+    }
+
+    const token = crypto.randomBytes(24).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + Number(expiresInMinutes || 60) * 60 * 1000);
+
+    const invitation = await StaffInvitation.create({
+      tokenHash,
+      hospitalId: req.user.hospitalId,
+      hospitalName: req.user.hospitalName || '',
+      hospitalLocation: req.user.hospitalLocation || '',
+      createdBy: req.user._id,
+      email: normalizedEmail,
+      expiresAt,
+      status: 'pending'
+    });
+
+    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/staff-registration?token=${token}`;
+    return res.status(201).json({ success: true, invitation: { _id: invitation._id, token, expiresAt, inviteLink }, message: 'Staff invitation created successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const updateStaff = async (req, res) => {
   try {
-    const filter = { _id: req.params.id, ...hospitalFilter(req.user), role: 'staff' };
+    const filter = { _id: req.params.id, ...hospitalFilter(req.user), role: { $in: ['hospital_staff', 'staff'] } };
     const updates = {};
     for (const key of ['name', 'phone', 'permissions', 'isActive']) if (req.body[key] !== undefined) updates[key] = req.body[key];
     if (req.body.password) updates.password = await bcrypt.hash(req.body.password, 10);
@@ -113,8 +161,8 @@ export const updateStaff = async (req, res) => {
 
 export const deleteStaff = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can remove staff.' });
-    const removed = await User.findOneAndDelete({ _id: req.params.id, ...hospitalFilter(req.user), role: 'staff' });
+    if (normalizeRole(req.user.role) !== 'hospital_admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can remove staff.' });
+    const removed = await User.findOneAndDelete({ _id: req.params.id, ...hospitalFilter(req.user), role: { $in: ['hospital_staff', 'staff'] } });
     if (!removed) return res.status(404).json({ success: false, message: 'Staff member not found.' });
     return res.json({ success: true, message: 'Staff member removed.' });
   } catch (error) {

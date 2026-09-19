@@ -2,6 +2,7 @@ import Donation from '../models/donationModel.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
 import DonorRecipientLog from '../models/DonorRecipientLog.js';
+import { sendDonorThankYouEmail } from '../services/emailService.js';
 
 const locationCache = new Map();
 
@@ -180,6 +181,15 @@ export const addDonation = async (req, res) => {
       { bloodGroup: bloodGroup, lastDonationDate: donationDate || Date.now() },
       { upsert: false }
     );
+
+    if (formattedEmail) {
+      sendDonorThankYouEmail({
+        donorEmail: formattedEmail,
+        donorName: donorName || 'Donor',
+        bloodGroup: bloodGroup || 'Unknown',
+        units: Number(units) || 1
+      }).catch((error) => console.error('Thank-you email failed:', error.message));
+    }
 
     res.status(201).json(savedDonation);
   } catch (error) {
