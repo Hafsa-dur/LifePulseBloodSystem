@@ -34,12 +34,12 @@ export const sendEmailMessage = async ({ to, subject, text, html }) => {
   }
 };
 
-export const sendDonorEmergencyEmail = async ({ donorEmail, donorName, bloodGroup, urgency, hospitalName, hospitalLocation, unitsRequired, message }) => {
+export const sendDonorEmergencyEmail = async ({ donorEmail, donorName, bloodGroup, urgency, hospitalName, hospitalLocation, patientName, unitsRequired, message }) => {
   const donorMessage = message || `A ${String(urgency || 'Urgent').toLowerCase()} blood requirement has been raised.`;
   return sendEmailMessage({
     to: donorEmail,
     subject: `${String(urgency || 'Urgent').toUpperCase()} blood request: ${bloodGroup} needed at ${hospitalName}`,
-    text: `Dear ${donorName || 'Donor'},\n\n${donorMessage}\n\nBlood group: ${bloodGroup}\nUnits required: ${unitsRequired}\nHospital: ${hospitalName}\nLocation: ${hospitalLocation}\n\nPlease contact the hospital if you are available to donate and help save a life.\n\nWarm regards,\nLifePulse Blood Bank Management System`,
+    text: `Dear ${donorName || 'Donor'},\n\n${donorMessage}\n\nBlood group: ${bloodGroup}\nUnits required: ${unitsRequired}\nPatient: ${patientName || 'Urgent patient request'}\nHospital: ${hospitalName}\nLocation: ${hospitalLocation}\n\nPlease contact the hospital if you are available to donate and help save a life.\n\nWarm regards,\nLifePulse Blood Bank Management System`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;">
         <h3 style="color: #5A1827;">LifePulse Blood Donation Alert</h3>
@@ -47,6 +47,7 @@ export const sendDonorEmergencyEmail = async ({ donorEmail, donorName, bloodGrou
         <p>${donorMessage}</p>
         <p><strong>Blood group:</strong> ${bloodGroup}<br />
         <strong>Units required:</strong> ${unitsRequired}<br />
+        <strong>Patient:</strong> ${patientName || 'Urgent patient request'}<br />
         <strong>Hospital:</strong> ${hospitalName}<br />
         <strong>Location:</strong> ${hospitalLocation}</p>
         <p>Please contact the hospital if you are available to donate.</p>

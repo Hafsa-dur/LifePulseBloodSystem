@@ -3,6 +3,7 @@ import { requireAuth, requireHospitalRole, requireAdmin, requirePermission } fro
 import { createStaff, getStaff, updateStaff, deleteStaff, getHospitalSettings, updateHospitalSettings, getHospitalAnalytics, updateAccount, listHospitals, onboardHospitalAdmin, createStaffInvitation } from '../controllers/hospitalController.js';
 import { sendDonorEmergencyEmail } from '../services/emailService.js';
 import Donation from '../models/donationModel.js';
+import PatientRequest from '../models/PatientRequest.js';
 
 const router = express.Router();
 router.get('/directory', listHospitals);
@@ -19,9 +20,9 @@ router.get('/analytics', getHospitalAnalytics);
 router.patch('/account', updateAccount);
 router.post('/send-donor-email', requirePermission('dispatch'), async (req, res) => {
   try {
-    const { donorId, hospitalName, hospitalLocation, unitsRequired, customMessage, urgency = 'Urgent' } = req.body || {};
-    if (!donorId) {
-      return res.status(400).json({ success: false, message: 'Selected donor record is required.' });
+    const { donorId, patientRequestId, customMessage, urgency = 'Urgent' } = req.body || {};
+    if (!donorId || !patientRequestId) {
+      return res.status(400).json({ success: false, message: 'A selected donor and patient request are required.' });
     }
 
     const donorFilter = { _id: donorId, email: { $exists: true, $nin: ['', null] } };
@@ -33,15 +34,24 @@ router.post('/send-donor-email', requirePermission('dispatch'), async (req, res)
       return res.status(404).json({ success: false, message: 'Selected donor email was not found for this hospital.' });
     }
 
+    const requestFilter = { _id: patientRequestId, donorId };
+    if (req.user?.hospitalId) requestFilter.hospitalId = req.user.hospitalId;
+    else requestFilter.hospitalName = req.user?.hospitalName;
+    const patientRequest = await PatientRequest.findOne(requestFilter).lean();
+    if (!patientRequest) {
+      return res.status(404).json({ success: false, message: 'The selected donor is not linked to a patient request for this hospital.' });
+    }
+
     const result = await sendDonorEmergencyEmail({
       donorEmail: donor.email,
       donorName: donor.donorName || 'Donor',
-      bloodGroup: donor.bloodGroup || 'A+',
+      bloodGroup: patientRequest.bloodGroup || donor.bloodGroup || 'A+',
       urgency,
-      hospitalName: hospitalName || req.user?.hospitalName || 'LifePulse Hospital',
-      hospitalLocation: hospitalLocation || req.user?.hospitalLocation || 'Hospital location not provided',
-      unitsRequired: unitsRequired || 1,
-      message: customMessage || 'A blood requirement has been raised for an urgent patient need.'
+      hospitalName: patientRequest.hospitalName,
+      hospitalLocation: patientRequest.hospitalLocation,
+      patientName: patientRequest.patientName,
+      unitsRequired: patientRequest.unitsRequired || 1,
+      message: customMessage || `Urgent requirement for ${patientRequest.bloodGroup} blood for patient ${patientRequest.patientName} at ${patientRequest.hospitalName}.`
     });
 
     if (!result.sent) {

@@ -14,16 +14,27 @@ const geocodeLocation = async (location) => {
   if (!normalizedLocation) return null;
   if (locationCache.has(normalizedLocation)) return locationCache.get(normalizedLocation);
 
-  const request = fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(normalizedLocation)}`, {
-    headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' }
-  })
-    .then(async (response) => {
-      if (!response.ok) return null;
-      const results = await response.json();
-      if (!results[0]) return null;
-      return { latitude: Number(results[0].lat), longitude: Number(results[0].lon) };
-    })
-    .catch(() => null);
+  const locationParts = normalizedLocation.split('/').map((part) => part.trim()).filter(Boolean);
+  const cityContext = normalizedLocation.includes(',') ? normalizedLocation.slice(normalizedLocation.lastIndexOf(',') + 1).trim() : '';
+  const contextualParts = cityContext
+    ? locationParts.map((part) => `${part}, ${cityContext}`)
+    : locationParts;
+  const searchLocations = [...new Set([normalizedLocation, ...contextualParts])];
+  const request = (async () => {
+    for (const searchLocation of searchLocations) {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(searchLocation)}`, {
+          headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' }
+        });
+        if (!response.ok) continue;
+        const results = await response.json();
+        if (results[0]) return { latitude: Number(results[0].lat), longitude: Number(results[0].lon) };
+      } catch {
+        // Try the next real location variant.
+      }
+    }
+    return null;
+  })();
 
   locationCache.set(normalizedLocation, request);
   return request;
