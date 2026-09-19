@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Send, AlertTriangle, CheckCircle, PackageCheck, Droplets, User, Building2, Calendar, FileText, Radio, X, Hash, Clock } from 'lucide-react';
+import { Search, Send, AlertTriangle, CheckCircle, PackageCheck, Droplets, User, Building2, Calendar, FileText, Radio, X, Hash, Clock, Pencil } from 'lucide-react';
 import { API_URL, authHeaders, parseResponse } from '../api';
 
 const BloodStock = () => {
@@ -102,7 +102,7 @@ const BloodStock = () => {
 
       const response = await fetch(`${API_URL}/donations/dispatch`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(true),
         body: JSON.stringify(dispatchData)
       });
 
@@ -122,6 +122,21 @@ const BloodStock = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEditDonation = async (donation) => {
+    const units = window.prompt('Available units:', String(Number(donation.availableUnits) > 0 ? donation.availableUnits : (donation.units || 1)));
+    if (units === null) return;
+    const parsedUnits = Number(units);
+    if (!Number.isInteger(parsedUnits) || parsedUnits <= 0) return alert('Units must be a positive whole number.');
+    const response = await fetch(`${API_URL}/donations/${donation._id}`, {
+      method: 'PATCH',
+      headers: authHeaders(true),
+      body: JSON.stringify({ units: parsedUnits })
+    });
+    const data = await parseResponse(response);
+    if (!response.ok) return alert(data.message || 'Unable to update donation record.');
+    setDonations((items) => items.map((item) => item._id === donation._id ? data.donation : item));
   };
 
   // Stock summary calculation for all 8 blood groups (Synced with Dispatches / Patient Outflow)
@@ -236,11 +251,12 @@ const BloodStock = () => {
                   <th className="py-4 px-4">Donated Units</th>
                   <th className="py-4 px-4">Registration Date</th>
                   <th className="py-4 px-4">Last Donation Date</th>
+                  <th className="py-4 px-4">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
                 {loading ? (
-                  <tr><td colSpan="6" className="text-center py-8 text-slate-500">Loading donor records...</td></tr>
+                  <tr><td colSpan="7" className="text-center py-8 text-slate-500">Loading donor records...</td></tr>
                 ) : normalDonations.length > 0 ? (
                   normalDonations.map((item, idx) => (
                     <tr key={item._id || idx} className="hover:bg-[#FAF4EC] transition-colors">
@@ -254,10 +270,11 @@ const BloodStock = () => {
                       <td className="py-4 px-4 font-extrabold text-slate-900">{Math.abs(Number(item.units || item.pints || 1))} Pints</td>
                       <td className="py-4 px-4 text-slate-600 text-xs">{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}</td>
                       <td className="py-4 px-4 text-rose-600 text-xs font-bold">{item.lastDonationDate ? new Date(item.lastDonationDate).toLocaleDateString() : (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-')}</td>
+                      <td className="py-4 px-4"><button type="button" onClick={() => handleEditDonation(item)} className="inline-flex items-center gap-1 rounded-lg bg-[#E5C158] px-3 py-2 text-[10px] font-black uppercase text-[#5A1827]"><Pencil className="w-3 h-3" /> Edit</button></td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="6" className="text-center py-10 text-slate-500 italic">No donor contributions found.</td></tr>
+                  <tr><td colSpan="7" className="text-center py-10 text-slate-500 italic">No donor contributions found.</td></tr>
                 )}
               </tbody>
             </table>
