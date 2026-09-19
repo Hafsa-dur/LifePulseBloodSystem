@@ -86,15 +86,16 @@ export const getStaff = async (req, res) => {
 export const createStaff = async (req, res) => {
   try {
     if (normalizeRole(req.user.role) !== 'hospital_admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can add staff.' });
-    const { name, email, password, phone = '', staffRole = 'Emergency Staff', permissions = [] } = req.body;
+    const { name, email, password, phone = '', staffRole = 'Hospital Staff', permissions = [] } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
-    if (!['Blood Bank Staff', 'Emergency Staff'].includes(String(staffRole || '').trim())) {
-      return res.status(400).json({ success: false, message: 'Only Emergency Staff and Blood Bank Staff roles are allowed.' });
+    if (!['Hospital Staff', 'Blood Bank Staff', 'Emergency Staff'].includes(String(staffRole || '').trim())) {
+      return res.status(400).json({ success: false, message: 'Only Hospital Staff, Emergency Staff, and Blood Bank Staff roles are allowed.' });
     }
     if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
 
     const rolePermissions = {
+      'Hospital Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account'],
       'Blood Bank Staff': ['dashboard', 'inventory', 'dispatch', 'requests', 'account', 'tracking'],
       'Emergency Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account']
     };
