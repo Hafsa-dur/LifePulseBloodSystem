@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Truck, Thermometer, MapPin, ArrowLeft, AlertCircle, Clock, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_URL, authHeaders, parseResponse } from '../api';
-import { socket } from '../socket';
+import { isSocketEnabled, socket } from '../socket';
 
 const LiveTracking = () => {
   const [activeDispatch, setActiveDispatch] = useState(null);
@@ -55,13 +55,15 @@ const LiveTracking = () => {
       });
 
     const handleUpdate = () => loadActiveDispatch();
-    socket.auth = { token: localStorage.getItem('token') || '' };
-    if (!socket.connected) socket.connect();
-    socket.on('update_patient_request', handleUpdate);
+    if (isSocketEnabled) {
+      socket.auth = { token: localStorage.getItem('token') || '' };
+      if (!socket.connected) socket.connect();
+      socket.on('update_patient_request', handleUpdate);
+    }
     const refreshTimer = setInterval(loadActiveDispatch, 15000);
     loadActiveDispatch();
     return () => {
-      socket.off('update_patient_request', handleUpdate);
+      if (isSocketEnabled) socket.off('update_patient_request', handleUpdate);
       clearInterval(refreshTimer);
     };
   }, []);

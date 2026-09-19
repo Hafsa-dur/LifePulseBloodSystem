@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { socket } from '../socket';
+import { isSocketEnabled, socket } from '../socket';
 import { Users, CheckCircle, XCircle, Clock, AlertCircle, Truck } from 'lucide-react';
 import { API_URL, authHeaders, parseResponse } from '../api';
 
@@ -35,15 +35,18 @@ const PatientRequests = () => {
       );
     };
 
-    socket.auth = { token: localStorage.getItem('token') || '' };
-    if (!socket.connected) socket.connect();
-
-    socket.on('new_patient_request', handleNewRequest);
-    socket.on('update_patient_request', handleUpdateRequest);
+    if (isSocketEnabled) {
+      socket.auth = { token: localStorage.getItem('token') || '' };
+      if (!socket.connected) socket.connect();
+      socket.on('new_patient_request', handleNewRequest);
+      socket.on('update_patient_request', handleUpdateRequest);
+    }
 
     return () => {
-      socket.off('new_patient_request', handleNewRequest);
-      socket.off('update_patient_request', handleUpdateRequest);
+      if (isSocketEnabled) {
+        socket.off('new_patient_request', handleNewRequest);
+        socket.off('update_patient_request', handleUpdateRequest);
+      }
     };
   }, []); 
 

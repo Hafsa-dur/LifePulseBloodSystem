@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { socket } from '../socket';
+import { isSocketEnabled, socket } from '../socket';
 import { AlertTriangle, Radio, X, ShieldAlert } from 'lucide-react';
 
 const StockAlertModal = ({ isOpen: propsIsOpen, onClose: propsOnClose, lowStockGroups = [] }) => {
@@ -16,16 +16,16 @@ const StockAlertModal = ({ isOpen: propsIsOpen, onClose: propsOnClose, lowStockG
       setInternalOpen(true);
     };
 
-    if (socket && !socket.connected) {
+    if (isSocketEnabled && socket && !socket.connected) {
       socket.connect();
     }
 
-    if (socket) {
+    if (isSocketEnabled && socket) {
       socket.on('low_stock_alert', handleLowStock);
     }
 
     return () => {
-      if (socket) {
+      if (isSocketEnabled && socket) {
         socket.off('low_stock_alert', handleLowStock);
       }
     };
