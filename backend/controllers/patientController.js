@@ -206,19 +206,22 @@ export const dispatchRequest = async (req, res) => {
             for (const donation of orderedDonations) {
                 if (!remainingUnits) break;
                 const allocatedUnits = Math.min(donation.units, remainingUnits);
-                const updated = await Donation.updateOne(
-                    { _id: donation._id, units: { $gte: allocatedUnits } },
-                    { $inc: { units: -allocatedUnits } },
-                    { session }
-                );
-                if (updated.modifiedCount !== 1) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
+                const availableUnits = Number(donation.availableUnits) > 0 ? Number(donation.availableUnits) : Number(donation.units);
+                if (availableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
+                const previousDispatchedUnits = Number(donation.dispatchedUnits || 0);
+                donation.units -= allocatedUnits;
+                donation.availableUnits = Math.max(0, availableUnits - allocatedUnits);
+                donation.dispatchedUnits = previousDispatchedUnits + allocatedUnits;
+                donation.totalUnits = Number(donation.totalUnits) > 0 ? Number(donation.totalUnits) : availableUnits + previousDispatchedUnits;
+                if (donation.units === 0) donation.status = 'Dispatched';
+                await donation.save({ session });
                 remainingUnits -= allocatedUnits;
             }
 
             await new Donation({
                 donorName: `Dispatched to: ${request.patientName} (${request.hospitalName})`,
                 email: `dispatch-${new mongoose.Types.ObjectId()}@lifepulse.com`,
-                bloodGroup, units: -requiredUnits, hospitalName: request.hospitalName,
+                bloodGroup, units: -requiredUnits, totalUnits: requiredUnits, availableUnits: 0, dispatchedUnits: requiredUnits, hospitalName: request.hospitalName,
                 notes: request.hospitalName, status: 'Dispatched', donationDate: new Date()
             }).save({ session });
             request.status = 'Dispatched';

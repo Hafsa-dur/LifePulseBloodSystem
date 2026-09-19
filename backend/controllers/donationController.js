@@ -179,6 +179,9 @@ export const addDonation = async (req, res) => {
       email: formattedEmail,
       bloodGroup,
       units: Number(units) || 1,
+      totalUnits: Number(units) || 1,
+      availableUnits: Number(units) || 1,
+      dispatchedUnits: 0,
       phone: phone || '03000000000',
       address: address || location || '',
       location: location || address || '',
@@ -211,6 +214,34 @@ export const addDonation = async (req, res) => {
     console.error('Error in addDonation:', error);
     if (error.code === 11000) return res.status(400).json({ message: 'This email already exists in the database! Duplicate donations are not allowed.' });
     return res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateDonation = async (req, res) => {
+  try {
+    const scope = req.user.hospitalId
+      ? { hospitalId: req.user.hospitalId }
+      : { hospitalName: req.user.hospitalName };
+    const donation = await Donation.findOne({ _id: req.params.id, ...scope, status: { $ne: 'Dispatched' } });
+    if (!donation) return res.status(404).json({ success: false, message: 'Editable donation record not found.' });
+
+    const updates = {};
+    for (const key of ['donorName', 'bloodGroup', 'phone', 'address', 'location', 'notes']) {
+      if (req.body[key] !== undefined) updates[key] = String(req.body[key]).trim();
+    }
+    if (req.body.units !== undefined) {
+      const units = Number(req.body.units);
+      if (!Number.isInteger(units) || units <= 0) return res.status(400).json({ success: false, message: 'Units must be a positive whole number.' });
+      const dispatchedUnits = Number(donation.dispatchedUnits || 0);
+      updates.units = units;
+      updates.availableUnits = units;
+      updates.totalUnits = units + dispatchedUnits;
+    }
+
+    const updated = await Donation.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true }).select('-__v');
+    return res.json({ success: true, donation: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -257,12 +288,15 @@ export const dispatchBlood = async (req, res) => {
       for (const donation of donations) {
         if (!remainingUnits) break;
         const allocatedUnits = Math.min(donation.units, remainingUnits);
-        const updated = await Donation.updateOne(
-          { _id: donation._id, units: { $gte: allocatedUnits } },
-          { $inc: { units: -allocatedUnits } },
-          { session }
-        );
-        if (updated.modifiedCount !== 1) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
+        const availableUnits = Number(donation.availableUnits) > 0 ? Number(donation.availableUnits) : Number(donation.units);
+        if (availableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
+        const previousDispatchedUnits = Number(donation.dispatchedUnits || 0);
+        donation.units -= allocatedUnits;
+        donation.availableUnits = Math.max(0, availableUnits - allocatedUnits);
+        donation.dispatchedUnits = previousDispatchedUnits + allocatedUnits;
+        donation.totalUnits = Number(donation.totalUnits) > 0 ? Number(donation.totalUnits) : availableUnits + previousDispatchedUnits;
+        if (donation.units === 0) donation.status = 'Dispatched';
+        await donation.save({ session });
         remainingUnits -= allocatedUnits;
       }
 
@@ -272,6 +306,9 @@ export const dispatchBlood = async (req, res) => {
         bloodGroup: normalizedBloodGroup,
         patientName: patientName || '',
         units: -requestedUnits,
+        totalUnits: requestedUnits,
+        availableUnits: 0,
+        dispatchedUnits: requestedUnits,
         phone: 'N/A',
         hospitalName: hospitalName || 'General Hospital',
         notes: hospitalName || 'Direct Dispatch',

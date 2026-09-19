@@ -91,9 +91,10 @@ app.use('/api/hospital', hospitalRoutes);
 // ==========================================
 
 // 1. GET: Fetch all dispatch history logs
-app.get('/api/donor-recipient-logs', async (req, res) => {
+app.get('/api/donor-recipient-logs', requireAuth, requireHospitalRole, async (req, res) => {
   try {
-    const logs = await DonorRecipientLog.find().sort({ createdAt: -1 });
+    const hospitalFilter = { hospitalName: req.user.hospitalName };
+    const logs = await DonorRecipientLog.find(hospitalFilter).sort({ createdAt: -1 });
     return res.status(200).json(logs);
   } catch (error) {
     console.error('Error fetching dispatch logs:', error);

@@ -3,6 +3,7 @@ import {
   getAllDonations, 
   getDashboardDonations, 
   addDonation, 
+  updateDonation,
   getDonorHistory, 
   dispatchBlood,
   findMatchingDonors,
@@ -18,6 +19,7 @@ router.get('/public-stats', getPublicDonationStats);
 router.get('/', requireAuth, getAllDonations);                           // Hospital/donor-scoped inventory
 router.get('/dashboard', requireAuth, requireHospitalRole, getDashboardDonations);             // Hospital-scoped dashboard stock
 router.post('/', addDonation);                               // Add new donation with duplicate email check
+router.patch('/:id', requireAuth, requireHospitalRole, requirePermission('inventory'), updateDonation);
 router.get('/history/:donorName', getDonorHistory);          // Get specific donor history
 router.get('/match', requireAuth, requireHospitalRole, async (req, res) => {
   try {
