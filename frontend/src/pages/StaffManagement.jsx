@@ -13,7 +13,7 @@ const StaffManagement = () => {
   const hospitalName = user.hospitalName || 'Current Hospital';
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [invite, setInvite] = useState({ email: '', expiresInMinutes: 60, staffRole: 'Hospital Staff' });
+  const [invite, setInvite] = useState({ email: '', expiresInMinutes: 1440, staffRole: 'Hospital Staff' });
   const [inviteLink, setInviteLink] = useState('');
   const [inviteStatus, setInviteStatus] = useState({ type: '', text: '' });
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', staffRole: 'Hospital Staff' });
@@ -50,7 +50,7 @@ const StaffManagement = () => {
     }
     setInviteLink(data.invitation?.inviteLink || '');
     setInviteStatus({ type: 'success', text: data.message || 'Invitation sent successfully.' });
-    setInvite({ email: '', expiresInMinutes: 60, staffRole: 'Hospital Staff' });
+    setInvite({ email: '', expiresInMinutes: 1440, staffRole: 'Hospital Staff' });
   };
 
   const toggleStaff = async (member) => {
@@ -153,7 +153,7 @@ const StaffManagement = () => {
               </form>
               <form onSubmit={generateInvitation} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
                 <input type="email" required placeholder="Invite email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
-                <input type="number" min="15" max="1440" value={invite.expiresInMinutes} onChange={(event) => setInvite({ ...invite, expiresInMinutes: Number(event.target.value) || 60 })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
+                <input type="text" value="24 hours" readOnly className="border-2 border-[#6B1D2F]/20 bg-slate-100 rounded-xl p-3 text-sm font-bold" />
                 <input type="text" value="Hospital Staff" readOnly className="border-2 border-[#6B1D2F]/20 bg-slate-100 rounded-xl p-3 text-sm font-bold" />
                 <button className="bg-[#E5C158] text-[#5A1827] rounded-xl font-black text-xs uppercase">Generate Invite</button>
               </form>

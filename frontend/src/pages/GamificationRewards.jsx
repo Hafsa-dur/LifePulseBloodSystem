@@ -4,7 +4,7 @@ import { Award, Gift, Sparkles, Star, Zap, ShieldCheck, Mail } from 'lucide-reac
 
 const GamificationRewards = () => {
   const [points, setPoints] = useState(420);
-  const [donorEmail] = useState(() => JSON.parse(localStorage.getItem('user') || '{}').email || '');
+  const [donorEmail, setDonorEmail] = useState(() => JSON.parse(localStorage.getItem('user') || '{}').email || '');
   const [loading, setLoading] = useState(false);
 
   const rewardOffers = [
@@ -33,7 +33,7 @@ const GamificationRewards = () => {
       const response = await fetch(`${API_URL}/auth/rewards/send`, {
         method: 'POST',
         headers: authHeaders(true),
-        body: JSON.stringify({ rewardTitle: offer.title, partner: offer.partner, points: offer.pointsCost, voucherCode })
+        body: JSON.stringify({ donorEmail, rewardTitle: offer.title, partner: offer.partner, points: offer.pointsCost, voucherCode })
       });
 
       const result = await parseResponse(response);
@@ -87,13 +87,13 @@ const GamificationRewards = () => {
         </div>
         <div className="flex-1 w-full">
           <label className="block text-xs font-black uppercase tracking-wider text-[#5A1827] mb-1">
-            Registered Email Address for Voucher Delivery:
+            Donor Email Address for Voucher Delivery:
           </label>
           <input
             type="email"
             value={donorEmail}
-            readOnly
-            placeholder="Your registered donor email"
+            onChange={(event) => setDonorEmail(event.target.value)}
+            placeholder="Enter a donor email saved in the system"
             className="w-full px-4 py-2.5 rounded-xl border-2 border-[#5A1827]/20 focus:border-[#5A1827] outline-none text-sm font-semibold bg-[#FAF9F6]"
           />
         </div>
