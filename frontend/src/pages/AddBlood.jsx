@@ -10,6 +10,8 @@ const AddBlood = () => {
     bloodGroup: 'A+',
     units: 1,
     location: '',
+    latitude: '',
+    longitude: '',
     lastDonationDate: '',
     nextEligibleDate: '',
     notes: ''
@@ -49,6 +51,8 @@ const AddBlood = () => {
         bloodGroup: formData.bloodGroup,
         units: Number(formData.units),
         location: formData.location,
+        latitude: formData.latitude === '' ? undefined : Number(formData.latitude),
+        longitude: formData.longitude === '' ? undefined : Number(formData.longitude),
         lastDonationDate: formData.lastDonationDate || new Date(),
         nextEligibleDate: formData.nextEligibleDate,
         notes: formData.notes,
@@ -64,6 +68,8 @@ const AddBlood = () => {
           bloodGroup: 'A+',
           units: 1,
           location: '',
+          latitude: '',
+          longitude: '',
           lastDonationDate: '',
           nextEligibleDate: '',
           notes: ''
@@ -192,6 +198,15 @@ const AddBlood = () => {
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             className="w-full bg-slate-50 border-2 border-slate-200 p-2.5 rounded-xl text-xs text-[#5A1827] font-semibold focus:outline-none focus:border-[#5A1827] transition"
           />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="space-y-1 text-[11px] font-black text-[#5A1827] uppercase tracking-wider">Latitude (Optional)
+            <input type="number" step="any" min="-90" max="90" placeholder="e.g. 34.0074" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} className="w-full bg-slate-50 border-2 border-slate-200 p-2.5 rounded-xl text-xs" />
+          </label>
+          <label className="space-y-1 text-[11px] font-black text-[#5A1827] uppercase tracking-wider">Longitude (Optional)
+            <input type="number" step="any" min="-180" max="180" placeholder="e.g. 71.5714" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} className="w-full bg-slate-50 border-2 border-slate-200 p-2.5 rounded-xl text-xs" />
+          </label>
         </div>
 
         {/* Additional Notes */}

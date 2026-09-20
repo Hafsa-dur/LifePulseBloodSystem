@@ -12,7 +12,9 @@ const PatientRequestForm = () => {
     department: '',
     contactPhone: '',
     hospitalName: user.hospitalName || '',
-    hospitalLocation: user.hospitalLocation || ''
+    hospitalLocation: user.hospitalLocation || '',
+    hospitalLatitude: '',
+    hospitalLongitude: ''
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -28,7 +30,7 @@ const PatientRequestForm = () => {
       const response = await fetch(`${API_URL}/patient-requests`, {
         method: 'POST',
         headers: { ...authHeaders(true) },
-        body: JSON.stringify({ ...formData, unitsRequired: Number(formData.unitsRequired) })
+        body: JSON.stringify({ ...formData, unitsRequired: Number(formData.unitsRequired), hospitalLatitude: formData.hospitalLatitude === '' ? undefined : Number(formData.hospitalLatitude), hospitalLongitude: formData.hospitalLongitude === '' ? undefined : Number(formData.hospitalLongitude) })
       });
       const data = await parseResponse(response);
       if (!response.ok) throw new Error(data.message || 'Patient request could not be submitted.');
@@ -110,6 +112,16 @@ const PatientRequestForm = () => {
           <label className="space-y-1.5 text-xs font-black uppercase tracking-wider">
             Hospital Location
             <input required value={formData.hospitalLocation} onChange={(event) => updateField('hospitalLocation', event.target.value)} className="w-full mt-1 bg-[#FAF9F6] border-2 border-[#5A1827]/30 p-3 rounded-xl text-sm" />
+          </label>
+
+          <label className="space-y-1.5 text-xs font-black uppercase tracking-wider">
+            Hospital Latitude (Optional)
+            <input type="number" step="any" min="-90" max="90" placeholder="e.g. 34.0074" value={formData.hospitalLatitude} onChange={(event) => updateField('hospitalLatitude', event.target.value)} className="w-full mt-1 bg-[#FAF9F6] border-2 border-[#5A1827]/30 p-3 rounded-xl text-sm" />
+          </label>
+
+          <label className="space-y-1.5 text-xs font-black uppercase tracking-wider">
+            Hospital Longitude (Optional)
+            <input type="number" step="any" min="-180" max="180" placeholder="e.g. 71.5714" value={formData.hospitalLongitude} onChange={(event) => updateField('hospitalLongitude', event.target.value)} className="w-full mt-1 bg-[#FAF9F6] border-2 border-[#5A1827]/30 p-3 rounded-xl text-sm" />
           </label>
 
           {message && <p className="md:col-span-2 text-sm font-bold text-slate-700">{message}</p>}
