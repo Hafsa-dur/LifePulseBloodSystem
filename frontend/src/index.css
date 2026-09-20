@@ -10,19 +10,91 @@
   }
 }
 
-.dashboard-layout[data-dashboard-theme='navy'] { background: #eaf0f6 !important; color: #172b4d !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .dashboard-content { background: #eef3f8 !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .bg-white { background-color: #ffffff !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#F7F4EC\],
-.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#FAF9F6\] { background-color: #f5f8fb !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#5A1827\] { background-color: #17345f !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#4A121F\] { background-color: #102744 !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .text-\[\#4A1521\],
-.dashboard-layout[data-dashboard-theme='navy'] .text-\[\#5A1827\] { color: #17345f !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .text-white { color: #ffffff !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .border-\[\#6B1D2F\]\/20 { border-color: rgba(23, 52, 95, .2) !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#E5C158\] { background-color: #e1b84a !important; }
-.dashboard-layout[data-dashboard-theme='navy'] .text-\[\#E5C158\] { color: #e1b84a !important; }
+.dashboard-layout {
+  --dashboard-navy: #102a4c;
+  --dashboard-navy-light: #173b68;
+  --dashboard-gold: #d6a62a;
+  --dashboard-gold-hover: #edc34f;
+  --dashboard-surface: #ffffff;
+  --dashboard-surface-soft: #f3f6fa;
+  --dashboard-border: #c7d2df;
+  --dashboard-text: #17304f;
+  --dashboard-muted: #5f7185;
+  background: #e8eef5 !important;
+  color: var(--dashboard-text) !important;
+}
+
+.dashboard-layout[data-dashboard-theme='navy-soft'] {
+  --dashboard-surface-soft: #eef3f8;
+  --dashboard-border: #b8c8d8;
+}
+
+.dashboard-layout .dashboard-content { background: #e8eef5 !important; }
+.dashboard-layout .bg-white { background-color: var(--dashboard-surface) !important; }
+.dashboard-layout .bg-\[\#F7F4EC\],
+.dashboard-layout .bg-\[\#FAF9F6\],
+.dashboard-layout .bg-slate-50 { background-color: var(--dashboard-surface-soft) !important; }
+.dashboard-layout .text-\[\#4A1521\],
+.dashboard-layout .text-\[\#5A1827\],
+.dashboard-layout .text-\[\#4A121F\] { color: var(--dashboard-text) !important; }
+.dashboard-layout .border-\[\#6B1D2F\],
+.dashboard-layout .border-\[\#5A1827\],
+.dashboard-layout .border-slate-200 { border-color: var(--dashboard-border) !important; }
+.dashboard-layout .bg-\[\#E5C158\],
+.dashboard-layout .bg-\[\#D4AF37\] { background-color: var(--dashboard-gold) !important; }
+.dashboard-layout .text-\[\#E5C158\],
+.dashboard-layout .text-\[\#7A6305\] { color: var(--dashboard-gold) !important; }
+
+.dashboard-layout .topbar-responsive,
+.dashboard-layout .sidebar-responsive,
+.dashboard-layout .sidebar-brand,
+.dashboard-layout .sidebar-footer { background: var(--dashboard-navy) !important; }
+.dashboard-layout .topbar-profile,
+.dashboard-layout .topbar-search-input { background: var(--dashboard-navy-light) !important; border-color: rgba(214, 166, 42, .55) !important; }
+.dashboard-layout .topbar-search-input::placeholder { color: #dbe5f0 !important; }
+.dashboard-layout .theme-toggle { color: var(--dashboard-gold) !important; border-color: rgba(214, 166, 42, .65) !important; }
+.dashboard-layout .theme-toggle:hover { background: var(--dashboard-gold) !important; color: var(--dashboard-navy) !important; }
+.dashboard-layout .sidebar-kicker { color: var(--dashboard-gold) !important; }
+.dashboard-layout .sidebar-link { color: #e4edf7 !important; }
+.dashboard-layout .sidebar-link:hover,
+.dashboard-layout .sidebar-link-active { background: var(--dashboard-gold) !important; color: var(--dashboard-navy) !important; border-color: var(--dashboard-gold) !important; }
+.dashboard-layout .sidebar-logout { background: var(--dashboard-gold) !important; color: var(--dashboard-navy) !important; border: 1px solid var(--dashboard-gold-hover) !important; }
+.dashboard-layout .sidebar-logout:hover { background: var(--dashboard-gold-hover) !important; }
+
+/* Normalize old page utilities only inside authenticated dashboards. */
+.dashboard-layout [class*="bg-[#5A1827]"],
+.dashboard-layout [class*="bg-[#4A121F]"],
+.dashboard-layout [class*="bg-[#6B1D2F]"] { background-color: var(--dashboard-navy) !important; }
+.dashboard-layout [class*="text-[#5A1827]"],
+.dashboard-layout [class*="text-[#4A1521]"],
+.dashboard-layout [class*="text-[#990000]"] { color: var(--dashboard-text) !important; }
+.dashboard-layout [class*="border-[#5A1827]"],
+.dashboard-layout [class*="border-[#6B1D2F]"] { border-color: var(--dashboard-border) !important; }
+.dashboard-layout [class*="bg-rose-"],
+.dashboard-layout [class*="bg-red-"] { background-color: #fff4d6 !important; }
+.dashboard-layout [class*="text-rose-"],
+.dashboard-layout [class*="text-red-"] { color: #8a5a00 !important; }
+.dashboard-layout [class*="border-rose-"],
+.dashboard-layout [class*="border-red-"] { border-color: #e5c46a !important; }
+.dashboard-layout [class*="from-[#5A1827]"],
+.dashboard-layout [class*="from-[#FCD34D]"],
+.dashboard-layout [class*="from-[#F59E0B]"] { --tw-gradient-from: var(--dashboard-navy) !important; }
+.dashboard-layout [class*="to-[#802035]"],
+.dashboard-layout [class*="to-[#D97706]"],
+.dashboard-layout [class*="to-[#B45309]"] { --tw-gradient-to: var(--dashboard-gold) !important; }
+
+.dashboard-layout button[class*="bg-[#5A1827]"],
+.dashboard-layout button[class*="bg-[#990000]"],
+.dashboard-layout button[class*="bg-rose-"],
+.dashboard-layout button[class*="bg-red-"] { background-color: var(--dashboard-gold) !important; color: var(--dashboard-navy) !important; border-color: var(--dashboard-gold) !important; }
+.dashboard-layout button[class*="bg-[#5A1827]"]:hover,
+.dashboard-layout button[class*="bg-[#990000]"]:hover,
+.dashboard-layout button[class*="bg-rose-"]:hover,
+.dashboard-layout button[class*="bg-red-"]:hover { background-color: var(--dashboard-gold-hover) !important; }
+.dashboard-layout button[class*="hover:bg-rose-"],
+.dashboard-layout button[class*="hover:bg-red-"] { background-color: var(--dashboard-gold) !important; color: var(--dashboard-navy) !important; }
+.dashboard-layout button[class*="hover:bg-rose-"]:hover,
+.dashboard-layout button[class*="hover:bg-red-"]:hover { background-color: var(--dashboard-gold-hover) !important; }
 
 /* Custom Scrollbar for professional look */
 ::-webkit-scrollbar {
