@@ -1,7 +1,9 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
+import { Landmark } from 'lucide-react';
+import { useTheme } from '../ThemeContext';
 
 const Navbar = () => {
+  const { theme, toggleTheme } = useTheme();
   return (
     <nav className="navbar-responsive bg-[#5A1827] border-b-2 border-[#E5C158]/30 py-4 px-6 md:px-12 flex justify-between items-center text-white font-sans shadow-md sticky top-0 z-50">
       <Link to="/" className="flex items-center gap-3 group">
@@ -22,6 +24,9 @@ const Navbar = () => {
 
       {/* Auth Buttons */}
       <div className="flex items-center gap-4 text-xs font-black uppercase tracking-wider">
+        <button type="button" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} className="theme-toggle flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5C158]/50 text-[#E5C158] hover:bg-[#E5C158]/15">
+          <Landmark className="h-4 w-4" />
+        </button>
         <Link to="/login" className="text-rose-100 hover:text-[#E5C158] transition-colors">
           Sign In
         </Link>

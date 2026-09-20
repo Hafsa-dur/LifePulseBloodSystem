@@ -23,7 +23,7 @@ const ReportsAnalytics = () => {
         const data = await parseResponse(response);
         if (!response.ok) throw new Error(data.message || 'Analytics unavailable.');
         setMetrics(data.metrics || {});
-        setBloodBreakdown((data.bloodBreakdown || []).filter((item) => item.units > 0));
+        setBloodBreakdown(data.bloodBreakdown || []);
       } catch (error) {
         console.error('Failed to load analytics:', error);
       } finally {
@@ -103,25 +103,14 @@ const ReportsAnalytics = () => {
         </div>
 
         <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-6 shadow-md">
-          <h2 className="text-xl font-black text-[#4A1521] mb-4">Blood group balance</h2>
-          <div className="space-y-3">
-            {bloodBreakdown.length > 0 ? bloodBreakdown.map((item) => (
-              <div key={item.group}>
-                <div className="flex justify-between mb-1 text-sm font-bold text-[#4A1521]">
-                  <span>{item.group}</span>
-                  <span>{item.units} units</span>
-                </div>
-                <div className="h-3 w-full bg-[#FAF9F6] border border-[#6B1D2F]/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#5A1827] via-[#9C1D3C] to-[#E5C158]"
-                    style={{ width: `${(item.units / maxValue) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )) : (
-              <p className="text-sm text-slate-600">No donation data is available for this hospital yet.</p>
-            )}
-          </div>
+          <h2 className="text-xl font-black text-[#4A1521] mb-4">Blood group distribution</h2>
+          {bloodBreakdown.length > 0 ? <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 items-end min-h-64 border-b-2 border-[#6B1D2F]/15 px-2 pt-6">
+            {bloodBreakdown.map((item, index) => {
+              const colors = ['#B4233C', '#E05A47', '#2A9D8F', '#1D70A2', '#7B61A8', '#E09F3E', '#2F855A', '#C05621'];
+              return <div key={item.group} className="flex h-52 flex-col items-center justify-end gap-2"><span className="text-xs font-black text-[#4A1521]">{item.units}</span><div className="w-full max-w-12 rounded-t-xl transition-all" style={{ height: `${Math.max(item.units ? 12 : 4, (item.units / maxValue) * 150)}px`, backgroundColor: colors[index % colors.length] }} title={`${item.group}: ${item.units} units`} /><span className="text-sm font-black text-[#4A1521]">{item.group}</span></div>;
+            })}
+          </div> : <p className="text-sm text-slate-600">No donation data is available for this hospital yet.</p>}
+          <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-center text-[10px] font-black uppercase text-slate-500">{bloodBreakdown.map((item) => <span key={item.group}>{item.group} · {item.units} units</span>)}</div>
         </div>
       </div>
     </div>

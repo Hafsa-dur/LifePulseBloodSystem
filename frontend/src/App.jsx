@@ -60,7 +60,11 @@ const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false }) 
   }
 
   if (adminOnly && userRole !== 'hospital_admin') return <Navigate to="/dashboard" replace />;
-  if (requiredPermission && userRole !== 'hospital_admin' && !(user.permissions || []).includes(requiredPermission)) {
+  const hospitalStaffOperationalPermissions = ['requests', 'dispatch', 'inventory', 'tracking'];
+  const hasRequiredPermission = userRole === 'hospital_admin'
+    || (userRole === 'hospital_staff' && hospitalStaffOperationalPermissions.includes(requiredPermission))
+    || (user.permissions || []).includes(requiredPermission);
+  if (requiredPermission && !hasRequiredPermission) {
     return <Navigate to="/dashboard" replace />;
   }
 
