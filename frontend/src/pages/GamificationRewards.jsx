@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { API_URL, authHeaders, parseResponse } from '../api';
 import { Award, Gift, Sparkles, Star, Zap, ShieldCheck, Mail } from 'lucide-react';
 
@@ -29,11 +29,14 @@ const GamificationRewards = () => {
     try {
       setLoading(true);
 
-      const voucherCode = `LP-VOUCHER-${Math.floor(100000 + Math.random() * 900000)}`;
+      const randomValues = new Uint32Array(1);
+      window.crypto.getRandomValues(randomValues);
+      const voucherCode = `LP-VOUCHER-${100000 + (randomValues[0] % 900000)}`;
+      const selectedEmail = donorEmail.trim().toLowerCase();
       const response = await fetch(`${API_URL}/auth/rewards/send`, {
         method: 'POST',
         headers: authHeaders(true),
-        body: JSON.stringify({ donorEmail, rewardTitle: offer.title, partner: offer.partner, points: offer.pointsCost, voucherCode })
+        body: JSON.stringify({ donorEmail: selectedEmail, rewardTitle: offer.title, partner: offer.partner, points: offer.pointsCost, voucherCode })
       });
 
       const result = await parseResponse(response);
@@ -43,7 +46,7 @@ const GamificationRewards = () => {
       }
 
       setPoints(points - offer.pointsCost);
-      alert(`🎉 Success! ${offer.title} has been redeemed and the voucher has been successfully sent to your email (${donorEmail})!`);
+      alert(`🎉 Success! ${offer.title} has been redeemed and the voucher has been successfully sent to your email (${selectedEmail})!`);
       setDonorEmail('');
 
     } catch (error) {

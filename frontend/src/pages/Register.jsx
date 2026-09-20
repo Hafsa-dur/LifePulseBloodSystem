@@ -28,8 +28,8 @@ const Register = () => {
 
   useEffect(() => {
     const token = searchParams.get('token');
-    if (token) setForm((current) => ({ ...current, token }));
-  }, [searchParams]);
+    if (token) navigate(`/staff-registration?token=${encodeURIComponent(token)}`, { replace: true });
+  }, [navigate, searchParams]);
 
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
