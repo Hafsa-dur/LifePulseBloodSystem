@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
   hospitalName: { type: String, default: '' },
   hospitalLocation: { type: String, default: '' },
   isActive: { type: Boolean, default: true },
+  dutyStatus: { type: String, enum: ['on_duty', 'off_duty'], default: 'off_duty' },
+  dutyStatusUpdatedAt: { type: Date, default: null },
   permissions: { type: [String], default: ['dashboard', 'requests', 'dispatch'] },
   phone: { type: String, default: '' },
   profile: { type: String, default: '' }

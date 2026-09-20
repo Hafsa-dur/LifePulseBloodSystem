@@ -170,6 +170,10 @@ export const updateStaff = async (req, res) => {
     const filter = { _id: req.params.id, ...hospitalFilter(req.user), role: { $in: ['hospital_staff', 'staff'] } };
     const updates = {};
     for (const key of ['name', 'phone', 'permissions', 'isActive']) if (req.body[key] !== undefined) updates[key] = req.body[key];
+    if (req.body.dutyStatus !== undefined && ['on_duty', 'off_duty'].includes(req.body.dutyStatus)) {
+      updates.dutyStatus = req.body.dutyStatus;
+      updates.dutyStatusUpdatedAt = new Date();
+    }
     if (req.body.password) updates.password = await bcrypt.hash(req.body.password, 10);
     const staff = await User.findOneAndUpdate(filter, updates, { new: true }).select('-password');
     if (!staff) return res.status(404).json({ success: false, message: 'Staff member not found.' });
@@ -194,7 +198,8 @@ export const getHospitalSettings = async (req, res) => {
   const settings = await HospitalSettings.findOne({ hospitalId: req.user.hospitalId || req.user.hospitalName });
   return res.json({ success: true, settings: settings || {
     hospitalId: req.user.hospitalId || req.user.hospitalName, hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '',
-    emergencyAlerts: true, autoDispatch: true, donorNotifications: true
+    emergencyAlerts: true, autoDispatch: true, donorNotifications: true,
+    emergencyContact: '', ambulanceContact: ''
   } });
 };
 
@@ -203,13 +208,42 @@ export const updateHospitalSettings = async (req, res) => {
     const hospitalId = req.user.hospitalId || req.user.hospitalName;
     const settings = await HospitalSettings.findOneAndUpdate(
       { hospitalId },
-      { emergencyAlerts: req.body.emergencyAlerts !== false, autoDispatch: req.body.autoDispatch !== false, donorNotifications: req.body.donorNotifications !== false, hospitalId, hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '', updatedBy: req.user._id },
+      {
+        emergencyAlerts: req.body.emergencyAlerts !== false,
+        autoDispatch: req.body.autoDispatch !== false,
+        donorNotifications: req.body.donorNotifications !== false,
+        emergencyContact: String(req.body.emergencyContact || '').trim(),
+        ambulanceContact: String(req.body.ambulanceContact || '').trim(),
+        hospitalId,
+        hospitalName: req.user.hospitalName || '',
+        hospitalLocation: req.user.hospitalLocation || '',
+        updatedBy: req.user._id
+      },
       { new: true, upsert: true, runValidators: true }
     );
     return res.json({ success: true, settings });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
+};
+
+export const getSystemHealth = async (req, res) => {
+    const checkedAt = new Date();
+    const databaseConnected = mongoose.connection.readyState === 1;
+    const backupConfigured = Boolean(process.env.MONGODB_BACKUP_COMMAND || process.env.BACKUP_PROVIDER);
+    return res.json({
+      success: true,
+      checkedAt,
+      api: { status: 'operational', service: 'LifePulse API' },
+      database: { status: databaseConnected ? 'connected' : 'disconnected', provider: 'MongoDB' },
+      service: { status: 'operational', uptimeSeconds: Math.round(process.uptime()) },
+      backup: {
+        configured: backupConfigured,
+        status: backupConfigured ? 'configured' : 'not_configured',
+        lastSuccessfulAt: null,
+        history: []
+      }
+    });
 };
 
 export const getHospitalAnalytics = async (req, res) => {

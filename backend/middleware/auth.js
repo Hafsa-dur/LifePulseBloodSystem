@@ -56,7 +56,9 @@ export const requireAdmin = (req, res, next) => {
 };
 
 export const requirePermission = (permission) => (req, res, next) => {
-  if (normalizeUserRole(req.user?.role) === 'hospital_admin' || req.user?.permissions?.includes(permission)) return next();
+  const role = normalizeUserRole(req.user?.role);
+  const hospitalStaffOperationalPermissions = ['requests', 'dispatch', 'inventory', 'tracking'];
+  if (role === 'hospital_admin' || (role === 'hospital_staff' && hospitalStaffOperationalPermissions.includes(permission)) || req.user?.permissions?.includes(permission)) return next();
   return res.status(403).json({ success: false, message: `Permission required: ${permission}.` });
 };
 
