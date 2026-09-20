@@ -73,23 +73,22 @@ export const getPatientRequests = async (req, res) => {
     try {
         const filters = hospitalScope(req.user);
         const requests = await PatientRequest.find(filters).sort({ createdAt: -1 });
-        const pendingFallbacks = requests.filter((request) => request.status === 'Pending' && !request.donorId && request.sourceType === 'inventory');
-        await Promise.all(pendingFallbacks.map(async (request) => {
+        const pendingRequests = requests.filter((request) => request.status === 'Pending');
+        await Promise.all(pendingRequests.map(async (request) => {
             const rankedDonors = await findMatchingDonors({
                 bloodGroup: request.bloodGroup,
                 units: request.unitsRequired,
                 location: request.hospitalLocation
             });
             const nearestMatch = rankedDonors?.[0] || null;
-            if (!nearestMatch) return;
-            request.donorId = nearestMatch.donor._id;
-            request.donorName = nearestMatch.donor.donorName;
-            request.donorEmail = nearestMatch.donor.email;
-            request.donorLocation = nearestMatch.donor.location || nearestMatch.donor.address || '';
-            request.donorDistance = Number.isFinite(nearestMatch.distance) ? Number(nearestMatch.distance.toFixed(2)) : null;
-            request.sourceType = 'donor';
-            request.matchStatus = 'Matched';
-            request.locationMatchStatus = 'Matched';
+            request.donorId = nearestMatch?.donor?._id || null;
+            request.donorName = nearestMatch?.donor?.donorName || '';
+            request.donorEmail = nearestMatch?.donor?.email || '';
+            request.donorLocation = nearestMatch?.donor?.location || nearestMatch?.donor?.address || '';
+            request.donorDistance = Number.isFinite(nearestMatch?.distance) ? Number(nearestMatch.distance.toFixed(2)) : null;
+            request.sourceType = nearestMatch ? 'donor' : 'inventory';
+            request.matchStatus = nearestMatch ? 'Matched' : undefined;
+            request.locationMatchStatus = nearestMatch ? 'Matched' : 'No Donor';
             await request.save();
         }));
         res.status(200).json(requests);

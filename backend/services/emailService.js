@@ -15,14 +15,15 @@ const getTransporter = () => {
 
 export const sendEmailMessage = async ({ to, subject, text, html }) => {
   const mailer = getTransporter();
-  if (!mailer || !to) {
-    return { sent: false, reason: !to ? 'missing-recipient-email' : 'email-not-configured' };
+  const recipient = String(to || '').trim().toLowerCase();
+  if (!mailer || !recipient) {
+    return { sent: false, reason: !recipient ? 'missing-recipient-email' : 'email-not-configured' };
   }
 
   try {
     await mailer.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to,
+      to: recipient,
       subject,
       text,
       html: html || text

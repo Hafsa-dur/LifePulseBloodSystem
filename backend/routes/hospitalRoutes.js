@@ -43,7 +43,7 @@ router.post('/send-donor-email', requirePermission('dispatch'), async (req, res)
     }
 
     const result = await sendDonorEmergencyEmail({
-      donorEmail: donor.email,
+      donorEmail: String(donor.email).trim().toLowerCase(),
       donorName: donor.donorName || 'Donor',
       bloodGroup: patientRequest.bloodGroup || donor.bloodGroup || 'A+',
       urgency,
