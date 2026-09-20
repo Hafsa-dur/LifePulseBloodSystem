@@ -9,7 +9,7 @@ const StaffRegistration = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [status, setStatus] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
-  const [validation, setValidation] = useState(() => ({ loading: Boolean(token), valid: false, email: '', inviteeName: '', hospitalName: '' }));
+  const [validation, setValidation] = useState(() => ({ loading: Boolean(token), valid: false, accepted: false, email: '', inviteeName: '', hospitalName: '' }));
 
   useEffect(() => {
     if (!token) {
@@ -18,13 +18,14 @@ const StaffRegistration = () => {
     fetch(`${API_URL}/auth/staff/invitation/${encodeURIComponent(token)}`)
       .then(parseResponse)
       .then((data) => {
-        setValidation({ loading: false, valid: Boolean(data.valid), email: data.invitation?.email || '', inviteeName: data.invitation?.inviteeName || '', hospitalName: data.invitation?.hospitalName || '' });
-        if (!data.valid) setStatus({ type: 'error', text: data.message || 'This invitation is not valid.' });
+        setValidation({ loading: false, valid: Boolean(data.valid), accepted: Boolean(data.accepted), email: data.invitation?.email || '', inviteeName: data.invitation?.inviteeName || '', hospitalName: data.invitation?.hospitalName || '' });
+        if (data.accepted) setStatus({ type: 'success', text: data.message || 'Invitation already accepted. This staff account is already registered.' });
+        else if (!data.valid) setStatus({ type: 'error', text: data.message || 'This invitation is not valid.' });
         if (data.invitation?.email) setForm((current) => ({ ...current, email: data.invitation.email }));
         if (data.invitation?.inviteeName) setForm((current) => ({ ...current, name: data.invitation.inviteeName }));
       })
       .catch(() => {
-        setValidation({ loading: false, valid: false, email: '', inviteeName: '', hospitalName: '' });
+        setValidation({ loading: false, valid: false, accepted: false, email: '', inviteeName: '', hospitalName: '' });
         setStatus({ type: 'error', text: 'Unable to validate this invitation.' });
       });
   }, [token]);
@@ -67,7 +68,7 @@ const StaffRegistration = () => {
 
         {status.text && <div className={`${status.type === 'error' ? 'bg-rose-100 border-rose-300 text-rose-800' : 'bg-emerald-100 border-emerald-300 text-emerald-800'} mb-5 border-2 rounded-xl px-4 py-3 text-xs font-bold`}>{status.text}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {validation.accepted ? <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-5 text-center text-sm font-bold text-emerald-800">This invitation has already been accepted. The linked Hospital Staff account already exists.</div> : <form onSubmit={handleSubmit} className="space-y-4">
           {['name', 'email', 'phone'].map((field) => (
             <label key={field} className="block text-xs font-black uppercase tracking-wider text-[#5A1827]">
               {field === 'name' ? 'Full name' : field}
@@ -77,7 +78,7 @@ const StaffRegistration = () => {
           <label className="block text-xs font-black uppercase tracking-wider text-[#5A1827]">Password<input name="password" type="password" minLength="6" required value={form.password} onChange={updateField} className="mt-1 w-full rounded-xl border-2 border-[#5A1827]/20 bg-[#FAF9F6] p-3 text-sm" /></label>
           <label className="block text-xs font-black uppercase tracking-wider text-[#5A1827]">Confirm password<input name="confirmPassword" type="password" minLength="6" required value={form.confirmPassword} onChange={updateField} className="mt-1 w-full rounded-xl border-2 border-[#5A1827]/20 bg-[#FAF9F6] p-3 text-sm" /></label>
           <button type="submit" disabled={loading || validation.loading || !validation.valid} className="w-full rounded-xl bg-[#5A1827] py-3 text-xs font-black uppercase tracking-widest text-[#E5C158] disabled:opacity-50">{validation.loading ? 'Validating invitation...' : loading ? 'Creating account...' : 'Create staff account'}</button>
-        </form>
+        </form>}
       </div>
     </div>
   );

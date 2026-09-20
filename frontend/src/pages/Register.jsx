@@ -54,6 +54,10 @@ const Register = () => {
 
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await parseResponse(response);
+      if (role === 'hospital_staff' && data.accepted) {
+        navigate(`/staff-registration?token=${encodeURIComponent(form.token)}`, { replace: true });
+        return;
+      }
       if (!response.ok) throw new Error(data.message || 'Registration failed.');
       if (data.token && data.user) {
         localStorage.setItem('token', data.token);

@@ -16,7 +16,6 @@ const StaffManagement = () => {
   const [invite, setInvite] = useState({ name: '', email: '' });
   const [inviteLink, setInviteLink] = useState('');
   const [inviteStatus, setInviteStatus] = useState({ type: '', text: '' });
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
 
   useEffect(() => {
     fetch(`${API_URL}/hospital/staff`, { headers: authHeaders() })
@@ -25,15 +24,6 @@ const StaffManagement = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-
-  const addStaff = async (event) => {
-    event.preventDefault();
-    const response = await fetch(`${API_URL}/hospital/staff`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify(form) });
-    const data = await parseResponse(response);
-    if (!response.ok) return alert(data.message || 'Unable to add staff member.');
-    setStaff((items) => [data.staff, ...items]);
-    setForm({ name: '', email: '', password: '', phone: '' });
-  };
 
   const generateInvitation = async (event) => {
     event.preventDefault();
@@ -142,10 +132,6 @@ const StaffManagement = () => {
           <h2 className="text-xl font-black text-[#4A1521] mb-4">Hospital team</h2>
           {normalizedUserRole === 'hospital_admin' || normalizedUserRole === 'admin' ? (
             <>
-              <form onSubmit={addStaff} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
-                {['name', 'email', 'password', 'phone'].map((field) => <input key={field} required={field !== 'phone'} type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'} placeholder={field[0].toUpperCase() + field.slice(1)} value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />)}
-                <button className="bg-[#5A1827] text-white rounded-xl font-black text-xs uppercase">Add staff</button>
-              </form>
               <form onSubmit={generateInvitation} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
                 <input type="text" required placeholder="Staff name" value={invite.name} onChange={(event) => setInvite({ ...invite, name: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
                 <input type="email" required placeholder="Invite email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
