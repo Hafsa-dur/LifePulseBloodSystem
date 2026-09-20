@@ -2,7 +2,7 @@ import { Menu, Search, Landmark } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 
 const Topbar = ({ onMenuClick = () => {} }) => {
-  const { theme, toggleTheme } = useTheme();
+  const { toggleTheme } = useTheme();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = String(user.role || 'donor').trim().toLowerCase();
   const normalizedRole = userRole === 'hospital_admin' || userRole === 'admin' ? 'hospital_admin' : userRole === 'hospital_staff' || userRole === 'staff' ? 'hospital_staff' : 'donor';
@@ -29,7 +29,7 @@ const Topbar = ({ onMenuClick = () => {} }) => {
       </div>
 
       <div className="flex items-center gap-3">
-        <button type="button" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} className="theme-toggle flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5C158]/50 text-[#E5C158] hover:bg-[#E5C158]/15">
+        <button type="button" onClick={toggleTheme} title="Change Dashboard Theme" aria-label="Change Dashboard Theme" className="theme-toggle flex h-9 w-9 items-center justify-center rounded-xl border border-[#E5C158]/50 text-[#E5C158] hover:bg-[#E5C158]/15">
           <Landmark className="h-4 w-4" />
         </button>
         <div className="topbar-profile flex items-center gap-3 bg-[#4A121F] px-3 py-1.5 rounded-2xl border-2 border-[#E5C158]/30 shadow-sm">

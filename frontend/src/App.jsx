@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTheme } from './ThemeContext';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // Public Components
@@ -83,9 +84,10 @@ const PublicLayout = () => (
 
 const DashboardShell = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme } = useTheme();
 
   return (
-    <div className="dashboard-layout flex h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div data-dashboard-theme={theme} className="dashboard-layout flex h-screen overflow-hidden bg-slate-950 text-slate-100">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {sidebarOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

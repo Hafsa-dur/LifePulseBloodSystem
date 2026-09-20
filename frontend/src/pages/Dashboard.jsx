@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import '../styles/Dashboard.css';
 import { 
@@ -53,7 +53,7 @@ const Dashboard = () => {
           // Calculate total units and group-wise donations securely
           donationsData.forEach((item) => {
             const bg = item.bloodGroup;
-            const units = Number(item.units) || 1;
+            const units = item.availableUnits === undefined ? (Number(item.units) || 0) : (Number(item.availableUnits) || 0);
             if (groupDonationUnits[bg] !== undefined) {
               groupDonationUnits[bg] += units;
             }
@@ -61,7 +61,7 @@ const Dashboard = () => {
           });
 
           // Strictly counting unique donors from donation database only (Isolated from patient requests/dispatches)
-          uniqueDonors = new Set(donationsData.map((item) => item.donorName)).size;
+          uniqueDonors = new Set(donationsData.filter((item) => item.availableUnits === undefined || Number(item.availableUnits) > 0).map((item) => item.donorName)).size;
         }
 
         const requestsRes = await fetch(`${API_URL}/patient-requests${params.toString() ? `?${params.toString()}` : ''}`, { headers: authHeaders() });

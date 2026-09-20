@@ -10,24 +10,19 @@
   }
 }
 
-:root[data-theme='dark'] body {
-  background: #1e2028;
-  color: #f4eee6;
-}
-
-:root[data-theme='dark'] .bg-white { background-color: #292c35 !important; }
-:root[data-theme='dark'] .bg-slate-50,
-:root[data-theme='dark'] .bg-\[\#FAF9F6\],
-:root[data-theme='dark'] .bg-\[\#F7F4EC\] { background-color: #23252d !important; }
-:root[data-theme='dark'] .text-\[\#4A1521\],
-:root[data-theme='dark'] .text-\[\#5A1827\] { color: #f3dfcf !important; }
-:root[data-theme='dark'] .text-slate-500,
-:root[data-theme='dark'] .text-slate-600 { color: #b9b4b1 !important; }
-:root[data-theme='dark'] input,
-:root[data-theme='dark'] select,
-:root[data-theme='dark'] textarea { color-scheme: dark; }
-:root[data-theme='dark'] .dashboard-content,
-:root[data-theme='dark'] .public-layout { background-color: #1e2028 !important; }
+.dashboard-layout[data-dashboard-theme='navy'] { background: #eaf0f6 !important; color: #172b4d !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .dashboard-content { background: #eef3f8 !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .bg-white { background-color: #ffffff !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#F7F4EC\],
+.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#FAF9F6\] { background-color: #f5f8fb !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#5A1827\] { background-color: #17345f !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#4A121F\] { background-color: #102744 !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .text-\[\#4A1521\],
+.dashboard-layout[data-dashboard-theme='navy'] .text-\[\#5A1827\] { color: #17345f !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .text-white { color: #ffffff !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .border-\[\#6B1D2F\]\/20 { border-color: rgba(23, 52, 95, .2) !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .bg-\[\#E5C158\] { background-color: #e1b84a !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .text-\[\#E5C158\] { color: #e1b84a !important; }
 
 /* Custom Scrollbar for professional look */
 ::-webkit-scrollbar {

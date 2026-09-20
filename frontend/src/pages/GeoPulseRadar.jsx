@@ -52,7 +52,7 @@ const GeoPulseRadar = () => {
           const status = String(item.status || '').toLowerCase();
           const donorLocation = String(item.location || item.address || '').trim();
           return !lowerName.includes('dispatched to') && status !== 'dispatched' &&
-            item.role !== 'patient' && Number(item.units || 0) > 0 && Boolean(donorLocation);
+            item.role !== 'patient' && Number(item.units || 0) > 0 && (item.availableUnits === undefined || Number(item.availableUnits) > 0) && Boolean(donorLocation);
         });
 
         const enrichedDonors = activeDonors.map((donor) => ({
