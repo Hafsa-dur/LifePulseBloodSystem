@@ -5,26 +5,26 @@ import { API_URL, parseResponse } from '../api';
 const StaffRegistration = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || '';
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [status, setStatus] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
-  const [validation, setValidation] = useState({ loading: true, valid: false, email: '', hospitalName: '' });
-  const token = searchParams.get('token') || '';
+  const [validation, setValidation] = useState(() => ({ loading: Boolean(token), valid: false, email: '', inviteeName: '', hospitalName: '' }));
 
   useEffect(() => {
     if (!token) {
-      setValidation({ loading: false, valid: false, email: '', hospitalName: '' });
       return;
     }
     fetch(`${API_URL}/auth/staff/invitation/${encodeURIComponent(token)}`)
       .then(parseResponse)
       .then((data) => {
-        setValidation({ loading: false, valid: Boolean(data.valid), email: data.invitation?.email || '', hospitalName: data.invitation?.hospitalName || '' });
+        setValidation({ loading: false, valid: Boolean(data.valid), email: data.invitation?.email || '', inviteeName: data.invitation?.inviteeName || '', hospitalName: data.invitation?.hospitalName || '' });
         if (!data.valid) setStatus({ type: 'error', text: data.message || 'This invitation is not valid.' });
         if (data.invitation?.email) setForm((current) => ({ ...current, email: data.invitation.email }));
+        if (data.invitation?.inviteeName) setForm((current) => ({ ...current, name: data.invitation.inviteeName }));
       })
       .catch(() => {
-        setValidation({ loading: false, valid: false, email: '', hospitalName: '' });
+        setValidation({ loading: false, valid: false, email: '', inviteeName: '', hospitalName: '' });
         setStatus({ type: 'error', text: 'Unable to validate this invitation.' });
       });
   }, [token]);

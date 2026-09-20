@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -25,7 +24,6 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   const userRole = String(user.role || 'donor').trim().toLowerCase();
   const normalizedRole = userRole === 'hospital_admin' || userRole === 'admin' ? 'hospital_admin' : userRole === 'hospital_staff' || userRole === 'staff' ? 'hospital_staff' : userRole;
   const isHospitalRole = normalizedRole === 'hospital_admin' || normalizedRole === 'hospital_staff';
-  const staffRole = user.staffRole || '';
   const can = (permission) => normalizedRole === 'hospital_admin' || (user.permissions || []).includes(permission);
 
   const handleLogout = () => {
@@ -51,17 +49,6 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         { path: '/account-center', label: 'Account Center', icon: User },
       ];
 
-      const bloodBankItems = [
-        { path: '/dashboard', label: 'System Overview', icon: LayoutDashboard },
-        { path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle },
-        { path: '/blood-list', label: 'Stock Directory', icon: Droplets },
-        { path: '/request-management', label: 'Request Management', icon: GitPullRequest },
-        { path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio },
-        { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList },
-        { path: '/tracking', label: 'Live Transport Tracking', icon: Truck },
-        { path: '/account-center', label: 'Account Center', icon: User },
-      ];
-
       if (normalizedRole === 'hospital_admin') {
         return [
           ...adminItems,
@@ -75,10 +62,11 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         ];
       }
 
-      if (staffRole === 'Emergency Staff') return emergencyItems;
-      if (staffRole === 'Hospital Staff') return emergencyItems;
-      if (staffRole === 'Blood Bank Staff') return bloodBankItems;
-      return adminItems;
+      return [
+        ...emergencyItems,
+        { path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle },
+        { path: '/blood-list', label: 'Stock Directory', icon: Droplets },
+      ];
     }
 
     return [
@@ -101,7 +89,7 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         <div>
           <h1 className="text-base font-black text-white tracking-wider">LifePulse</h1>
           <p className="text-[10px] text-[#E5C158] font-black uppercase tracking-widest">
-            {normalizedRole === 'hospital_admin' ? 'Admin Portal' : normalizedRole === 'hospital_staff' ? (staffRole === 'Emergency Staff' ? 'Emergency Portal' : staffRole === 'Blood Bank Staff' ? 'Blood Bank Portal' : 'Staff Portal') : 'Donor Portal'}
+            {normalizedRole === 'hospital_admin' ? 'Admin Portal' : normalizedRole === 'hospital_staff' ? 'Staff Portal' : 'Donor Portal'}
           </p>
         </div>
       </div>

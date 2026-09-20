@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // Public Components
@@ -16,7 +16,6 @@ import BloodList from './pages/BloodList';
 import MyDonations from './pages/MyDonations';
 import DonorPassport from './pages/DonorPassport';
 import DonorProfile from './pages/DonorProfile';
-import DispatchModal from './pages/DispatchModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import StaffRegistration from './pages/StaffRegistration';
@@ -46,26 +45,21 @@ const normalizeRole = (role) => {
   return value || 'donor';
 };
 
-const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false, allowedStaffRoles = [] }) => {
+const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false }) => {
   const token = localStorage.getItem('token');
   const user = getUser();
 
   if (!token) return <Navigate to="/login" replace />;
 
   const userRole = normalizeRole(user?.role);
-  const staffRole = user?.staffRole || '';
   const allowedRoles = Array.isArray(allowedRole) ? allowedRole : [allowedRole].filter(Boolean);
   const normalizedAllowedRoles = allowedRoles.map((value) => normalizeRole(value));
-  const safeAllowedStaffRoles = Array.isArray(allowedStaffRoles) ? allowedStaffRoles : [allowedStaffRoles].filter(Boolean);
 
   if (normalizedAllowedRoles.length && !normalizedAllowedRoles.includes(userRole)) {
     return <Navigate to={userRole === 'hospital_admin' || userRole === 'hospital_staff' ? '/dashboard' : '/profile'} replace />;
   }
 
   if (adminOnly && userRole !== 'hospital_admin') return <Navigate to="/dashboard" replace />;
-  if (safeAllowedStaffRoles.length && userRole === 'hospital_staff' && !safeAllowedStaffRoles.includes(staffRole)) {
-    return <Navigate to="/dashboard" replace />;
-  }
   if (requiredPermission && userRole !== 'hospital_admin' && !(user.permissions || []).includes(requiredPermission)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -119,18 +113,18 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/account-center" element={<AccountCenter />} />
 
-            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Hospital Staff', 'Emergency Staff']} requiredPermission="requests" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} requiredPermission="requests" />}>
               <Route path="/request-management" element={<PatientRequests />} />
               <Route path="/patient-request" element={<PatientRequestForm />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Hospital Staff', 'Emergency Staff']} requiredPermission="dispatch" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} requiredPermission="dispatch" />}>
               <Route path="/geopulse-radar" element={<GeoPulseRadar />} />
               <Route path="/tracking" element={<LiveTracking />} />
               <Route path="/donor-recipient-dispatch-log" element={<DonorRecipientDispatchLog />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} allowedStaffRoles={['Blood Bank Staff']} requiredPermission="inventory" />}>
+            <Route element={<ProtectedRoute allowedRole={['hospital_admin', 'hospital_staff']} requiredPermission="inventory" />}>
               <Route path="/add-blood" element={<BloodStock />} />
               <Route path="/blood-list" element={<BloodList />} />
             </Route>

@@ -13,10 +13,10 @@ const StaffManagement = () => {
   const hospitalName = user.hospitalName || 'Current Hospital';
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [invite, setInvite] = useState({ email: '', expiresInMinutes: 1440, staffRole: 'Hospital Staff' });
+  const [invite, setInvite] = useState({ name: '', email: '' });
   const [inviteLink, setInviteLink] = useState('');
   const [inviteStatus, setInviteStatus] = useState({ type: '', text: '' });
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', staffRole: 'Hospital Staff' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
 
   useEffect(() => {
     fetch(`${API_URL}/hospital/staff`, { headers: authHeaders() })
@@ -32,7 +32,7 @@ const StaffManagement = () => {
     const data = await parseResponse(response);
     if (!response.ok) return alert(data.message || 'Unable to add staff member.');
     setStaff((items) => [data.staff, ...items]);
-    setForm({ name: '', email: '', password: '', phone: '', staffRole: 'Hospital Staff' });
+    setForm({ name: '', email: '', password: '', phone: '' });
   };
 
   const generateInvitation = async (event) => {
@@ -50,7 +50,7 @@ const StaffManagement = () => {
     }
     setInviteLink(data.invitation?.inviteLink || '');
     setInviteStatus({ type: 'success', text: data.message || 'Invitation sent successfully.' });
-    setInvite({ email: '', expiresInMinutes: 1440, staffRole: 'Hospital Staff' });
+    setInvite({ name: '', email: '' });
   };
 
   const toggleStaff = async (member) => {
@@ -144,14 +144,10 @@ const StaffManagement = () => {
             <>
               <form onSubmit={addStaff} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
                 {['name', 'email', 'password', 'phone'].map((field) => <input key={field} required={field !== 'phone'} type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'} placeholder={field[0].toUpperCase() + field.slice(1)} value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />)}
-                <select value={form.staffRole} onChange={(event) => setForm({ ...form, staffRole: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm">
-                  <option>Hospital Staff</option>
-                  <option>Emergency Staff</option>
-                  <option>Blood Bank Staff</option>
-                </select>
                 <button className="bg-[#5A1827] text-white rounded-xl font-black text-xs uppercase">Add staff</button>
               </form>
-              <form onSubmit={generateInvitation} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
+              <form onSubmit={generateInvitation} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
+                <input type="text" required placeholder="Staff name" value={invite.name} onChange={(event) => setInvite({ ...invite, name: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
                 <input type="email" required placeholder="Invite email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
                 <input type="text" value="24 hours" readOnly className="border-2 border-[#6B1D2F]/20 bg-slate-100 rounded-xl p-3 text-sm font-bold" />
                 <input type="text" value="Hospital Staff" readOnly className="border-2 border-[#6B1D2F]/20 bg-slate-100 rounded-xl p-3 text-sm font-bold" />
@@ -163,7 +159,7 @@ const StaffManagement = () => {
           ) : null}
           <div className="space-y-2">
             {!loading && staff.map((member) => <div key={member._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-[#6B1D2F]/10 rounded-xl p-3 bg-[#FAF9F6]">
-              <div><p className="font-black text-[#4A1521]">{member.name}</p><p className="text-xs text-slate-500">{member.staffRole || 'Emergency Staff'} · {member.email} {member.phone ? `· ${member.phone}` : ''}</p></div>
+              <div><p className="font-black text-[#4A1521]">{member.name}</p><p className="text-xs text-slate-500">Hospital Staff · {member.email} {member.phone ? `· ${member.phone}` : ''}</p></div>
               <div className="flex items-center gap-2"><button onClick={() => toggleStaff(member)} className={`px-3 py-2 rounded-lg text-xs font-black ${member.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{member.isActive ? 'Active' : 'Inactive'}</button>{(normalizedUserRole === 'hospital_admin' || normalizedUserRole === 'admin') && <button onClick={() => removeStaff(member)} className="px-3 py-2 rounded-lg text-xs font-black bg-rose-100 text-rose-700">Remove</button>}</div>
             </div>)}
             {!loading && staff.length === 0 && <p className="text-sm text-slate-500">No staff accounts found for this hospital.</p>}

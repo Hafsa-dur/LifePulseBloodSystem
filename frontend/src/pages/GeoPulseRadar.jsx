@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Navigation, Send, X, Building2, Droplet, User } from 'lucide-react';
+import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Navigation, Send, X, Droplet } from 'lucide-react';
 import { API_URL, authHeaders, parseResponse } from '../api';
 
 const GeoPulseRadar = () => {
@@ -199,7 +199,7 @@ const GeoPulseRadar = () => {
                 <td className="p-4"><div className="font-bold">{request.hospitalName}</div><div className="text-xs text-slate-500">{request.hospitalLocation}</div></td>
                 <td className="p-4"><div className="font-black">{request.donorName || 'No suitable donor found'}</div><div className="text-xs text-slate-500">{request.donorLocation || 'Inventory fallback'}</div></td>
                 <td className="p-4 font-bold">{request.donorDistance !== null && request.donorDistance !== undefined ? `${request.donorDistance} km` : 'N/A'}</td>
-                <td className="p-4"><span className={`px-2 py-1 rounded-lg text-xs font-black ${request.locationMatchStatus === 'Matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{request.locationMatchStatus === 'Matched' ? 'Nearest Donor Selected' : 'No suitable donor found'}</span></td>
+                <td className="p-4"><span title={request.matchingDiagnostics?.map((item) => item.rejectionReason || 'eligible').join(', ')} className={`px-2 py-1 rounded-lg text-xs font-black ${request.locationMatchStatus === 'Matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{request.locationMatchStatus === 'Matched' ? 'Nearest Donor Selected' : request.matchingDiagnostics?.length ? `No suitable donor found (${request.matchingDiagnostics.map((item) => item.rejectionReason).filter(Boolean).join(', ')})` : 'No suitable donor found'}</span></td>
               </tr>) : <tr><td colSpan="6" className="p-8 text-center text-slate-500 italic">No patient request matches available yet.</td></tr>}
             </tbody>
           </table>
