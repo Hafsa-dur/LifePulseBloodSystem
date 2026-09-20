@@ -5,14 +5,14 @@ const ThemeContext = createContext(null);
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem('lifepulse-dashboard-theme');
-    return stored === 'navy-soft' ? 'navy-soft' : 'navy';
+    return stored === 'navy' ? 'navy' : 'maroon';
   });
 
   useEffect(() => {
     localStorage.setItem('lifepulse-dashboard-theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme((current) => current === 'navy' ? 'navy-soft' : 'navy');
+  const toggleTheme = () => setTheme((current) => current === 'navy' ? 'maroon' : 'navy');
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
 };
