@@ -246,7 +246,7 @@ export const dispatchRequest = async (req, res) => {
             for (const donation of orderedDonations) {
                 if (!remainingUnits) break;
                 const allocatedUnits = Math.min(donation.units, remainingUnits);
-                const availableUnits = Number(donation.availableUnits) > 0 ? Number(donation.availableUnits) : Number(donation.units);
+                const availableUnits = donation.availableUnits === undefined ? Number(donation.units) : Number(donation.availableUnits);
                 if (availableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
                 const previousDispatchedUnits = Number(donation.dispatchedUnits || 0);
                 donation.units -= allocatedUnits;

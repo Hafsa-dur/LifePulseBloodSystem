@@ -139,6 +139,7 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
   }
 
   const rankedDonors = await Promise.all(donors.map(async (donor) => {
+    const availableUnits = donor.availableUnits === undefined ? Number(donor.units || 0) : Number(donor.availableUnits || 0);
     const donorCoordinates = getStoredCoordinates(donor);
     const donorLocation = String(donor.location || donor.address || '').trim();
     const coordinates = donorCoordinates || (donorLocation ? await geocodeLocation(donorLocation) : null);
@@ -147,14 +148,14 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
       donorName: donor.donorName,
       donorBloodGroup: String(donor.bloodGroup || '').trim().toUpperCase(),
       requestedBloodGroup: normalizedBloodGroup,
-      units: Number(donor.units || 0),
+      units: availableUnits,
       requestedUnits,
       donorLocation,
       donorCoordinates: coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : null,
       hospitalCoordinates: { latitude: targetCoordinates.latitude, longitude: targetCoordinates.longitude },
       nextEligibleDate: donor.nextEligibleDate || null,
       status: donor.status,
-      available: Number(donor.units || 0) >= requestedUnits && donor.status !== 'Dispatched',
+      available: availableUnits >= requestedUnits && donor.status !== 'Dispatched',
       eligible: !donor.nextEligibleDate || new Date(donor.nextEligibleDate) <= new Date()
     };
     const distance = coordinates ? distanceInKilometers(targetCoordinates, coordinates) : Number.POSITIVE_INFINITY;
@@ -377,7 +378,7 @@ export const dispatchBlood = async (req, res) => {
       for (const donation of donations) {
         if (!remainingUnits) break;
         const allocatedUnits = Math.min(donation.units, remainingUnits);
-        const availableUnits = Number(donation.availableUnits) > 0 ? Number(donation.availableUnits) : Number(donation.units);
+        const availableUnits = donation.availableUnits === undefined ? Number(donation.units) : Number(donation.availableUnits);
         if (availableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
         const previousDispatchedUnits = Number(donation.dispatchedUnits || 0);
         donation.units -= allocatedUnits;
