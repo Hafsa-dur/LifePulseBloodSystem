@@ -46,6 +46,11 @@ const StaffRegistration = () => {
         body: JSON.stringify({ token, name: form.name, email: form.email, phone: form.phone, password: form.password })
       });
       const data = await parseResponse(response);
+      if (data.accepted) {
+        setValidation((current) => ({ ...current, loading: false, valid: false, accepted: true }));
+        setStatus({ type: 'success', text: data.message || 'Invitation already accepted. This invitation is already linked to your staff account.' });
+        return;
+      }
       if (!response.ok) throw new Error(data.message || 'Staff registration failed.');
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
