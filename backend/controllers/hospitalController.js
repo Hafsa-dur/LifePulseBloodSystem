@@ -114,8 +114,9 @@ export const createStaffInvitation = async (req, res) => {
 
     const { email, name = '' } = req.body || {};
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    if (!normalizedEmail) {
-      return res.status(400).json({ success: false, message: 'Invited staff email is required.' });
+    const inviteeName = String(name || '').trim();
+    if (!normalizedEmail || !inviteeName) {
+      return res.status(400).json({ success: false, message: 'Staff name and invited email are required.' });
     }
 
     const configuredFrontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
@@ -139,7 +140,7 @@ export const createStaffInvitation = async (req, res) => {
       hospitalName: req.user.hospitalName || '',
       hospitalLocation: req.user.hospitalLocation || '',
       staffRole: 'Hospital Staff',
-      inviteeName: String(name || '').trim(),
+      inviteeName,
       createdBy: req.user._id,
       email: normalizedEmail,
       expiresAt,

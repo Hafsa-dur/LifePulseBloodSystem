@@ -56,7 +56,15 @@ export const validateStaffInvitation = async (req, res) => {
 
     const invitation = await findInvitationByToken(token);
     if (!invitation) return res.status(404).json({ success: false, valid: false, message: 'This invitation link is invalid.' });
-    if (invitation.status === 'used' || invitation.usedAt) return res.status(410).json({ success: false, valid: false, message: 'This invitation has already been used.' });
+    if (invitation.status === 'accepted' || invitation.status === 'used' || invitation.usedAt) {
+      return res.json({
+        success: true,
+        valid: false,
+        accepted: true,
+        message: 'Invitation already accepted. This staff account is already registered.',
+        invitation: { email: invitation.email, inviteeName: invitation.inviteeName || '', hospitalName: invitation.hospitalName, expiresAt: invitation.expiresAt, acceptedUserId: invitation.acceptedUserId || null }
+      });
+    }
     if (invitation.expiresAt <= new Date()) {
       await StaffInvitation.updateOne({ _id: invitation._id, status: 'pending' }, { status: 'expired' });
       return res.status(410).json({ success: false, valid: false, message: 'This invitation has expired.' });
@@ -130,10 +138,17 @@ export const registerStaffFromInvitation = async (req, res) => {
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const normalizedToken = normalizeInvitationToken(token);
-    const invitation = await findInvitationByToken(normalizedToken, { status: 'pending', expiresAt: { $gt: new Date() } });
+    const invitation = await findInvitationByToken(normalizedToken);
     const matchingInvitation = invitation || null;
     if (!matchingInvitation) {
       return res.status(400).json({ success: false, message: 'Invalid, expired, or already used staff invitation token.' });
+    }
+    if (matchingInvitation.status === 'accepted' || matchingInvitation.status === 'used' || matchingInvitation.usedAt) {
+      return res.status(409).json({ success: false, accepted: true, code: 'INVITATION_ACCEPTED', message: 'Invitation already accepted. This staff account is already registered.' });
+    }
+    if (matchingInvitation.status !== 'pending' || matchingInvitation.expiresAt <= new Date()) {
+      if (matchingInvitation.status === 'pending') await StaffInvitation.updateOne({ _id: matchingInvitation._id, status: 'pending' }, { status: 'expired' });
+      return res.status(410).json({ success: false, message: 'This invitation has expired.' });
     }
 
     if (matchingInvitation.email && matchingInvitation.email !== normalizedEmail) {
@@ -146,15 +161,6 @@ export const registerStaffFromInvitation = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(String(password), 10);
-    const claimedInvitation = await StaffInvitation.findOneAndUpdate(
-      { _id: matchingInvitation._id, status: 'pending', expiresAt: { $gt: new Date() } },
-      { status: 'used', usedAt: new Date() },
-      { new: true }
-    ).lean();
-    if (!claimedInvitation) {
-      return res.status(409).json({ success: false, message: 'This invitation has already been used or expired.' });
-    }
-
     let user;
     try {
       user = await User.create({
@@ -167,12 +173,21 @@ export const registerStaffFromInvitation = async (req, res) => {
         hospitalName: matchingInvitation.hospitalName,
         hospitalLocation: matchingInvitation.hospitalLocation,
         phone: String(phone).trim(),
-        permissions: ['dashboard', 'requests', 'dispatch', 'tracking', 'account'],
+        permissions: ['dashboard', 'requests', 'inventory', 'dispatch', 'tracking', 'account'],
         isActive: true
       });
     } catch (error) {
-      await StaffInvitation.updateOne({ _id: matchingInvitation._id, status: 'used' }, { status: 'pending', usedAt: null });
       throw error;
+    }
+
+    const acceptedInvitation = await StaffInvitation.findOneAndUpdate(
+      { _id: matchingInvitation._id, status: 'pending', expiresAt: { $gt: new Date() } },
+      { status: 'accepted', acceptedUserId: user._id, usedAt: new Date() },
+      { new: true }
+    ).lean();
+    if (!acceptedInvitation) {
+      await User.deleteOne({ _id: user._id });
+      return res.status(409).json({ success: false, accepted: true, code: 'INVITATION_ACCEPTED', message: 'Invitation was already accepted by another registration.' });
     }
 
     const safeUser = safeUserPayload(user);

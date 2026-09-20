@@ -8,10 +8,11 @@ const staffInvitationSchema = new mongoose.Schema({
   staffRole: { type: String, enum: ['Hospital Staff'], default: 'Hospital Staff' },
   inviteeName: { type: String, default: '' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  acceptedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   email: { type: String, lowercase: true, trim: true, default: '' },
   expiresAt: { type: Date, required: true },
   usedAt: { type: Date, default: null },
-  status: { type: String, enum: ['pending', 'used', 'expired'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'accepted', 'used', 'expired'], default: 'pending' },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
