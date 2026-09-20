@@ -132,9 +132,7 @@ export const registerUser = async (req, res) => {
 export const registerStaffFromInvitation = async (req, res) => {
   try {
     const { token, name, email, password, phone = '' } = req.body;
-    if (!token || !name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Invitation token, name, email, and password are required.' });
-    }
+    if (!token) return res.status(400).json({ success: false, message: 'Invitation token is required.' });
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const normalizedToken = normalizeInvitationToken(token);
@@ -144,11 +142,29 @@ export const registerStaffFromInvitation = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid, expired, or already used staff invitation token.' });
     }
     if (matchingInvitation.status === 'accepted' || matchingInvitation.status === 'used' || matchingInvitation.usedAt) {
-      return res.status(409).json({ success: false, accepted: true, code: 'INVITATION_ACCEPTED', message: 'Invitation already accepted. This staff account is already registered.' });
+      if (!normalizedEmail || (matchingInvitation.email && matchingInvitation.email !== normalizedEmail)) {
+        return res.status(403).json({ success: false, message: 'This invitation is only valid for the invited email address.' });
+      }
+      const existingStaff = matchingInvitation.acceptedUserId
+        ? await User.findOne({ _id: matchingInvitation.acceptedUserId, role: { $in: ['hospital_staff', 'staff'] } }).select('-password').lean()
+        : await User.findOne({ email: normalizedEmail, hospitalId: matchingInvitation.hospitalId, role: { $in: ['hospital_staff', 'staff'] } }).select('-password').lean();
+      return res.status(200).json({
+        success: true,
+        accepted: true,
+        alreadyRegistered: true,
+        code: 'INVITATION_ACCEPTED',
+        message: 'Invitation already accepted. This invitation is already linked to your staff account.',
+        invitation: { email: matchingInvitation.email, hospitalName: matchingInvitation.hospitalName, acceptedUserId: matchingInvitation.acceptedUserId || null },
+        user: existingStaff ? safeUserPayload(existingStaff) : null
+      });
     }
     if (matchingInvitation.status !== 'pending' || matchingInvitation.expiresAt <= new Date()) {
       if (matchingInvitation.status === 'pending') await StaffInvitation.updateOne({ _id: matchingInvitation._id, status: 'pending' }, { status: 'expired' });
       return res.status(410).json({ success: false, message: 'This invitation has expired.' });
+    }
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Invitation email, name, and password are required.' });
     }
 
     if (matchingInvitation.email && matchingInvitation.email !== normalizedEmail) {
