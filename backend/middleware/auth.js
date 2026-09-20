@@ -1,12 +1,10 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
-const VALID_STAFF_ROLES = new Set(['Emergency Staff', 'Blood Bank Staff', 'Hospital Staff']);
-
 export const normalizeUserRole = (role) => {
   const value = String(role || '').trim().toLowerCase();
-  if (value === 'hospital_admin' || value === 'admin') return 'admin';
-  if (value === 'hospital_staff' || value === 'staff') return 'staff';
+  if (value === 'hospital_admin' || value === 'admin') return 'hospital_admin';
+  if (value === 'hospital_staff' || value === 'staff') return 'hospital_staff';
   if (value === 'donor') return 'donor';
   return value || 'donor';
 };
@@ -24,8 +22,8 @@ export const requireAuth = async (req, res, next) => {
     }
 
     user.role = normalizeUserRole(user.role);
-    if (user.role === 'staff' && user.staffRole && !VALID_STAFF_ROLES.has(user.staffRole)) {
-      return res.status(403).json({ success: false, message: 'Only Hospital Staff, Emergency Staff, and Blood Bank Staff accounts are allowed.' });
+    if (user.role === 'hospital_staff' && user.staffRole && user.staffRole !== 'Hospital Staff') {
+      user.staffRole = 'Hospital Staff';
     }
 
     req.user = user;
@@ -36,12 +34,12 @@ export const requireAuth = async (req, res, next) => {
 };
 
 export const requireHospitalRole = (req, res, next) => {
-  if (!req.user || !['admin', 'staff'].includes(normalizeUserRole(req.user.role))) {
+  if (!req.user || !['hospital_admin', 'hospital_staff'].includes(normalizeUserRole(req.user.role))) {
     return res.status(403).json({ success: false, message: 'Hospital staff access required.' });
   }
 
-  if (normalizeUserRole(req.user.role) === 'staff' && (!req.user.staffRole || !VALID_STAFF_ROLES.has(req.user.staffRole))) {
-    return res.status(403).json({ success: false, message: 'Invalid staff role for hospital access.' });
+  if (normalizeUserRole(req.user.role) === 'hospital_staff' && req.user.staffRole && req.user.staffRole !== 'Hospital Staff') {
+    req.user.staffRole = 'Hospital Staff';
   }
 
   if (!req.user.hospitalId) {
@@ -52,20 +50,20 @@ export const requireHospitalRole = (req, res, next) => {
 };
 
 export const requireAdmin = (req, res, next) => {
-  if (normalizeUserRole(req.user?.role) !== 'admin') return res.status(403).json({ success: false, message: 'Administrator access required.' });
+  if (normalizeUserRole(req.user?.role) !== 'hospital_admin') return res.status(403).json({ success: false, message: 'Administrator access required.' });
   if (!req.user?.hospitalId) return res.status(403).json({ success: false, message: 'Hospital association required.' });
   next();
 };
 
 export const requirePermission = (permission) => (req, res, next) => {
-  if (normalizeUserRole(req.user?.role) === 'admin' || req.user?.permissions?.includes(permission)) return next();
+  if (normalizeUserRole(req.user?.role) === 'hospital_admin' || req.user?.permissions?.includes(permission)) return next();
   return res.status(403).json({ success: false, message: `Permission required: ${permission}.` });
 };
 
 export const requireStaffRole = (allowedStaffRoles = []) => (req, res, next) => {
-  if (normalizeUserRole(req.user?.role) === 'admin') return next();
+  if (normalizeUserRole(req.user?.role) === 'hospital_admin') return next();
   const safeRoles = Array.isArray(allowedStaffRoles) ? allowedStaffRoles : [allowedStaffRoles].filter(Boolean);
-  if (!req.user || normalizeUserRole(req.user.role) !== 'staff' || !safeRoles.includes(req.user.staffRole)) {
+  if (!req.user || normalizeUserRole(req.user.role) !== 'hospital_staff' || (safeRoles.length > 0 && !safeRoles.includes(req.user.staffRole))) {
     return res.status(403).json({ success: false, message: 'This portal is restricted to the allowed staff role.' });
   }
   next();

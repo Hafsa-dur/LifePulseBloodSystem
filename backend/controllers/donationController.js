@@ -7,6 +7,26 @@ import { sendDonorThankYouEmail } from '../services/emailService.js';
 const locationCache = new Map();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const finiteCoordinate = (value, minimum, maximum) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= minimum && numericValue <= maximum ? numericValue : null;
+};
+
+const getStoredCoordinates = (record) => {
+  const latitude = finiteCoordinate(record?.latitude ?? record?.location?.latitude, -90, 90);
+  const longitude = finiteCoordinate(record?.longitude ?? record?.location?.longitude, -180, 180);
+  if (latitude !== null && longitude !== null) return { latitude, longitude, source: 'stored' };
+
+  const geoJsonCoordinates = record?.coordinates || record?.geo?.coordinates || record?.location?.coordinates;
+  if (Array.isArray(geoJsonCoordinates) && geoJsonCoordinates.length >= 2) {
+    const geoLongitude = finiteCoordinate(geoJsonCoordinates[0], -180, 180);
+    const geoLatitude = finiteCoordinate(geoJsonCoordinates[1], -90, 90);
+    if (geoLatitude !== null && geoLongitude !== null) return { latitude: geoLatitude, longitude: geoLongitude, source: 'stored-geojson' };
+  }
+
+  return null;
+};
+
 export const geocodeLocation = async (location) => {
   const normalizedLocation = String(location || '').trim();
   if (!normalizedLocation) return null;
@@ -88,35 +108,21 @@ const distanceInKilometers = (first, second) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, session, excludeDonorIds = [] }) => {
+export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, session, excludeDonorIds = [], diagnostics }) => {
+  const matchingRadiusKm = Number(process.env.MATCHING_RADIUS_KM) > 0 ? Number(process.env.MATCHING_RADIUS_KM) : 50;
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
-  if (!normalizedBloodGroup || !savedLocation || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
+  const requestCoordinates = getStoredCoordinates({ latitude, longitude });
+  if (!normalizedBloodGroup || (!savedLocation && !requestCoordinates) || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
     return null;
   }
 
   const donorQuery = Donation.find({
     bloodGroup: new RegExp(`^${escapeRegex(normalizedBloodGroup)}$`, 'i'),
-    units: { $gte: requestedUnits },
     status: { $ne: 'Dispatched' },
     donorName: { $exists: true, $nin: ['', null], $not: /^(Direct Donor|System Stock|Inventory|Dispatched to:)/i },
-    email: { $exists: true, $nin: ['', null] },
-    $and: [
-      {
-        $or: [
-          { nextEligibleDate: { $exists: false } },
-          { nextEligibleDate: null },
-          { nextEligibleDate: { $lte: new Date() } }
-        ]
-      },
-      {
-        $or: [
-          { location: { $exists: true, $nin: ['', null] } },
-          { address: { $exists: true, $nin: ['', null] } }
-        ]
-      }
-    ]
+    email: { $exists: true, $nin: ['', null] }
   }).sort({ createdAt: 1, _id: 1 });
   if (session) donorQuery.session(session);
 
@@ -124,24 +130,45 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
   const donors = (await donorQuery).filter((donor) => !excluded.has(String(donor._id)));
   if (donors.length === 0) return [];
 
-  const explicitLatitude = Number(latitude);
-  const explicitLongitude = Number(longitude);
-  const targetCoordinates = Number.isFinite(explicitLatitude) && Number.isFinite(explicitLongitude)
-    ? { latitude: explicitLatitude, longitude: explicitLongitude }
-    : await geocodeLocation(savedLocation);
+  const targetCoordinates = requestCoordinates || (savedLocation
+    ? await geocodeLocation(savedLocation)
+    : null);
+  if (!targetCoordinates) {
+    diagnostics?.push({ reason: 'hospital-location-unresolved', hospitalLocation: savedLocation });
+    return [];
+  }
+
   const rankedDonors = await Promise.all(donors.map(async (donor) => {
+    const donorCoordinates = getStoredCoordinates(donor);
     const donorLocation = String(donor.location || donor.address || '').trim();
-    const donorLatitude = Number(donor.latitude);
-    const donorLongitude = Number(donor.longitude);
-    const coordinates = Number.isFinite(donorLatitude) && Number.isFinite(donorLongitude)
-      ? { latitude: donorLatitude, longitude: donorLongitude }
-      : await geocodeLocation(donorLocation);
-    const exactLocation = donorLocation.toLowerCase() === savedLocation.toLowerCase();
-    if (!exactLocation && (!targetCoordinates || !coordinates)) return null;
-    return {
-      donor,
-      distance: exactLocation ? 0 : distanceInKilometers(targetCoordinates, coordinates)
+    const coordinates = donorCoordinates || (donorLocation ? await geocodeLocation(donorLocation) : null);
+    const donorDiagnostic = {
+      donorId: String(donor._id),
+      donorName: donor.donorName,
+      donorBloodGroup: String(donor.bloodGroup || '').trim().toUpperCase(),
+      requestedBloodGroup: normalizedBloodGroup,
+      units: Number(donor.units || 0),
+      requestedUnits,
+      donorLocation,
+      donorCoordinates: coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : null,
+      hospitalCoordinates: { latitude: targetCoordinates.latitude, longitude: targetCoordinates.longitude },
+      nextEligibleDate: donor.nextEligibleDate || null,
+      status: donor.status,
+      available: Number(donor.units || 0) >= requestedUnits && donor.status !== 'Dispatched',
+      eligible: !donor.nextEligibleDate || new Date(donor.nextEligibleDate) <= new Date()
     };
+    const distance = coordinates ? distanceInKilometers(targetCoordinates, coordinates) : Number.POSITIVE_INFINITY;
+    donorDiagnostic.distanceKm = Number.isFinite(distance) ? Number(distance.toFixed(2)) : null;
+
+    if (!coordinates) donorDiagnostic.rejectionReason = 'donor-location-unresolved';
+    else if (distance > matchingRadiusKm) donorDiagnostic.rejectionReason = `outside-radius-${matchingRadiusKm}km`;
+    else if (!donorDiagnostic.available) donorDiagnostic.rejectionReason = 'insufficient-available-units-or-dispatched';
+    else if (!donorDiagnostic.eligible) donorDiagnostic.rejectionReason = 'donation-not-yet-eligible';
+    else diagnostics?.push({ ...donorDiagnostic, rejectionReason: null });
+    if (diagnostics && donorDiagnostic.rejectionReason) diagnostics.push(donorDiagnostic);
+    if (donorDiagnostic.rejectionReason) return null;
+
+    return { donor, distance };
   })).then((matches) => matches.filter(Boolean));
 
   rankedDonors.sort((first, second) => first.distance - second.distance

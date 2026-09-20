@@ -42,12 +42,14 @@ export const createPatientRequest = async (req, res) => {
         if (!['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(bloodGroup) || !Number.isInteger(unitsRequired) || unitsRequired <= 0) {
             return res.status(400).json({ success: false, message: 'A valid blood group and positive whole number of units are required.' });
         }
+        const matchingDiagnostics = [];
         const rankedDonors = await findMatchingDonors({
             bloodGroup,
             units: unitsRequired,
             location: payload.hospitalLocation,
             latitude: payload.hospitalLatitude,
-            longitude: payload.hospitalLongitude
+            longitude: payload.hospitalLongitude,
+            diagnostics: matchingDiagnostics
         });
         const suppliedLatitude = Number(payload.hospitalLatitude);
         const suppliedLongitude = Number(payload.hospitalLongitude);
@@ -72,7 +74,7 @@ export const createPatientRequest = async (req, res) => {
         });
         const savedRequest = await newRequest.save();
         req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('new_patient_request', savedRequest);
-        res.status(201).json({ success: true, message: 'Request submitted successfully', data: savedRequest });
+        res.status(201).json({ success: true, message: 'Request submitted successfully', data: savedRequest, matchingDiagnostics });
     } catch (err) {
         console.error("Error saving patient request:", err);
         res.status(500).json({ success: false, message: err.message });
@@ -85,14 +87,18 @@ export const getPatientRequests = async (req, res) => {
         const filters = hospitalScope(req.user);
         const requests = await PatientRequest.find(filters).sort({ createdAt: -1 });
         const pendingRequests = requests.filter((request) => request.status === 'Pending');
+        const matchingDiagnostics = new Map();
         await Promise.all(pendingRequests.map(async (request) => {
+            const diagnostics = [];
             const rankedDonors = await findMatchingDonors({
                 bloodGroup: request.bloodGroup,
                 units: request.unitsRequired,
                 location: request.hospitalLocation,
                 latitude: request.hospitalLatitude,
-                longitude: request.hospitalLongitude
+                longitude: request.hospitalLongitude,
+                diagnostics
             });
+            matchingDiagnostics.set(String(request._id), diagnostics);
             const nearestMatch = rankedDonors?.[0] || null;
             request.donorId = nearestMatch?.donor?._id || null;
             request.donorName = nearestMatch?.donor?.donorName || '';
@@ -104,7 +110,10 @@ export const getPatientRequests = async (req, res) => {
             request.locationMatchStatus = nearestMatch ? 'Matched' : 'No Donor';
             await request.save();
         }));
-        res.status(200).json(requests);
+        res.status(200).json(requests.map((request) => ({
+            ...request.toObject(),
+            matchingDiagnostics: matchingDiagnostics.get(String(request._id)) || []
+        })));
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

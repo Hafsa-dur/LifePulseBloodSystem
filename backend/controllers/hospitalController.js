@@ -19,6 +19,7 @@ const publicUser = (user) => {
   delete value.password;
   if (value.role === 'admin') value.role = 'hospital_admin';
   if (value.role === 'staff') value.role = 'hospital_staff';
+  if (value.role === 'hospital_staff') value.staffRole = 'Hospital Staff';
   return value;
 };
 
@@ -86,24 +87,16 @@ export const getStaff = async (req, res) => {
 export const createStaff = async (req, res) => {
   try {
     if (normalizeRole(req.user.role) !== 'hospital_admin') return res.status(403).json({ success: false, message: 'Only hospital administrators can add staff.' });
-    const { name, email, password, phone = '', staffRole = 'Hospital Staff', permissions = [] } = req.body;
+    const { name, email, password, phone = '', permissions = [] } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
-    if (!['Hospital Staff', 'Blood Bank Staff', 'Emergency Staff'].includes(String(staffRole || '').trim())) {
-      return res.status(400).json({ success: false, message: 'Only Hospital Staff, Emergency Staff, and Blood Bank Staff roles are allowed.' });
-    }
     if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
 
-    const rolePermissions = {
-      'Hospital Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account'],
-      'Blood Bank Staff': ['dashboard', 'inventory', 'dispatch', 'requests', 'account', 'tracking'],
-      'Emergency Staff': ['dashboard', 'requests', 'dispatch', 'tracking', 'account']
-    };
     const staff = await User.create({
       name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'hospital_staff',
-      staffRole: String(staffRole).trim(),
+      staffRole: 'Hospital Staff',
       hospitalId: req.user.hospitalId || '', hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '',
-      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : rolePermissions[String(staffRole).trim()] || rolePermissions['Emergency Staff'], isActive: true
+      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : ['dashboard', 'requests', 'inventory', 'dispatch', 'tracking', 'account'], isActive: true
     });
     const safeStaff = staff.toObject();
     delete safeStaff.password;
@@ -119,8 +112,7 @@ export const createStaffInvitation = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only hospital administrators can create staff invitations.' });
     }
 
-    const { email } = req.body || {};
-    const staffRole = 'Hospital Staff';
+    const { email, name = '' } = req.body || {};
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!normalizedEmail) {
       return res.status(400).json({ success: false, message: 'Invited staff email is required.' });
@@ -146,7 +138,8 @@ export const createStaffInvitation = async (req, res) => {
       hospitalId: req.user.hospitalId,
       hospitalName: req.user.hospitalName || '',
       hospitalLocation: req.user.hospitalLocation || '',
-      staffRole: String(staffRole).trim(),
+      staffRole: 'Hospital Staff',
+      inviteeName: String(name || '').trim(),
       createdBy: req.user._id,
       email: normalizedEmail,
       expiresAt,
@@ -158,7 +151,7 @@ export const createStaffInvitation = async (req, res) => {
       recipientEmail: normalizedEmail,
       hospitalName: req.user.hospitalName || 'LifePulse Hospital',
       inviteLink,
-      staffRole: String(staffRole).trim()
+      staffRole: 'Hospital Staff'
     });
     if (!emailResult.sent) {
       await StaffInvitation.deleteOne({ _id: invitation._id });

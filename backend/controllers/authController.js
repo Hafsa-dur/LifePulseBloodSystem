@@ -6,8 +6,8 @@ import crypto from 'crypto';
 
 const normalizeRole = (role) => {
   const value = String(role || '').trim().toLowerCase();
-  if (value === 'hospital_admin' || value === 'admin') return 'admin';
-  if (value === 'hospital_staff' || value === 'staff') return 'staff';
+  if (value === 'hospital_admin' || value === 'admin') return 'hospital_admin';
+  if (value === 'hospital_staff' || value === 'staff') return 'hospital_staff';
   return value || 'donor';
 };
 
@@ -15,8 +15,8 @@ const safeUserPayload = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
-  role: user.role,
-  staffRole: user.staffRole,
+  role: normalizeRole(user.role),
+  staffRole: normalizeRole(user.role) === 'hospital_staff' ? 'Hospital Staff' : '',
   hospitalId: user.hospitalId,
   hospitalName: user.hospitalName,
   hospitalLocation: user.hospitalLocation,
@@ -27,13 +27,34 @@ const safeUserPayload = (user) => ({
 });
 
 const invitationHash = (token) => crypto.createHash('sha256').update(String(token || '').trim()).digest('hex');
+const normalizeInvitationToken = (token) => {
+  const value = String(token || '').trim();
+  try { return decodeURIComponent(value).trim(); } catch { return value; }
+};
+
+const findInvitationByToken = async (token, query = {}) => {
+  const normalizedToken = normalizeInvitationToken(token);
+  const invitation = await StaffInvitation.findOne({
+    ...query,
+    $or: [{ tokenHash: invitationHash(normalizedToken) }, { token: normalizedToken }]
+  });
+  if (invitation && !invitation.tokenHash) {
+    await StaffInvitation.updateOne(
+      { _id: invitation._id },
+      { $set: { tokenHash: invitationHash(normalizedToken) }, $unset: { token: 1 } },
+      { strict: false }
+    );
+    invitation.tokenHash = invitationHash(normalizedToken);
+  }
+  return invitation;
+};
 
 export const validateStaffInvitation = async (req, res) => {
   try {
-    const token = String(req.params.token || '').trim();
+    const token = normalizeInvitationToken(req.params.token);
     if (!token) return res.status(400).json({ success: false, valid: false, message: 'Invitation token is required.' });
 
-    const invitation = await StaffInvitation.findOne({ tokenHash: invitationHash(token) }).lean();
+    const invitation = await findInvitationByToken(token);
     if (!invitation) return res.status(404).json({ success: false, valid: false, message: 'This invitation link is invalid.' });
     if (invitation.status === 'used' || invitation.usedAt) return res.status(410).json({ success: false, valid: false, message: 'This invitation has already been used.' });
     if (invitation.expiresAt <= new Date()) {
@@ -41,7 +62,7 @@ export const validateStaffInvitation = async (req, res) => {
       return res.status(410).json({ success: false, valid: false, message: 'This invitation has expired.' });
     }
 
-    return res.json({ success: true, valid: true, invitation: { email: invitation.email, hospitalName: invitation.hospitalName, expiresAt: invitation.expiresAt } });
+    return res.json({ success: true, valid: true, invitation: { email: invitation.email, inviteeName: invitation.inviteeName || '', hospitalName: invitation.hospitalName, expiresAt: invitation.expiresAt } });
   } catch (error) {
     return res.status(500).json({ success: false, valid: false, message: error.message });
   }
@@ -108,8 +129,8 @@ export const registerStaffFromInvitation = async (req, res) => {
     }
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    const tokenHash = invitationHash(token);
-    const invitation = await StaffInvitation.findOne({ tokenHash, status: 'pending', expiresAt: { $gt: new Date() } }).lean();
+    const normalizedToken = normalizeInvitationToken(token);
+    const invitation = await findInvitationByToken(normalizedToken, { status: 'pending', expiresAt: { $gt: new Date() } });
     const matchingInvitation = invitation || null;
     if (!matchingInvitation) {
       return res.status(400).json({ success: false, message: 'Invalid, expired, or already used staff invitation token.' });
@@ -141,7 +162,7 @@ export const registerStaffFromInvitation = async (req, res) => {
         email: normalizedEmail,
         password: hashedPassword,
         role: 'hospital_staff',
-        staffRole: matchingInvitation.staffRole || 'Hospital Staff',
+        staffRole: 'Hospital Staff',
         hospitalId: matchingInvitation.hospitalId,
         hospitalName: matchingInvitation.hospitalName,
         hospitalLocation: matchingInvitation.hospitalLocation,
@@ -180,8 +201,8 @@ export const loginUser = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role,
-          staffRole: user.staffRole,
+          role: normalizeRole(user.role),
+          staffRole: normalizeRole(user.role) === 'hospital_staff' ? 'Hospital Staff' : '',
           hospitalId: user.hospitalId,
           hospitalName: user.hospitalName,
           hospitalLocation: user.hospitalLocation,
