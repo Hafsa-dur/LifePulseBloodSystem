@@ -7,7 +7,7 @@ import { sendDonorThankYouEmail } from '../services/emailService.js';
 const locationCache = new Map();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const geocodeLocation = async (location) => {
+export const geocodeLocation = async (location) => {
   const normalizedLocation = String(location || '').trim();
   if (!normalizedLocation) return null;
   if (locationCache.has(normalizedLocation)) return locationCache.get(normalizedLocation);
@@ -88,7 +88,7 @@ const distanceInKilometers = (first, second) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-export const findMatchingDonors = async ({ bloodGroup, units, location, session, excludeDonorIds = [] }) => {
+export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, session, excludeDonorIds = [] }) => {
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
@@ -124,10 +124,18 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, session,
   const donors = (await donorQuery).filter((donor) => !excluded.has(String(donor._id)));
   if (donors.length === 0) return [];
 
-  const targetCoordinates = await geocodeLocation(savedLocation);
+  const explicitLatitude = Number(latitude);
+  const explicitLongitude = Number(longitude);
+  const targetCoordinates = Number.isFinite(explicitLatitude) && Number.isFinite(explicitLongitude)
+    ? { latitude: explicitLatitude, longitude: explicitLongitude }
+    : await geocodeLocation(savedLocation);
   const rankedDonors = await Promise.all(donors.map(async (donor) => {
     const donorLocation = String(donor.location || donor.address || '').trim();
-    const coordinates = await geocodeLocation(donorLocation);
+    const donorLatitude = Number(donor.latitude);
+    const donorLongitude = Number(donor.longitude);
+    const coordinates = Number.isFinite(donorLatitude) && Number.isFinite(donorLongitude)
+      ? { latitude: donorLatitude, longitude: donorLongitude }
+      : await geocodeLocation(donorLocation);
     const exactLocation = donorLocation.toLowerCase() === savedLocation.toLowerCase();
     if (!exactLocation && (!targetCoordinates || !coordinates)) return null;
     return {
@@ -199,7 +207,7 @@ export const getDashboardDonations = async (req, res) => {
 // 3. Add New Donation with Strict Duplicate Email Check
 export const addDonation = async (req, res) => {
   try {
-    const { donorName, email, bloodGroup, units, phone, address, location, notes, hospitalId, hospitalName, donationDate, lastDonationDate } = req.body;
+    const { donorName, email, bloodGroup, units, phone, address, location, latitude, longitude, notes, hospitalId, hospitalName, donationDate, lastDonationDate } = req.body;
     const formattedEmail = email ? email.toLowerCase().trim() : '';
 
     if (!formattedEmail) {
@@ -219,6 +227,12 @@ export const addDonation = async (req, res) => {
         });
     }
 
+    const suppliedLatitude = Number(latitude);
+    const suppliedLongitude = Number(longitude);
+    const resolvedCoordinates = Number.isFinite(suppliedLatitude) && Number.isFinite(suppliedLongitude)
+      ? { latitude: suppliedLatitude, longitude: suppliedLongitude }
+      : await geocodeLocation(location || address);
+
     const newDonation = new Donation({
       donorName,
       email: formattedEmail,
@@ -230,6 +244,8 @@ export const addDonation = async (req, res) => {
       phone: phone || '03000000000',
       address: address || location || '',
       location: location || address || '',
+      latitude: resolvedCoordinates?.latitude,
+      longitude: resolvedCoordinates?.longitude,
       hospitalId: hospitalId || '',
       hospitalName: hospitalName || notes || 'General Donation',
       notes: notes || hospitalName || 'General Donation',

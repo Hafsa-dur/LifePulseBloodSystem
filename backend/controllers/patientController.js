@@ -2,7 +2,7 @@ import PatientRequest from '../models/PatientRequest.js';
 import Donation from '../models/donationModel.js';
 import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import mongoose from 'mongoose';
-import { findMatchingDonors } from './donationController.js';
+import { findMatchingDonors, geocodeLocation } from './donationController.js';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const realDonorFilter = {
@@ -28,6 +28,8 @@ export const createPatientRequest = async (req, res) => {
             hospitalId: req.user.hospitalId || '',
             hospitalName: req.user.hospitalName || req.body.hospitalName || '',
             hospitalLocation: req.user.hospitalLocation || req.body.hospitalLocation || '',
+            hospitalLatitude: req.body.hospitalLatitude,
+            hospitalLongitude: req.body.hospitalLongitude,
             createdBy: String(req.user._id)
         };
 
@@ -43,8 +45,15 @@ export const createPatientRequest = async (req, res) => {
         const rankedDonors = await findMatchingDonors({
             bloodGroup,
             units: unitsRequired,
-            location: payload.hospitalLocation
+            location: payload.hospitalLocation,
+            latitude: payload.hospitalLatitude,
+            longitude: payload.hospitalLongitude
         });
+        const suppliedLatitude = Number(payload.hospitalLatitude);
+        const suppliedLongitude = Number(payload.hospitalLongitude);
+        const hospitalCoordinates = Number.isFinite(suppliedLatitude) && Number.isFinite(suppliedLongitude)
+            ? { latitude: suppliedLatitude, longitude: suppliedLongitude }
+            : await geocodeLocation(payload.hospitalLocation);
         const nearestMatch = rankedDonors?.[0] || null;
         const newRequest = new PatientRequest({
             ...payload,
@@ -55,6 +64,8 @@ export const createPatientRequest = async (req, res) => {
             donorEmail: nearestMatch?.donor?.email || '',
             donorLocation: nearestMatch?.donor?.location || nearestMatch?.donor?.address || '',
             donorDistance: Number.isFinite(nearestMatch?.distance) ? Number(nearestMatch.distance.toFixed(2)) : null,
+            hospitalLatitude: hospitalCoordinates?.latitude,
+            hospitalLongitude: hospitalCoordinates?.longitude,
             sourceType: nearestMatch ? 'donor' : 'inventory',
             matchStatus: nearestMatch ? 'Matched' : undefined,
             locationMatchStatus: nearestMatch ? 'Matched' : 'No Donor'
@@ -78,7 +89,9 @@ export const getPatientRequests = async (req, res) => {
             const rankedDonors = await findMatchingDonors({
                 bloodGroup: request.bloodGroup,
                 units: request.unitsRequired,
-                location: request.hospitalLocation
+                location: request.hospitalLocation,
+                latitude: request.hospitalLatitude,
+                longitude: request.hospitalLongitude
             });
             const nearestMatch = rankedDonors?.[0] || null;
             request.donorId = nearestMatch?.donor?._id || null;

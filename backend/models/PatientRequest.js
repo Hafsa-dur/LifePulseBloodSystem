@@ -7,6 +7,8 @@ const patientRequestSchema = new mongoose.Schema({
   hospitalId: { type: String, default: '' },
   hospitalName: { type: String, required: true },
   hospitalLocation: { type: String, required: true, trim: true },
+  hospitalLatitude: { type: Number, min: -90, max: 90 },
+  hospitalLongitude: { type: Number, min: -180, max: 180 },
   contactPhone: { type: String, required: true },
   donorName: { type: String, trim: true },
   donorEmail: { type: String, lowercase: true, trim: true },
