@@ -5,6 +5,7 @@ import Donation from '../models/donationModel.js';
 import PatientRequest from '../models/PatientRequest.js';
 import Hospital from '../models/Hospital.js';
 import StaffInvitation from '../models/StaffInvitation.js';
+import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
