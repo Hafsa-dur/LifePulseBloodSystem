@@ -6,6 +6,13 @@ import { sendDonorThankYouEmail } from '../services/emailService.js';
 
 const locationCache = new Map();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const availableStockFilter = {
+  $or: [
+    { availableUnits: { $gt: 0 } },
+    { availableUnits: { $exists: false }, units: { $gt: 0 } }
+  ],
+  status: { $ne: 'Dispatched' }
+};
 
 const finiteCoordinate = (value, minimum, maximum) => {
   const numericValue = Number(value);
@@ -124,10 +131,7 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
     email: { $exists: true, $nin: ['', null] }
   };
   if (hospitalId) {
-    donorFilter.$or = [
-      { hospitalId },
-      { hospitalName: new RegExp(`^${escapeRegex(String(hospitalName || ''))}$`, 'i') }
-    ];
+    donorFilter.hospitalId = hospitalId;
   } else if (hospitalName) {
     donorFilter.hospitalName = new RegExp(`^${escapeRegex(String(hospitalName))}$`, 'i');
   }
@@ -139,9 +143,7 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
   const donors = (await donorQuery).filter((donor) => !excluded.has(String(donor._id)));
   if (donors.length === 0) return [];
 
-  const targetCoordinates = requestCoordinates || (savedLocation
-    ? await geocodeLocation(savedLocation)
-    : null);
+  const targetCoordinates = requestCoordinates;
   if (!targetCoordinates) {
     diagnostics?.push({ reason: 'hospital-location-unresolved', hospitalLocation: savedLocation });
     return [];
@@ -151,7 +153,7 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
     const availableUnits = donor.availableUnits === undefined ? Number(donor.units || 0) : Number(donor.availableUnits || 0);
     const donorCoordinates = getStoredCoordinates(donor);
     const donorLocation = String(donor.location || donor.address || '').trim();
-    const coordinates = donorCoordinates || (donorLocation ? await geocodeLocation(donorLocation) : null);
+    const coordinates = donorCoordinates;
     const donorDiagnostic = {
       donorId: String(donor._id),
       donorName: donor.donorName,
@@ -196,7 +198,7 @@ export const findNearestMatchingDonor = async (options) => {
 export const getAllDonations = async (req, res) => {
   try {
     const filter = req.user?.hospitalId
-      ? { $or: [{ hospitalId: req.user.hospitalId }, { hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName || '')}$`, 'i') }] }
+      ? { hospitalId: req.user.hospitalId }
       : req.user?.hospitalName
         ? { hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName)}$`, 'i') }
         : req.user?.role === 'donor'
@@ -226,7 +228,7 @@ export const getDashboardDonations = async (req, res) => {
     const filter = {
       $and: [
         { status: { $ne: 'Dispatched' } },
-        { units: { $gt: 0 } },
+        availableStockFilter,
         { donorName: { $not: /^Dispatched to/i } }
       ]
     };
@@ -372,12 +374,14 @@ export const dispatchBlood = async (req, res) => {
     await session.withTransaction(async () => {
       const dispatchFilter = {
         bloodGroup: new RegExp(`^${normalizedBloodGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-        units: { $gt: 0 },
-        status: { $ne: 'Dispatched' }
+        ...availableStockFilter,
+        ...(req.user?.hospitalId
+          ? { hospitalId: req.user.hospitalId }
+          : { hospitalName: new RegExp(`^${escapeRegex(String(req.user?.hospitalName || ''))}$`, 'i') })
       };
       if (donorId) dispatchFilter._id = donorId;
       const donations = await Donation.find(dispatchFilter).sort({ createdAt: 1, _id: 1 }).session(session);
-      const availableUnits = donations.reduce((total, donation) => total + donation.units, 0);
+      const availableUnits = donations.reduce((total, donation) => total + (donation.availableUnits === undefined ? Number(donation.units || 0) : Number(donation.availableUnits || 0)), 0);
       if (availableUnits < requestedUnits) {
         throw Object.assign(new Error(`Only ${availableUnits} ${normalizedBloodGroup} unit(s) are available.`), { status: 409 });
       }
@@ -385,15 +389,15 @@ export const dispatchBlood = async (req, res) => {
       let remainingUnits = requestedUnits;
       for (const donation of donations) {
         if (!remainingUnits) break;
-        const allocatedUnits = Math.min(donation.units, remainingUnits);
-        const availableUnits = donation.availableUnits === undefined ? Number(donation.units) : Number(donation.availableUnits);
-        if (availableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
+        const currentAvailableUnits = donation.availableUnits === undefined ? Number(donation.units || 0) : Number(donation.availableUnits || 0);
+        const allocatedUnits = Math.min(currentAvailableUnits, remainingUnits);
+        if (currentAvailableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
         const previousDispatchedUnits = Number(donation.dispatchedUnits || 0);
-        donation.units -= allocatedUnits;
-        donation.availableUnits = Math.max(0, availableUnits - allocatedUnits);
+        donation.availableUnits = Math.max(0, currentAvailableUnits - allocatedUnits);
+        donation.units = donation.availableUnits;
         donation.dispatchedUnits = previousDispatchedUnits + allocatedUnits;
-        donation.totalUnits = Number(donation.totalUnits) > 0 ? Number(donation.totalUnits) : availableUnits + previousDispatchedUnits;
-        if (donation.units === 0) donation.status = 'Dispatched';
+        donation.totalUnits = Number(donation.totalUnits) > 0 ? Number(donation.totalUnits) : currentAvailableUnits + previousDispatchedUnits;
+        if (donation.availableUnits === 0) donation.status = 'Dispatched';
         await donation.save({ session });
         remainingUnits -= allocatedUnits;
       }
@@ -458,9 +462,9 @@ export const dispatchBlood = async (req, res) => {
 
 export const getPublicDonationStats = async (req, res) => {
   try {
-    const donations = await Donation.find({ units: { $gt: 0 }, status: { $ne: 'Dispatched' } }).select('bloodGroup units donorName').lean();
+    const donations = await Donation.find(availableStockFilter).select('bloodGroup units availableUnits donorName').lean();
     const groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    const criticalGroups = groups.filter((group) => donations.filter((item) => item.bloodGroup === group).reduce((sum, item) => sum + (Number(item.units) || 0), 0) <= 3);
+    const criticalGroups = groups.filter((group) => donations.filter((item) => item.bloodGroup === group).reduce((sum, item) => sum + (Number(item.availableUnits ?? item.units) || 0), 0) <= 3);
     return res.json({ success: true, criticalGroups, totalDonors: new Set(donations.map((item) => item.donorName)).size });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

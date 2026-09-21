@@ -18,8 +18,9 @@ const formatCleanDate = (dateVal) => {
 
 export const getLifeImpactBoard = async (req, res) => {
   try {
-    const userEmailQuery = req.query.email ? req.query.email.trim().toLowerCase() : '';
-    const userNameQuery = req.query.donorName ? req.query.donorName.trim() : '';
+    const isDonor = String(req.user?.role || '').toLowerCase() === 'donor';
+    const userEmailQuery = isDonor ? String(req.user.email || '').trim().toLowerCase() : (req.query.email ? req.query.email.trim().toLowerCase() : '');
+    const userNameQuery = isDonor ? '' : (req.query.donorName ? req.query.donorName.trim() : '');
 
     if (!userEmailQuery && !userNameQuery) {
       return res.status(200).json({

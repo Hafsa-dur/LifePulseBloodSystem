@@ -24,7 +24,8 @@ export const getCombinedDispatchLogs = async (req, res) => {
     const userEmailQuery = req.query.email?.trim().toLowerCase();
     const userNameQuery = req.query.donorName?.trim();
     const filter = {};
-    if (req.user?.hospitalName) filter.hospitalName = new RegExp(`^${req.user.hospitalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    if (req.user?.hospitalId) filter.$or = [{ hospitalName: new RegExp(`^${req.user.hospitalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }];
+    else if (req.user?.hospitalName) filter.hospitalName = new RegExp(`^${req.user.hospitalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     if (userEmailQuery) filter.donorEmail = userEmailQuery;
     if (userNameQuery) filter.donorName = new RegExp(`^${userNameQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
@@ -52,7 +53,11 @@ export const getDonorRecipientHistory = async (req, res) => {
   try {
     const { donorName } = req.params;
     const email = req.query.email?.trim().toLowerCase();
+    const hospitalFilter = req.user?.hospitalName
+      ? { hospitalName: new RegExp(`^${req.user.hospitalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+      : {};
     const records = await DonorRecipientLog.find({
+      ...hospitalFilter,
       ...(email ? { donorEmail: email } : { donorName: new RegExp(`^${donorName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') })
     }).sort({ createdAt: -1 });
     return res.status(200).json(records);

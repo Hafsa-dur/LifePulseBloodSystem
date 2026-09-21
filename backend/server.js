@@ -103,7 +103,7 @@ app.get('/api/donor-recipient-logs', requireAuth, requireHospitalRole, async (re
 });
 
 // 2. POST: Add a new donor record / inflow
-app.post('/api/donor-recipient-logs/add', async (req, res) => {
+app.post('/api/donor-recipient-logs/add', requireAuth, requireHospitalRole, async (req, res) => {
   try {
     const { donorName, lastDonationDate, bloodType, pints } = req.body;
     
@@ -112,6 +112,7 @@ app.post('/api/donor-recipient-logs/add', async (req, res) => {
       lastDonationDate,
       bloodType,
       pints: Number(pints),
+      hospitalName: req.user.hospitalName,
       sourceType: 'donor',
       matchStatus: 'Matched',
       dispatchStatus: 'Pending',
@@ -128,13 +129,13 @@ app.post('/api/donor-recipient-logs/add', async (req, res) => {
     return res.status(500).json({ success: false, error: error.message });
   }
 });// PUT: Update recipient allocation & change status
-app.put('/api/donor-recipient-logs/dispatch/:id', async (req, res) => {
+app.put('/api/donor-recipient-logs/dispatch/:id', requireAuth, requireHospitalRole, async (req, res) => {
   try {
     const { id } = req.params;
     const { recipientName, status } = req.body; // Yahan recipient ka naam aur status frontend se aayega
 
-    const updatedLog = await DonorRecipientLog.findByIdAndUpdate(
-      id,
+    const updatedLog = await DonorRecipientLog.findOneAndUpdate(
+      { _id: id, hospitalName: req.user.hospitalName },
       { 
         recipientName: recipientName || 'Pending Allocation', 
         status: status || 'Dispatched' 
@@ -189,14 +190,20 @@ app.post('/api/hospital-requests', requireAuth, requireHospitalRole, async (req,
       selectedDonor = await Donation.findOne({
         _id: donorId,
         bloodGroup: new RegExp(`^${normalizedBloodGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-        units: { $gte: requestedUnits },
-        status: { $ne: 'Dispatched' }
+        $or: [
+          { availableUnits: { $gte: requestedUnits } },
+          { availableUnits: { $exists: false }, units: { $gte: requestedUnits } }
+        ],
+        status: { $ne: 'Dispatched' },
+        hospitalId: req.user.hospitalId
       });
     } else {
       selectedDonor = await findNearestMatchingDonor({
         bloodGroup: normalizedBloodGroup,
         units: requestedUnits,
-        location: savedHospitalLocation
+        location: savedHospitalLocation,
+        hospitalId: req.user.hospitalId,
+        hospitalName: req.user.hospitalName
       });
     }
 

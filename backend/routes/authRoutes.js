@@ -13,7 +13,7 @@ router.post('/rewards/send', requireAuth, async (req, res) => {
 		if (req.user.role !== 'donor') return res.status(403).json({ success: false, message: 'Only donor accounts can redeem rewards.' });
 		const { donorEmail, rewardTitle, partner, points, voucherCode } = req.body || {};
 		if (!rewardTitle || !voucherCode) return res.status(400).json({ success: false, message: 'Reward details are required.' });
-		const recipientEmail = String(donorEmail || '').trim().toLowerCase();
+		const recipientEmail = String(req.user.email || donorEmail || '').trim().toLowerCase();
 		if (!recipientEmail) return res.status(400).json({ success: false, message: 'Select a donor email before redeeming a reward.' });
 		const donor = await Donation.findOne({ email: recipientEmail }).select('donorName email').lean();
 		if (!donor) return res.status(404).json({ success: false, message: 'That donor email was not found in the donation records.' });

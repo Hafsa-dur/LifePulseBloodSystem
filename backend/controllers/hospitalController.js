@@ -255,15 +255,15 @@ export const getHospitalAnalytics = async (req, res) => {
     if (Object.keys(dateFilter).length) filter.createdAt = dateFilter;
     const [requests, donations] = await Promise.all([
       PatientRequest.find(filter).lean(),
-      Donation.find({ ...filter, units: { $gt: 0 }, status: { $ne: 'Dispatched' } }).lean()
+      Donation.find({ ...filter, $or: [{ availableUnits: { $gt: 0 } }, { availableUnits: { $exists: false }, units: { $gt: 0 } }], status: { $ne: 'Dispatched' } }).lean()
     ]);
     const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
-    const bloodBreakdown = bloodGroups.map((group) => ({ group, units: donations.filter((item) => item.bloodGroup === group).reduce((sum, item) => sum + (Number(item.units) || 0), 0) }));
+    const bloodBreakdown = bloodGroups.map((group) => ({ group, units: donations.filter((item) => item.bloodGroup === group).reduce((sum, item) => sum + (Number(item.availableUnits ?? item.units) || 0), 0) }));
     return res.json({ success: true, metrics: {
       totalRequests: requests.length,
       approvedRequests: requests.filter((item) => ['Approved', 'Dispatched', 'Delivered'].includes(item.status)).length,
       dispatchedUnits: requests.filter((item) => ['Dispatched', 'Delivered'].includes(item.status)).reduce((sum, item) => sum + (Number(item.unitsRequired) || 0), 0),
-      totalDonations: donations.reduce((sum, item) => sum + (Number(item.units) || 0), 0)
+      totalDonations: donations.reduce((sum, item) => sum + (Number(item.availableUnits ?? item.units) || 0), 0)
     }, bloodBreakdown });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

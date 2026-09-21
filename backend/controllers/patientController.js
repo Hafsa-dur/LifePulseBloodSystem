@@ -12,7 +12,10 @@ const realDonorFilter = {
     email: { $exists: true, $nin: ['', null] }
 };
 const stockFilter = {
-    units: { $gt: 0 },
+    $or: [
+        { availableUnits: { $gt: 0 } },
+        { availableUnits: { $exists: false }, units: { $gt: 0 } }
+    ],
     status: { $ne: 'Dispatched' }
 };
 
@@ -147,10 +150,10 @@ export const approveRequest = async (req, res) => {
                 ? { hospitalId: req.user.hospitalId }
                 : { hospitalName: new RegExp(`^${escapeRegex(String(req.user.hospitalName || ''))}$`, 'i') };
             const allStock = request.sourceType === 'donor' && request.donorId
-                ? await Donation.find({ ...groupFilter, ...stockFilter, _id: request.donorId }).session(session)
+                ? await Donation.find({ ...groupFilter, ...stockFilter, ...hospitalInventoryFilter, _id: request.donorId }).session(session)
                 : await Donation.find({ ...groupFilter, ...stockFilter, ...hospitalInventoryFilter })
                     .sort({ createdAt: 1, _id: 1 }).session(session);
-            const availableUnits = allStock.reduce((total, donation) => total + donation.units, 0);
+            const availableUnits = allStock.reduce((total, donation) => total + (donation.availableUnits === undefined ? Number(donation.units || 0) : Number(donation.availableUnits || 0)), 0);
             if (availableUnits <= 0) {
                 request.status = 'Rejected';
                 await request.save({ session });
@@ -239,8 +242,9 @@ export const dispatchRequest = async (req, res) => {
                 // the match was made; later donors cannot replace that patient.
                 dispatchFilter.createdAt = { $lte: matchLog.matchedAt };
             }
+            Object.assign(dispatchFilter, hospitalScope(req.user));
             const donations = await Donation.find(dispatchFilter).sort({ createdAt: 1, _id: 1 }).session(session);
-            const availableUnits = donations.reduce((total, donation) => total + donation.units, 0);
+            const availableUnits = donations.reduce((total, donation) => total + (donation.availableUnits === undefined ? Number(donation.units || 0) : Number(donation.availableUnits || 0)), 0);
             if (availableUnits < requiredUnits) {
                 throw Object.assign(new Error(`Only ${availableUnits} ${bloodGroup} unit(s) remain; ${requiredUnits} required`), { status: 409 });
             }
@@ -249,15 +253,15 @@ export const dispatchRequest = async (req, res) => {
             const orderedDonations = donations;
             for (const donation of orderedDonations) {
                 if (!remainingUnits) break;
-                const allocatedUnits = Math.min(donation.units, remainingUnits);
-                const availableUnits = donation.availableUnits === undefined ? Number(donation.units) : Number(donation.availableUnits);
-                if (availableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
+                const currentAvailableUnits = donation.availableUnits === undefined ? Number(donation.units || 0) : Number(donation.availableUnits || 0);
+                const allocatedUnits = Math.min(currentAvailableUnits, remainingUnits);
+                if (currentAvailableUnits < allocatedUnits) throw Object.assign(new Error('Inventory changed; please retry dispatch'), { status: 409 });
                 const previousDispatchedUnits = Number(donation.dispatchedUnits || 0);
-                donation.units -= allocatedUnits;
-                donation.availableUnits = Math.max(0, availableUnits - allocatedUnits);
+                donation.availableUnits = Math.max(0, currentAvailableUnits - allocatedUnits);
+                donation.units = donation.availableUnits;
                 donation.dispatchedUnits = previousDispatchedUnits + allocatedUnits;
-                donation.totalUnits = Number(donation.totalUnits) > 0 ? Number(donation.totalUnits) : availableUnits + previousDispatchedUnits;
-                if (donation.units === 0) donation.status = 'Dispatched';
+                donation.totalUnits = Number(donation.totalUnits) > 0 ? Number(donation.totalUnits) : currentAvailableUnits + previousDispatchedUnits;
+                if (donation.availableUnits === 0) donation.status = 'Dispatched';
                 await donation.save({ session });
                 remainingUnits -= allocatedUnits;
             }
