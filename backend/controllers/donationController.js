@@ -109,7 +109,6 @@ const distanceInKilometers = (first, second) => {
 };
 
 export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, session, excludeDonorIds = [], diagnostics }) => {
-  const matchingRadiusKm = Number(process.env.MATCHING_RADIUS_KM) > 0 ? Number(process.env.MATCHING_RADIUS_KM) : 50;
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
@@ -162,7 +161,6 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
     donorDiagnostic.distanceKm = Number.isFinite(distance) ? Number(distance.toFixed(2)) : null;
 
     if (!coordinates) donorDiagnostic.rejectionReason = 'donor-location-unresolved';
-    else if (distance > matchingRadiusKm) donorDiagnostic.rejectionReason = `outside-radius-${matchingRadiusKm}km`;
     else if (!donorDiagnostic.available) donorDiagnostic.rejectionReason = 'insufficient-available-units-or-dispatched';
     else if (!donorDiagnostic.eligible) donorDiagnostic.rejectionReason = 'donation-not-yet-eligible';
     else diagnostics?.push({ ...donorDiagnostic, rejectionReason: null });
