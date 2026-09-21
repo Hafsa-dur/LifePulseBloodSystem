@@ -53,6 +53,9 @@ const GeoPulseRadar = () => {
           const donorLocation = String(item.location || item.address || '').trim();
           return !lowerName.includes('dispatched to') && status !== 'dispatched' &&
             item.role !== 'patient' && Number(item.units || 0) > 0 && (item.availableUnits === undefined || Number(item.availableUnits) > 0) && Boolean(donorLocation);
+        }).filter((donor, index, records) => {
+          const identity = String(donor.email || donor._id || '').trim().toLowerCase();
+          return identity && records.findIndex((record) => String(record.email || record._id || '').trim().toLowerCase() === identity) === index;
         });
 
         const enrichedDonors = activeDonors.map((donor) => ({
