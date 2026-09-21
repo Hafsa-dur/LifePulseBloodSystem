@@ -50,6 +50,9 @@
 .dashboard-layout[data-dashboard-theme='navy'] .theme-toggle { color: var(--dashboard-gold) !important; border-color: rgba(214, 166, 42, .65) !important; }
 .dashboard-layout[data-dashboard-theme='navy'] .theme-toggle:hover { background: var(--dashboard-gold) !important; color: var(--dashboard-navy) !important; }
 .dashboard-layout[data-dashboard-theme='navy'] .sidebar-kicker { color: var(--dashboard-gold) !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .sidebar-brand > div:first-child,
+.dashboard-layout[data-dashboard-theme='navy'] .sidebar-brand h1 { color: #ffffff !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .sidebar-brand > div:first-child { border-color: #dbe5f0 !important; }
 .dashboard-layout[data-dashboard-theme='navy'] .sidebar-link { color: #e4edf7 !important; }
 .dashboard-layout[data-dashboard-theme='navy'] .sidebar-link:hover,
 .dashboard-layout[data-dashboard-theme='navy'] .sidebar-link-active { background: var(--dashboard-gold) !important; color: var(--dashboard-navy) !important; border-color: var(--dashboard-gold) !important; }
@@ -104,6 +107,8 @@
 .dashboard-layout[data-dashboard-theme='maroon'] .theme-toggle { color: #E5C158 !important; border-color: rgba(229, 193, 88, .5) !important; }
 .dashboard-layout[data-dashboard-theme='maroon'] .theme-toggle:hover { background: #E5C158 !important; color: #5A1827 !important; }
 .dashboard-layout[data-dashboard-theme='maroon'] .sidebar-kicker { color: #E5C158 !important; }
+.dashboard-layout[data-dashboard-theme='maroon'] .sidebar-brand > div:first-child,
+.dashboard-layout[data-dashboard-theme='maroon'] .sidebar-brand h1 { color: #ffffff !important; }
 .dashboard-layout[data-dashboard-theme='maroon'] .sidebar-link { color: #ffe4e8 !important; }
 .dashboard-layout[data-dashboard-theme='maroon'] .sidebar-link:hover,
 .dashboard-layout[data-dashboard-theme='maroon'] .sidebar-link-active { background: #E5C158 !important; color: #5A1827 !important; border-color: rgba(255, 255, 255, .3) !important; }
