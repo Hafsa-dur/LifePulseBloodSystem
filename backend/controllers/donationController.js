@@ -19,7 +19,7 @@ const finiteCoordinate = (value, minimum, maximum) => {
   return Number.isFinite(numericValue) && numericValue >= minimum && numericValue <= maximum ? numericValue : null;
 };
 
-const getStoredCoordinates = (record) => {
+export const getStoredCoordinates = (record) => {
   const latitude = finiteCoordinate(record?.latitude ?? record?.location?.latitude, -90, 90);
   const longitude = finiteCoordinate(record?.longitude ?? record?.location?.longitude, -180, 180);
   if (latitude !== null && longitude !== null) return { latitude, longitude, source: 'stored' };
@@ -47,39 +47,39 @@ export const geocodeLocation = async (location) => {
   const request = (async () => {
     for (const searchLocation of placeSearchLocations) {
       try {
-        const nominatimUrl = new URL('https://nominatim.openstreetmap.org/search');
-        nominatimUrl.searchParams.set('format', 'jsonv2');
-        nominatimUrl.searchParams.set('limit', '1');
-        nominatimUrl.searchParams.set('q', searchLocation);
-        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
-        if (!response.ok) continue;
-        const results = await response.json();
-        const placeResult = results.find((result) => !['city', 'state', 'country'].includes(String(result.type || '').toLowerCase()));
-        if (placeResult) return { latitude: Number(placeResult.lat), longitude: Number(placeResult.lon), precision: 'place' };
-      } catch {
-        // Try the next real location variant.
-      }
-    }
-
-    for (const searchLocation of placeSearchLocations) {
-      try {
         const photonUrl = new URL('https://photon.komoot.io/api/');
         photonUrl.searchParams.set('q', `${searchLocation}, Pakistan`);
-        photonUrl.searchParams.set('limit', '5');
+        photonUrl.searchParams.set('limit', '10');
         const response = await fetch(photonUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         if (!response.ok) continue;
         const result = await response.json();
         const feature = result.features?.find((item) => {
           const properties = item.properties || {};
           const country = String(properties.country || '');
-          const city = String(properties.city || properties.county || '');
-          return /pakistan|پاکستان/i.test(country) || /peshawar/i.test(city);
+          const countryCode = String(properties.countrycode || '').toLowerCase();
+          return countryCode === 'pk' || /pakistan|پاکستان/i.test(country);
         });
         if (feature?.geometry?.coordinates?.length === 2) {
           return { latitude: Number(feature.geometry.coordinates[1]), longitude: Number(feature.geometry.coordinates[0]), precision: 'place' };
         }
       } catch {
-        // Keep trying real provider results.
+        // Continue with the next real provider.
+      }
+    }
+
+    for (const searchLocation of placeSearchLocations) {
+      try {
+        const nominatimUrl = new URL('https://nominatim.openstreetmap.org/search');
+        nominatimUrl.searchParams.set('format', 'jsonv2');
+        nominatimUrl.searchParams.set('limit', '1');
+        nominatimUrl.searchParams.set('q', `${searchLocation}, Pakistan`);
+        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
+        if (!response.ok) continue;
+        const results = await response.json();
+        const placeResult = results.find((result) => String(result.address?.country_code || '').toLowerCase() === 'pk' && !['city', 'state', 'country'].includes(String(result.type || '').toLowerCase()));
+        if (placeResult) return { latitude: Number(placeResult.lat), longitude: Number(placeResult.lon), precision: 'place' };
+      } catch {
+        // Try the next real location variant.
       }
     }
 
@@ -88,7 +88,7 @@ export const geocodeLocation = async (location) => {
         const cityUrl = new URL('https://nominatim.openstreetmap.org/search');
         cityUrl.searchParams.set('format', 'jsonv2');
         cityUrl.searchParams.set('limit', '1');
-        cityUrl.searchParams.set('q', cityFallback);
+        cityUrl.searchParams.set('q', `${cityFallback}, Pakistan`);
         const response = await fetch(cityUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         const results = response.ok ? await response.json() : [];
         if (results[0]) return { latitude: Number(results[0].lat), longitude: Number(results[0].lon), precision: 'city' };
@@ -103,7 +103,7 @@ export const geocodeLocation = async (location) => {
   return request;
 };
 
-const distanceInKilometers = (first, second) => {
+export const distanceInKilometers = (first, second) => {
   if (!first || !second) return Number.POSITIVE_INFINITY;
   const toRadians = (value) => (value * Math.PI) / 180;
   const latitudeDelta = toRadians(second.latitude - first.latitude);

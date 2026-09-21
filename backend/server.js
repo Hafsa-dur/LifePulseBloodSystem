@@ -201,7 +201,7 @@ app.post('/api/hospital-requests', requireAuth, requireHospitalRole, async (req,
       selectedDonor = await findNearestMatchingDonor({
         bloodGroup: normalizedBloodGroup,
         units: requestedUnits,
-        location: savedHospitalLocation,
+        location: `${req.user.hospitalName || hospitalName}, ${savedHospitalLocation}`,
         hospitalId: req.user.hospitalId,
         hospitalName: req.user.hospitalName
       });

@@ -2,7 +2,7 @@ import PatientRequest from '../models/PatientRequest.js';
 import Donation from '../models/donationModel.js';
 import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import mongoose from 'mongoose';
-import { findMatchingDonors, geocodeLocation } from './donationController.js';
+import { findMatchingDonors, geocodeLocation, getStoredCoordinates, distanceInKilometers } from './donationController.js';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const realDonorFilter = {
@@ -46,21 +46,19 @@ export const createPatientRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'A valid blood group and positive whole number of units are required.' });
         }
         const matchingDiagnostics = [];
+        const hospitalCoordinates = Number.isFinite(Number(payload.hospitalLatitude)) && Number.isFinite(Number(payload.hospitalLongitude))
+            ? { latitude: Number(payload.hospitalLatitude), longitude: Number(payload.hospitalLongitude) }
+            : await geocodeLocation(`${payload.hospitalName}, ${payload.hospitalLocation}`);
         const rankedDonors = await findMatchingDonors({
             bloodGroup,
             units: unitsRequired,
             location: payload.hospitalLocation,
-            latitude: payload.hospitalLatitude,
-            longitude: payload.hospitalLongitude,
+            latitude: hospitalCoordinates?.latitude,
+            longitude: hospitalCoordinates?.longitude,
             hospitalId: payload.hospitalId,
             hospitalName: payload.hospitalName,
             diagnostics: matchingDiagnostics
         });
-        const suppliedLatitude = Number(payload.hospitalLatitude);
-        const suppliedLongitude = Number(payload.hospitalLongitude);
-        const hospitalCoordinates = Number.isFinite(suppliedLatitude) && Number.isFinite(suppliedLongitude)
-            ? { latitude: suppliedLatitude, longitude: suppliedLongitude }
-            : await geocodeLocation(payload.hospitalLocation);
         const nearestMatch = rankedDonors?.[0] || null;
         const newRequest = new PatientRequest({
             ...payload,
@@ -93,14 +91,29 @@ export const getPatientRequests = async (req, res) => {
         const requests = await PatientRequest.find(filters).sort({ createdAt: -1 });
         const pendingRequests = requests.filter((request) => request.status === 'Pending');
         const matchingDiagnostics = new Map();
-        await Promise.all(pendingRequests.map(async (request) => {
+        await Promise.all(requests.map(async (request) => {
             const diagnostics = [];
+            const refreshedCoordinates = await geocodeLocation(`${request.hospitalName}, ${request.hospitalLocation}`);
+            if (refreshedCoordinates) {
+                request.hospitalLatitude = refreshedCoordinates.latitude;
+                request.hospitalLongitude = refreshedCoordinates.longitude;
+            }
+            if (request.status !== 'Pending') {
+                const sourceDonation = request.donorId
+                    ? await Donation.findOne({ _id: request.donorId, ...hospitalScope(req.user) }).select('latitude longitude location address').lean()
+                    : null;
+                const donorCoordinates = getStoredCoordinates(sourceDonation);
+                const hospitalCoordinates = getStoredCoordinates({ latitude: request.hospitalLatitude, longitude: request.hospitalLongitude });
+                if (donorCoordinates && hospitalCoordinates) request.donorDistance = Number(distanceInKilometers(hospitalCoordinates, donorCoordinates).toFixed(2));
+                await request.save();
+                return;
+            }
             const rankedDonors = await findMatchingDonors({
                 bloodGroup: request.bloodGroup,
                 units: request.unitsRequired,
                 location: request.hospitalLocation,
-                latitude: request.hospitalLatitude,
-                longitude: request.hospitalLongitude,
+                latitude: refreshedCoordinates?.latitude ?? request.hospitalLatitude,
+                longitude: refreshedCoordinates?.longitude ?? request.hospitalLongitude,
                 hospitalId: request.hospitalId,
                 hospitalName: request.hospitalName,
                 diagnostics
