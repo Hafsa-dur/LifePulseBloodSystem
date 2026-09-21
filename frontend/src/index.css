@@ -139,3 +139,5 @@
     height: 100%;
     border-radius: 0.5rem;
 }
+.analytics-donut-segment { transition: stroke-dasharray 650ms ease, stroke-dashoffset 650ms ease; }
+.analytics-bar { transition: height 650ms ease, opacity 250ms ease; }
