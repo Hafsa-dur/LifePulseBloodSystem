@@ -150,7 +150,7 @@ const BloodStock = () => {
   // Add collected units
   normalDonations.forEach((item) => {
     const grp = item.bloodGroup || item.group || item.bloodType;
-    const pints = Number(item.units || item.pints || 0);
+    const pints = item.availableUnits === undefined ? Number(item.units || item.pints || 0) : Number(item.availableUnits || 0);
     if (grp && groupCounts.hasOwnProperty(grp)) {
       groupCounts[grp] += pints;
     }

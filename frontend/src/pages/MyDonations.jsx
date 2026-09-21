@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Droplet, Calendar, AlertCircle, History, RefreshCcw, User } from 'lucide-react';
-import { API_URL, parseResponse } from '../api';
+import { API_URL, authHeaders, parseResponse } from '../api';
 
 const MyDonations = ({ currentUserName }) => {
   const [donations, setDonations] = useState([]);
@@ -55,7 +55,7 @@ const MyDonations = ({ currentUserName }) => {
       }
       const email = storedUser.email || localStorage.getItem('userEmail') || '';
       const impactQuery = email ? `email=${encodeURIComponent(email)}` : `donorName=${encodeURIComponent(targetName)}`;
-      const impactResponse = await fetch(`${API_URL}/life-impact?${impactQuery}`);
+      const impactResponse = await fetch(`${API_URL}/life-impact?${impactQuery}`, { headers: authHeaders() });
       if (impactResponse.ok) {
         const impactData = await parseResponse(impactResponse);
         setDonations(impactData.donations || []);

@@ -14,6 +14,7 @@ const StaffManagement = () => {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [invite, setInvite] = useState({ name: '', email: '' });
+  const [directStaff, setDirectStaff] = useState({ name: '', email: '', password: '', phone: '' });
   const [inviteLink, setInviteLink] = useState('');
   const [inviteStatus, setInviteStatus] = useState({ type: '', text: '' });
 
@@ -41,6 +42,24 @@ const StaffManagement = () => {
     setInviteLink(data.invitation?.inviteLink || '');
     setInviteStatus({ type: 'success', text: data.message || 'Invitation sent successfully.' });
     setInvite({ name: '', email: '' });
+  };
+
+  const createDirectStaff = async (event) => {
+    event.preventDefault();
+    setInviteStatus({ type: '', text: '' });
+    const response = await fetch(`${API_URL}/hospital/staff`, {
+      method: 'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify(directStaff)
+    });
+    const data = await parseResponse(response);
+    if (!response.ok) {
+      setInviteStatus({ type: 'error', text: data.message || 'Unable to create staff account.' });
+      return;
+    }
+    setStaff((items) => [data.staff, ...items]);
+    setDirectStaff({ name: '', email: '', password: '', phone: '' });
+    setInviteStatus({ type: 'success', text: 'Staff account created successfully.' });
   };
 
   const toggleStaff = async (member) => {
@@ -138,6 +157,13 @@ const StaffManagement = () => {
                 <input type="text" value="24 hours" readOnly className="border-2 border-[#6B1D2F]/20 bg-slate-100 rounded-xl p-3 text-sm font-bold" />
                 <input type="text" value="Hospital Staff" readOnly className="border-2 border-[#6B1D2F]/20 bg-slate-100 rounded-xl p-3 text-sm font-bold" />
                 <button className="bg-[#E5C158] text-[#5A1827] rounded-xl font-black text-xs uppercase">Generate Invite</button>
+              </form>
+              <form onSubmit={createDirectStaff} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
+                <input type="text" required placeholder="Direct staff name" value={directStaff.name} onChange={(event) => setDirectStaff({ ...directStaff, name: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
+                <input type="email" required placeholder="Staff email" value={directStaff.email} onChange={(event) => setDirectStaff({ ...directStaff, email: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
+                <input type="password" required minLength="6" placeholder="Password" value={directStaff.password} onChange={(event) => setDirectStaff({ ...directStaff, password: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
+                <input type="text" placeholder="Phone" value={directStaff.phone} onChange={(event) => setDirectStaff({ ...directStaff, phone: event.target.value })} className="border-2 border-[#6B1D2F]/20 bg-[#FAF9F6] rounded-xl p-3 text-sm" />
+                <button className="bg-[#5A1827] text-[#E5C158] rounded-xl font-black text-xs uppercase">Add Staff Directly</button>
               </form>
               {inviteStatus.text && <div className={`mb-5 rounded-xl border p-3 text-xs font-bold ${inviteStatus.type === 'error' ? 'border-rose-300 bg-rose-50 text-rose-800' : 'border-emerald-300 bg-emerald-50 text-emerald-800'}`}>{inviteStatus.text}</div>}
               {inviteLink && <div className="mb-5 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-800 font-bold break-all">Invite link: {inviteLink}</div>}
