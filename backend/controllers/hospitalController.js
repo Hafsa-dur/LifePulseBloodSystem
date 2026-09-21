@@ -248,23 +248,53 @@ export const getSystemHealth = async (req, res) => {
 
 export const getHospitalAnalytics = async (req, res) => {
   try {
-    const filter = hospitalFilter(req.user);
-    const dateFilter = {};
-    if (req.query.from) dateFilter.$gte = new Date(`${req.query.from}T00:00:00.000Z`);
-    if (req.query.to) dateFilter.$lte = new Date(`${req.query.to}T23:59:59.999Z`);
-    if (Object.keys(dateFilter).length) filter.createdAt = dateFilter;
-    const [requests, donations] = await Promise.all([
-      PatientRequest.find(filter).lean(),
-      Donation.find({ ...filter, $or: [{ availableUnits: { $gt: 0 } }, { availableUnits: { $exists: false }, units: { $gt: 0 } }], status: { $ne: 'Dispatched' } }).lean()
+    const scope = hospitalFilter(req.user);
+    const from = req.query.from ? new Date(`${req.query.from}T00:00:00.000Z`) : null;
+    const to = req.query.to ? new Date(`${req.query.to}T23:59:59.999Z`) : null;
+    const inRange = (date) => {
+      const value = new Date(date);
+      return !Number.isNaN(value.getTime()) && (!from || value >= from) && (!to || value <= to);
+    };
+    const requestEventDate = (item) => item.updatedAt || item.createdAt;
+    const [requests, donations, logs] = await Promise.all([
+      PatientRequest.find(scope).lean(),
+      Donation.find(scope).lean(),
+      DonorRecipientLog.find({ hospitalName: req.user.hospitalName }).lean()
     ]);
+    const datedRequests = requests.filter((item) => inRange(item.createdAt));
+    const approvedRequests = requests.filter((item) => ['Approved', 'Dispatched', 'Delivered'].includes(item.status) && inRange(requestEventDate(item)));
+    const dispatchedRequests = requests.filter((item) => ['Dispatched', 'Delivered'].includes(item.status) && inRange(requestEventDate(item)));
+    const pendingRequests = requests.filter((item) => item.status === 'Pending' && inRange(item.createdAt));
+    const rejectedRequests = requests.filter((item) => item.status === 'Rejected' && inRange(requestEventDate(item)));
+    const datedDonations = donations.filter((item) => inRange(item.donationDate || item.createdAt));
+    const datedLogs = logs.filter((item) => inRange(item.matchedAt || item.createdAt));
     const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
-    const bloodBreakdown = bloodGroups.map((group) => ({ group, units: donations.filter((item) => item.bloodGroup === group).reduce((sum, item) => sum + (Number(item.availableUnits ?? item.units) || 0), 0) }));
+    const bloodBreakdown = bloodGroups.map((group) => ({
+      group,
+      units: datedDonations
+        .filter((item) => item.bloodGroup === group && item.status !== 'Dispatched')
+        .reduce((sum, item) => sum + Math.max(0, Number(item.availableUnits ?? item.units) || 0), 0)
+    }));
+    const performance = [
+      { label: 'Total Requests', value: datedRequests.length },
+      { label: 'Matched', value: datedLogs.filter((item) => item.sourceType === 'donor' || item.matchStatus === 'Matched' || item.matchStatus === 'Fulfilled').length },
+      { label: 'Approved', value: approvedRequests.length },
+      { label: 'Dispatched', value: dispatchedRequests.length },
+      { label: 'Pending', value: pendingRequests.length },
+      { label: 'Rejected', value: rejectedRequests.length }
+    ];
+    const currentAvailableUnits = donations.reduce((sum, item) => sum + (item.status === 'Dispatched' ? 0 : Math.max(0, Number(item.availableUnits ?? item.units) || 0)), 0);
+    const totalCollectedUnits = datedDonations.reduce((sum, item) => sum + Math.max(0, Number(item.totalUnits ?? item.units) || 0), 0);
+    const totalDispatchedUnits = datedLogs.filter((item) => item.dispatchStatus === 'Dispatched' || item.status === 'Dispatched').reduce((sum, item) => sum + (Number(item.pints) || 0), 0)
+      || dispatchedRequests.reduce((sum, item) => sum + (Number(item.unitsRequired) || 0), 0);
     return res.json({ success: true, metrics: {
-      totalRequests: requests.length,
-      approvedRequests: requests.filter((item) => ['Approved', 'Dispatched', 'Delivered'].includes(item.status)).length,
-      dispatchedUnits: requests.filter((item) => ['Dispatched', 'Delivered'].includes(item.status)).reduce((sum, item) => sum + (Number(item.unitsRequired) || 0), 0),
-      totalDonations: donations.reduce((sum, item) => sum + (Number(item.availableUnits ?? item.units) || 0), 0)
-    }, bloodBreakdown });
+      totalRequests: datedRequests.length,
+      approvedRequests: approvedRequests.length,
+      dispatchedUnits: totalDispatchedUnits,
+      totalDonations: totalCollectedUnits,
+      totalCollectedUnits,
+      currentAvailableUnits
+    }, bloodBreakdown, performance });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
