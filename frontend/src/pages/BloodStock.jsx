@@ -70,7 +70,7 @@ const BloodStock = () => {
     const donorName = (item.donorName || item.name || '').toLowerCase();
     const unitsVal = Number(item.units || item.pints || 0);
     const availableVal = item.availableUnits === undefined ? unitsVal : Number(item.availableUnits || 0);
-    return status !== 'dispatched' && unitsVal > 0 && availableVal > 0 && !donorName.includes('dispatched');
+    return status !== 'dispatched' && unitsVal > 0 && availableVal > 0 && Number(item.dispatchedUnits || 0) === 0 && !donorName.includes('dispatched');
   });
 
   const dispatchRecords = donations.filter(item => {

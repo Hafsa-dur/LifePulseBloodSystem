@@ -27,11 +27,11 @@ const InventoryList = () => {
           );
 
           const totalUnits = groupRecords.reduce((acc, curr) => {
-            const qty = Number(curr.units || curr.quantity || 0);
-            if (curr.status === 'Dispatched') {
-              return acc - Math.abs(qty);
-            }
-            return acc + qty;
+            if (curr.status === 'Dispatched') return acc;
+            const qty = curr.availableUnits === undefined
+              ? Number(curr.units || curr.quantity || 0)
+              : Number(curr.availableUnits || 0);
+            return acc + Math.max(0, qty);
           }, 0);
 
           const finalStock = Math.max(0, totalUnits);
