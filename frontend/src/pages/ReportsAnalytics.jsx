@@ -16,7 +16,7 @@ const DonutChart = ({ items }) => {
         <circle cx="90" cy="90" r={radius} fill="none" stroke="#edf1f4" strokeWidth="22" />
         {items.map((item, index) => {
           const dash = total ? (Number(item.units || 0) / total) * circumference : 0;
-          const segment = <circle key={item.group} cx="90" cy="90" r={radius} fill="none" stroke={GROUP_COLORS[index]} strokeWidth="22" strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-offset} className="analytics-donut-segment" />;
+          const segment = <circle key={`${item.group}-${item.units}`} cx="90" cy="90" r={radius} fill="none" stroke={GROUP_COLORS[index]} strokeWidth="22" strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-offset} className="analytics-donut-segment" />;
           offset += dash;
           return segment;
         })}
@@ -29,7 +29,7 @@ const DonutChart = ({ items }) => {
 
 const PerformanceChart = ({ items }) => {
   const maxValue = Math.max(1, ...items.map((item) => Number(item.value || 0)));
-  return <div className="grid h-64 grid-cols-6 items-end gap-3 border-b-2 border-[#6B1D2F]/15 px-2 pb-2 pt-6 sm:gap-6">{items.map((item, index) => <div key={item.label} className="flex h-full min-w-0 flex-col items-center justify-end gap-2"><span className="text-xs font-black text-[#4A1521]">{item.value || 0}</span><div className="analytics-bar w-full max-w-12 rounded-t-xl" style={{ height: `${Math.max(item.value ? 12 : 4, (Number(item.value || 0) / maxValue) * 170)}px`, backgroundColor: GROUP_COLORS[index + 1] }} /><span className="w-full truncate text-center text-[9px] font-black text-slate-500" title={item.label}>{item.label.replace(' Requests', '')}</span></div>)}</div>;
+  return <div className="grid h-64 grid-cols-6 items-end gap-3 border-b-2 border-[#6B1D2F]/15 px-2 pb-2 pt-6 sm:gap-6">{items.map((item, index) => <div key={`${item.label}-${item.value}`} className="flex h-full min-w-0 flex-col items-center justify-end gap-2"><span className="text-xs font-black text-[#4A1521]">{item.value || 0}</span><div className="analytics-bar w-full max-w-12 rounded-t-xl" style={{ height: `${Math.max(item.value ? 12 : 4, (Number(item.value || 0) / maxValue) * 170)}px`, backgroundColor: GROUP_COLORS[index + 1] }} /><span className="w-full truncate text-center text-[9px] font-black text-slate-500" title={item.label}>{item.label.replace(' Requests', '')}</span></div>)}</div>;
 };
 
 const ReportsAnalytics = () => {

@@ -139,5 +139,8 @@
     height: 100%;
     border-radius: 0.5rem;
 }
-.analytics-donut-segment { transition: stroke-dasharray 650ms ease, stroke-dashoffset 650ms ease; }
-.analytics-bar { transition: height 650ms ease, opacity 250ms ease; }
+.analytics-donut-segment { animation: analytics-donut-in 900ms ease-out both; transition: stroke-dasharray 650ms ease, stroke-dashoffset 650ms ease; transform-origin: 90px 90px; }
+.analytics-bar { animation: analytics-bar-in 700ms cubic-bezier(.22, 1, .36, 1) both; transition: height 650ms ease, opacity 250ms ease; transform-origin: bottom; }
+@keyframes analytics-donut-in { from { stroke-dasharray: 0 390; opacity: .35; } to { opacity: 1; } }
+@keyframes analytics-bar-in { from { transform: scaleY(0); opacity: .35; } to { transform: scaleY(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .analytics-donut-segment, .analytics-bar { animation: none; transition: none; } }
