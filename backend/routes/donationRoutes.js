@@ -23,7 +23,11 @@ router.patch('/:id', requireAuth, requireHospitalRole, requirePermission('invent
 router.get('/history/:donorName', getDonorHistory);          // Get specific donor history
 router.get('/match', requireAuth, requireHospitalRole, async (req, res) => {
   try {
-    const rankedDonors = await findMatchingDonors(req.query);
+    const rankedDonors = await findMatchingDonors({
+      ...req.query,
+      hospitalId: req.user.hospitalId,
+      hospitalName: req.user.hospitalName
+    });
     return res.status(200).json({
       success: true,
       donor: rankedDonors[0]?.donor || null,

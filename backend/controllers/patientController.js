@@ -49,6 +49,8 @@ export const createPatientRequest = async (req, res) => {
             location: payload.hospitalLocation,
             latitude: payload.hospitalLatitude,
             longitude: payload.hospitalLongitude,
+            hospitalId: payload.hospitalId,
+            hospitalName: payload.hospitalName,
             diagnostics: matchingDiagnostics
         });
         const suppliedLatitude = Number(payload.hospitalLatitude);
@@ -96,6 +98,8 @@ export const getPatientRequests = async (req, res) => {
                 location: request.hospitalLocation,
                 latitude: request.hospitalLatitude,
                 longitude: request.hospitalLongitude,
+                hospitalId: request.hospitalId,
+                hospitalName: request.hospitalName,
                 diagnostics
             });
             matchingDiagnostics.set(String(request._id), diagnostics);

@@ -108,7 +108,7 @@ const distanceInKilometers = (first, second) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, session, excludeDonorIds = [], diagnostics }) => {
+export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, hospitalId, hospitalName, session, excludeDonorIds = [], diagnostics }) => {
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
@@ -117,12 +117,22 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
     return null;
   }
 
-  const donorQuery = Donation.find({
+  const donorFilter = {
     bloodGroup: new RegExp(`^${escapeRegex(normalizedBloodGroup)}$`, 'i'),
     status: { $ne: 'Dispatched' },
     donorName: { $exists: true, $nin: ['', null], $not: /^(Direct Donor|System Stock|Inventory|Dispatched to:)/i },
     email: { $exists: true, $nin: ['', null] }
-  }).sort({ createdAt: 1, _id: 1 });
+  };
+  if (hospitalId) {
+    donorFilter.$or = [
+      { hospitalId },
+      { hospitalName: new RegExp(`^${escapeRegex(String(hospitalName || ''))}$`, 'i') }
+    ];
+  } else if (hospitalName) {
+    donorFilter.hospitalName = new RegExp(`^${escapeRegex(String(hospitalName))}$`, 'i');
+  }
+
+  const donorQuery = Donation.find(donorFilter).sort({ createdAt: 1, _id: 1 });
   if (session) donorQuery.session(session);
 
   const excluded = new Set(excludeDonorIds.map((id) => String(id)));
