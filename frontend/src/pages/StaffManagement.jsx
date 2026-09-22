@@ -57,6 +57,11 @@ const StaffManagement = () => {
       setInviteStatus({ type: 'error', text: data.message || 'Unable to create staff account.' });
       return;
     }
+    if (data.pendingVerification) {
+      setDirectStaff({ name: '', email: '', password: '', phone: '' });
+      setInviteStatus({ type: 'success', text: data.message || 'Verification email sent. Staff access will be available after verification.' });
+      return;
+    }
     setStaff((items) => [data.staff, ...items]);
     setDirectStaff({ name: '', email: '', password: '', phone: '' });
     setInviteStatus({ type: 'success', text: 'Staff account created successfully.' });
