@@ -20,6 +20,7 @@ import DonorProfile from './pages/DonorProfile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
+import EmailVerificationPending from './pages/EmailVerificationPending';
 import StaffRegistration from './pages/StaffRegistration';
 import HospitalOnboarding from './pages/HospitalOnboarding';
 import GeoPulseRadar from './pages/GeoPulseRadar';
@@ -52,6 +53,10 @@ const ProtectedRoute = ({ allowedRole, requiredPermission, adminOnly = false }) 
   const user = getUser();
 
   if (!token) return <Navigate to="/login" replace />;
+  if (user.emailVerified === false || user.isActive === false) {
+    localStorage.removeItem('token');
+    return <Navigate to="/email-verification-pending" replace state={{ email: user.email }} />;
+  }
 
   const userRole = normalizeRole(user?.role);
   const allowedRoles = Array.isArray(allowedRole) ? allowedRole : [allowedRole].filter(Boolean);
@@ -110,6 +115,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/email-verification-pending" element={<EmailVerificationPending />} />
           <Route path="/staff-registration" element={<StaffRegistration />} />
           <Route path="/hospital-onboarding" element={<HospitalOnboarding />} />
           <Route path="/faq" element={<FAQPage />} />

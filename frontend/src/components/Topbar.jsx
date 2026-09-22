@@ -2,7 +2,7 @@ import { Menu, Search } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 
 const Topbar = ({ onMenuClick = () => {} }) => {
-  const { toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = String(user.role || 'donor').trim().toLowerCase();
   const normalizedRole = userRole === 'hospital_admin' || userRole === 'admin' ? 'hospital_admin' : userRole === 'hospital_staff' || userRole === 'staff' ? 'hospital_staff' : 'donor';

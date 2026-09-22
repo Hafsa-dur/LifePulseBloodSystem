@@ -62,7 +62,8 @@ const Register = () => {
       }
       if (!response.ok) throw new Error(data.message || 'Registration failed.');
       if (data.pendingVerification) {
-        setSuccess(data.message || 'Verification email sent. Please check your inbox before signing in.');
+        localStorage.setItem('pendingVerificationEmail', form.email.trim().toLowerCase());
+        navigate('/email-verification-pending', { replace: true, state: { email: form.email.trim().toLowerCase() } });
         return;
       }
       if (data.token && data.user) {
