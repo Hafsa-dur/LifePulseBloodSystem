@@ -3,6 +3,27 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import StaffInvitation from '../models/StaffInvitation.js';
 import crypto from 'crypto';
+import { sendVerificationEmail } from '../services/emailService.js';
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const frontendUrl = () => String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+const createVerification = () => {
+  const token = crypto.randomBytes(32).toString('hex');
+  return { token, tokenHash: tokenHash(token), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) };
+};
+const sendUserVerification = async (user, purpose = 'account', recipientEmail = user.email) => {
+  const verification = createVerification();
+  user.verificationTokenHash = verification.tokenHash;
+  user.verificationTokenExpiresAt = verification.expiresAt;
+  await user.save();
+  const result = await sendVerificationEmail({
+    recipientEmail,
+    purpose,
+    verificationLink: `${frontendUrl()}/verify-email?token=${encodeURIComponent(verification.token)}`
+  });
+  return { ...result, verification };
+};
 
 const normalizeRole = (role) => {
   const value = String(role || '').trim().toLowerCase();
@@ -15,6 +36,7 @@ const safeUserPayload = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
+  previousEmails: user.previousEmails || [],
   role: normalizeRole(user.role),
   staffRole: normalizeRole(user.role) === 'hospital_staff' ? 'Hospital Staff' : '',
   hospitalId: user.hospitalId,
@@ -100,6 +122,8 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
+    if (!emailPattern.test(normalizedEmail)) return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const safeRole = 'donor';
 
@@ -113,17 +137,16 @@ export const registerUser = async (req, res) => {
       hospitalLocation: String(hospitalLocation || '').trim(),
       phone: String(phone || '').trim(),
       profile: String(profile || '').trim(),
-      isActive: true,
+      isActive: false,
+      emailVerified: false,
       permissions: ['profile', 'history']
     });
-
-    const token = jwt.sign({ id: user._id, role: user.role, hospitalId: user.hospitalId, hospitalName: user.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
-
-    res.status(201).json({
-      success: true,
-      token,
-      user: safeUserPayload(user)
-    });
+    const emailResult = await sendUserVerification(user);
+    if (!emailResult.sent) {
+      await User.deleteOne({ _id: user._id });
+      return res.status(502).json({ success: false, message: 'Verification email could not be sent. Please try again.' });
+    }
+    return res.status(201).json({ success: true, pendingVerification: true, message: 'Verification email sent. Please check your inbox before signing in.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -224,6 +247,9 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await bcrypt.compare(password, user.password))) {
+      if (user.emailVerified === false || user.isActive === false) {
+        return res.status(403).json({ success: false, code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email address before continuing.' });
+      }
       const token = jwt.sign({ id: user._id, role: user.role, hospitalId: user.hospitalId, hospitalName: user.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
       return res.status(200).json({
         success: true,
@@ -232,6 +258,7 @@ export const loginUser = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
+          previousEmails: user.previousEmails || [],
           role: normalizeRole(user.role),
           staffRole: normalizeRole(user.role) === 'hospital_staff' ? 'Hospital Staff' : '',
           hospitalId: user.hospitalId,
@@ -275,6 +302,69 @@ export const updateProfile = async (req, res) => {
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
     return res.json({ success: true, user: safeUserPayload(user) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const verifyEmail = async (req, res) => {
+  try {
+    const token = String(req.query.token || '').trim();
+    if (!token) return res.status(400).json({ success: false, message: 'Verification token is required.' });
+    const user = await User.findOne({ verificationTokenHash: tokenHash(token), verificationTokenExpiresAt: { $gt: new Date() } });
+    if (!user) return res.status(400).json({ success: false, message: 'This verification link is invalid or expired.' });
+
+    if (user.pendingEmail) {
+      if (await User.exists({ email: user.pendingEmail, _id: { $ne: user._id } })) return res.status(409).json({ success: false, message: 'This email address is already registered.' });
+      user.previousEmails = [...new Set([...(user.previousEmails || []), user.email])];
+      user.email = user.pendingEmail;
+      user.pendingEmail = '';
+    }
+    user.emailVerified = true;
+    user.isActive = true;
+    user.verificationTokenHash = '';
+    user.verificationTokenExpiresAt = null;
+    await user.save();
+    return res.json({ success: true, message: 'Email verified successfully. You can now sign in.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const resendVerificationEmail = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!emailPattern.test(email)) return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    const user = await User.findOne({ $or: [{ email }, { pendingEmail: email }] });
+    if (!user) return res.status(404).json({ success: false, message: 'No pending account was found for this email address.' });
+    if (user.emailVerified !== false && !user.pendingEmail) return res.status(400).json({ success: false, message: 'This email address is already verified.' });
+    const result = await sendUserVerification(user, user.pendingEmail ? 'email-change' : 'account', user.pendingEmail || user.email);
+    if (!result.sent) return res.status(502).json({ success: false, message: 'Verification email could not be sent. Please try again.' });
+    return res.json({ success: true, message: 'A new verification email has been sent.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const requestEmailChange = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const currentPassword = String(req.body?.currentPassword || '');
+    if (!emailPattern.test(email)) return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    if (email === req.user.email) return res.status(400).json({ success: false, message: 'Enter a different email address.' });
+    if (!currentPassword || !(await bcrypt.compare(currentPassword, (await User.findById(req.user._id)).password))) return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    if (await User.exists({ email, _id: { $ne: req.user._id } })) return res.status(409).json({ success: false, message: 'Email already registered.' });
+    const user = await User.findById(req.user._id);
+    user.pendingEmail = email;
+    const result = await sendUserVerification(user, 'email-change', email);
+    if (!result.sent) {
+      user.pendingEmail = '';
+      user.verificationTokenHash = '';
+      user.verificationTokenExpiresAt = null;
+      await user.save();
+      return res.status(502).json({ success: false, message: 'Verification email could not be sent. Please try again.' });
+    }
+    return res.json({ success: true, pendingVerification: true, message: 'Verification email sent to your new email address.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

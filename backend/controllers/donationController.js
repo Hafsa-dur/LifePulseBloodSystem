@@ -202,7 +202,7 @@ export const getAllDonations = async (req, res) => {
       : req.user?.hospitalName
         ? { hospitalName: new RegExp(`^${escapeRegex(req.user.hospitalName)}$`, 'i') }
         : req.user?.role === 'donor'
-          ? { email: req.user.email }
+          ? { email: { $in: [req.user.email, ...(req.user.previousEmails || [])] } }
           : {};
     const donations = await Donation.find(filter).sort({ createdAt: -1 });
     

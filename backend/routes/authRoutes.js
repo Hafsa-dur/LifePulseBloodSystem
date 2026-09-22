@@ -1,11 +1,13 @@
 import express from 'express';
-import { registerUser, loginUser, updateProfile, registerStaffFromInvitation, validateStaffInvitation } from '../controllers/authController.js';
+import { registerUser, loginUser, updateProfile, requestEmailChange, resendVerificationEmail, verifyEmail, registerStaffFromInvitation, validateStaffInvitation } from '../controllers/authController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendRewardEmail } from '../services/emailService.js';
 import Donation from '../models/donationModel.js';
 
 const router = express.Router();
 router.post('/register', registerUser);
+router.get('/verify-email', verifyEmail);
+router.post('/verify-email/resend', resendVerificationEmail);
 router.get('/staff/invitation/:token', validateStaffInvitation);
 router.post('/staff/register', registerStaffFromInvitation);
 router.post('/rewards/send', requireAuth, async (req, res) => {
@@ -26,5 +28,6 @@ router.post('/rewards/send', requireAuth, async (req, res) => {
 });
 router.post('/login', loginUser);
 router.put('/profile', requireAuth, updateProfile);
+router.put('/profile/email', requireAuth, requestEmailChange);
 
 export default router;

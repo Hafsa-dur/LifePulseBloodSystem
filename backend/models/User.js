@@ -3,6 +3,11 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
+  previousEmails: { type: [String], default: [] },
+  emailVerified: { type: Boolean, default: true },
+  verificationTokenHash: { type: String, default: '' },
+  verificationTokenExpiresAt: { type: Date, default: null },
+  pendingEmail: { type: String, default: '' },
   password: { type: String, required: true },
   role: { type: String, enum: ['donor', 'hospital_admin', 'hospital_staff', 'admin', 'staff'], default: 'donor' },
   staffRole: { type: String, enum: ['Hospital Staff', ''], default: '' },
