@@ -10,6 +10,7 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { sendStaffInvitationEmail } from '../services/emailService.js';
+import { sendUserVerification } from './authController.js';
 
 const hospitalFilter = (user) => user.hospitalId
   ? { hospitalId: user.hospitalId }
@@ -63,11 +64,15 @@ export const onboardHospitalAdmin = async (req, res) => {
     const admin = await User.create({
       name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'hospital_admin',
       hospitalId: hospital.hospitalId, hospitalName: hospital.name, hospitalLocation: hospital.location,
-      phone: String(req.body.phone || '').trim(), isActive: true,
+      phone: String(req.body.phone || '').trim(), isActive: false, emailVerified: false,
       permissions: ['dashboard', 'requests', 'dispatch', 'staff', 'settings', 'reports']
     });
-    const token = jwt.sign({ id: admin._id, role: admin.role, hospitalId: admin.hospitalId, hospitalName: admin.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    return res.status(201).json({ success: true, token, user: publicUser(admin), hospital });
+    const emailResult = await sendUserVerification(admin);
+    if (!emailResult.sent) {
+      await User.deleteOne({ _id: admin._id });
+      return res.status(502).json({ success: false, message: 'Verification email could not be sent. Please try again.' });
+    }
+    return res.status(201).json({ success: true, pendingVerification: true, message: 'Verification email sent. Please verify your email before signing in.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -97,11 +102,16 @@ export const createStaff = async (req, res) => {
       name: String(name).trim(), email: normalizedEmail, password: await bcrypt.hash(password, 10), role: 'hospital_staff',
       staffRole: 'Hospital Staff',
       hospitalId: req.user.hospitalId || '', hospitalName: req.user.hospitalName || '', hospitalLocation: req.user.hospitalLocation || '',
-      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : ['dashboard', 'requests', 'inventory', 'dispatch', 'tracking', 'account'], isActive: true
+      phone: String(phone).trim(), permissions: Array.isArray(permissions) && permissions.length ? permissions : ['dashboard', 'requests', 'inventory', 'dispatch', 'tracking', 'account'], isActive: false, emailVerified: false
     });
+    const emailResult = await sendUserVerification(staff);
+    if (!emailResult.sent) {
+      await User.deleteOne({ _id: staff._id });
+      return res.status(502).json({ success: false, message: 'Verification email could not be sent. Please try again.' });
+    }
     const safeStaff = staff.toObject();
     delete safeStaff.password;
-    return res.status(201).json({ success: true, staff: safeStaff });
+    return res.status(201).json({ success: true, pendingVerification: true, message: 'Verification email sent. Staff access will be available after verification.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

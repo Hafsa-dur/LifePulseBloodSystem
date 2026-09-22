@@ -15,7 +15,7 @@ const createVerification = () => {
   const token = crypto.randomBytes(32).toString('hex');
   return { token, tokenHash: tokenHash(token), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) };
 };
-const sendUserVerification = async (user, purpose = 'account', recipientEmail = user.email) => {
+export const sendUserVerification = async (user, purpose = 'account', recipientEmail = user.email) => {
   const verification = createVerification();
   user.verificationTokenHash = verification.tokenHash;
   user.verificationTokenExpiresAt = verification.expiresAt;
