@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, registerStaffFromInvitation, validateStaffInvitation } from '../controllers/authController.js';
+import { registerUser, loginUser, updateProfile, registerStaffFromInvitation, validateStaffInvitation } from '../controllers/authController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendRewardEmail } from '../services/emailService.js';
 import Donation from '../models/donationModel.js';
@@ -25,5 +25,6 @@ router.post('/rewards/send', requireAuth, async (req, res) => {
 	}
 });
 router.post('/login', loginUser);
+router.put('/profile', requireAuth, updateProfile);
 
 export default router;

@@ -250,3 +250,32 @@ export const loginUser = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, currentPassword, newPassword } = req.body || {};
+    const updates = {};
+    const account = newPassword ? await User.findById(req.user._id) : null;
+
+    if (typeof name === 'string' && name.trim()) updates.name = name.trim();
+
+    if (newPassword) {
+      if (!account || !currentPassword || !(await bcrypt.compare(String(currentPassword), account.password))) {
+        return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+      }
+      if (String(newPassword).length < 6) {
+        return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
+      }
+      updates.password = await bcrypt.hash(String(newPassword), 10);
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ success: false, message: 'Enter a new name or password.' });
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+    return res.json({ success: true, user: safeUserPayload(user) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
