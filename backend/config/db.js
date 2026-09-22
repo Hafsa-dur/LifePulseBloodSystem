@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import dns from 'dns';
 
+let googleIdCleanupComplete = false;
+
 // DNS SRV lookup resolve karne ke liye Google DNS set karein
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -37,6 +39,13 @@ const connectDB = async () => {
 
   try {
     cached.conn = await cached.promise;
+    if (!googleIdCleanupComplete) {
+      await mongoose.connection.collection('users').updateMany(
+        { googleId: '' },
+        { $unset: { googleId: '' } }
+      );
+      googleIdCleanupComplete = true;
+    }
   } catch (e) {
     cached.promise = null;
     console.error('MongoDB Connection Error:', e.message);
