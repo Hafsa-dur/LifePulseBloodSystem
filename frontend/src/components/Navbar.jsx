@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const Navbar = () => {
+  const [hasRegisteredAccount] = useState(() => Boolean(localStorage.getItem('user')));
+
   return (
     <nav className="navbar-responsive bg-[#5A1827] border-b-2 border-[#E5C158]/30 py-4 px-6 md:px-12 flex justify-between items-center text-white font-sans shadow-md sticky top-0 z-50">
       <Link to="/" className="flex items-center gap-3 group">
@@ -21,15 +24,15 @@ const Navbar = () => {
 
       {/* Auth Buttons */}
       <div className="flex items-center gap-4 text-xs font-black uppercase tracking-wider">
-        <Link to="/login" className="text-rose-100 hover:text-[#E5C158] transition-colors">
-          Sign In
-        </Link>
-        <Link 
-          to="/register" 
-          className="px-4 py-2 bg-[#E5C158] hover:bg-amber-300 text-[#5A1827] rounded-xl transition-all shadow-md border border-white/20"
-        >
-          Sign Up
-        </Link>
+        {hasRegisteredAccount ? (
+          <Link to="/login" className="px-4 py-2 bg-[#E5C158] hover:bg-amber-300 text-[#5A1827] rounded-xl transition-all shadow-md border border-white/20">
+            Sign In
+          </Link>
+        ) : (
+          <Link to="/register" className="px-4 py-2 bg-[#E5C158] hover:bg-amber-300 text-[#5A1827] rounded-xl transition-all shadow-md border border-white/20">
+            Sign Up
+          </Link>
+        )}
       </div>
     </nav>
   );
