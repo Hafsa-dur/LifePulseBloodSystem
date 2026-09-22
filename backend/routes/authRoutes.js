@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, updateProfile, requestEmailChange, resendVerificationEmail, verifyEmail, registerStaffFromInvitation, validateStaffInvitation } from '../controllers/authController.js';
+import { registerUser, loginUser, googleAuth, updateProfile, requestEmailChange, resendVerificationEmail, verifyEmail, registerStaffFromInvitation, validateStaffInvitation } from '../controllers/authController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendRewardEmail } from '../services/emailService.js';
 import Donation from '../models/donationModel.js';
@@ -27,6 +27,7 @@ router.post('/rewards/send', requireAuth, async (req, res) => {
 	}
 });
 router.post('/login', loginUser);
+router.post('/google', googleAuth);
 router.put('/profile', requireAuth, updateProfile);
 router.put('/profile/email', requireAuth, requestEmailChange);
 

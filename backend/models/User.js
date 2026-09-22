@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
+  googleId: { type: String, unique: true, sparse: true, default: '' },
+  authProvider: { type: String, enum: ['password', 'google'], default: 'password' },
   previousEmails: { type: [String], default: [] },
   emailVerified: { type: Boolean, default: true },
   verificationTokenHash: { type: String, default: '' },

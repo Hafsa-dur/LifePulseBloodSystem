@@ -3,7 +3,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import StaffInvitation from '../models/StaffInvitation.js';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import { sendVerificationEmail } from '../services/emailService.js';
+import { OAuth2Client } from 'google-auth-library';
+import Hospital from '../models/Hospital.js';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -369,5 +372,83 @@ export const requestEmailChange = async (req, res) => {
     return res.json({ success: true, pendingVerification: true, message: 'Verification email sent to your new email address.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const issueAuthToken = (user) => jwt.sign({ id: user._id, role: user.role, hospitalId: user.hospitalId, hospitalName: user.hospitalName }, process.env.JWT_SECRET, { expiresIn: '1d' });
+const googleUserResponse = (user) => ({ success: true, token: issueAuthToken(user), user: safeUserPayload(user) });
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { credential, role = 'donor', phone = '', hospitalId = '', hospitalName = '', hospitalLocation = '', invitationToken = '' } = req.body || {};
+    if (!credential) return res.status(400).json({ success: false, message: 'Google authentication credential is required.' });
+    if (!process.env.GOOGLE_CLIENT_ID) return res.status(503).json({ success: false, message: 'Google authentication is not configured on the server.' });
+
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+    const googlePayload = ticket.getPayload();
+    const googleId = String(googlePayload?.sub || '').trim();
+    const verifiedEmail = String(googlePayload?.email || '').trim().toLowerCase();
+    if (!googleId || !verifiedEmail || googlePayload?.email_verified !== true) {
+      return res.status(401).json({ success: false, message: 'Google could not verify this account email.' });
+    }
+
+    let user = await User.findOne({ $or: [{ googleId }, { email: verifiedEmail }] });
+    const requestedRole = normalizeRole(role);
+    if (user) {
+      if (user.googleId && user.googleId !== googleId) return res.status(409).json({ success: false, message: 'This email is linked to a different Google account.' });
+      if (user.role && normalizeRole(user.role) !== requestedRole && requestedRole !== 'donor') {
+        return res.status(403).json({ success: false, message: 'This account is not registered for the selected role.' });
+      }
+      user.googleId = googleId;
+      user.authProvider = 'google';
+      user.emailVerified = true;
+      user.isActive = true;
+      await user.save();
+      return res.json(googleUserResponse(user));
+    }
+
+    const name = String(googlePayload?.name || googlePayload?.given_name || '').trim();
+    if (!name) return res.status(400).json({ success: false, message: 'Google account name is unavailable.' });
+
+    if (requestedRole === 'hospital_staff') {
+      const invitation = await findInvitationByToken(invitationToken);
+      if (!invitation || invitation.status !== 'pending' || invitation.usedAt || invitation.expiresAt <= new Date()) {
+        return res.status(400).json({ success: false, message: 'A valid staff invitation is required for Google registration.' });
+      }
+      if (invitation.email && invitation.email !== verifiedEmail) return res.status(403).json({ success: false, message: 'This Google account does not match the invited staff email.' });
+      const staff = await User.create({
+        name, email: verifiedEmail, googleId, authProvider: 'google', password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10),
+        role: 'hospital_staff', staffRole: 'Hospital Staff', hospitalId: invitation.hospitalId, hospitalName: invitation.hospitalName,
+        hospitalLocation: invitation.hospitalLocation, phone: String(phone).trim(), permissions: ['dashboard', 'requests', 'inventory', 'dispatch', 'tracking', 'account'], isActive: true, emailVerified: true
+      });
+      const accepted = await StaffInvitation.findOneAndUpdate({ _id: invitation._id, status: 'pending', expiresAt: { $gt: new Date() } }, { status: 'accepted', acceptedUserId: staff._id, usedAt: new Date() }, { new: true });
+      if (!accepted) {
+        await User.deleteOne({ _id: staff._id });
+        return res.status(409).json({ success: false, message: 'This invitation was already used.' });
+      }
+      return res.status(201).json(googleUserResponse(staff));
+    }
+
+    if (requestedRole === 'hospital_admin') {
+      let hospital;
+      if (hospitalId) {
+        hospital = await Hospital.findOne({ hospitalId, isActive: true });
+        if (!hospital) return res.status(404).json({ success: false, message: 'Selected hospital was not found.' });
+      } else {
+        const cleanName = String(hospitalName).trim();
+        const cleanLocation = String(hospitalLocation).trim();
+        if (!cleanName || !cleanLocation) return res.status(400).json({ success: false, message: 'Hospital name and location are required.' });
+        const generatedId = `HOSP-${new mongoose.Types.ObjectId().toString().slice(-10).toUpperCase()}`;
+        hospital = await Hospital.create({ hospitalId: generatedId, name: cleanName, location: cleanLocation });
+      }
+      const admin = await User.create({ name, email: verifiedEmail, googleId, authProvider: 'google', password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), role: 'hospital_admin', hospitalId: hospital.hospitalId, hospitalName: hospital.name, hospitalLocation: hospital.location, phone: String(phone).trim(), isActive: true, emailVerified: true, permissions: ['dashboard', 'requests', 'dispatch', 'staff', 'settings', 'reports'] });
+      return res.status(201).json(googleUserResponse(admin));
+    }
+
+    const donor = await User.create({ name, email: verifiedEmail, googleId, authProvider: 'google', password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), role: 'donor', phone: String(phone).trim(), isActive: true, emailVerified: true, permissions: ['profile', 'history'] });
+    return res.status(201).json(googleUserResponse(donor));
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ success: false, message: 'This Google account or email is already registered.' });
+    return res.status(401).json({ success: false, message: 'Google authentication failed.' });
   }
 };
