@@ -6,11 +6,17 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./index.css";
 import App from "./App.jsx";
 import { ThemeProvider } from './ThemeContext.jsx';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const application = (
+  <ThemeProvider>
+    <App />
+  </ThemeProvider>
+);
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    {googleClientId ? <GoogleOAuthProvider clientId={googleClientId}>{application}</GoogleOAuthProvider> : application}
   </StrictMode>
 );

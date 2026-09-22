@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { API_URL, parseResponse } from '../api';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -85,6 +86,24 @@ const Login = () => {
     }
   };
 
+  const handleGoogleSuccess = async ({ credential }) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential }) });
+      const data = await parseResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Google sign in failed.');
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      const normalizedRole = String(data.user?.role || 'donor').toLowerCase();
+      navigate(normalizedRole === 'hospital_admin' || normalizedRole === 'hospital_staff' ? '/dashboard' : '/profile');
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#FAF9F6] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-3xl shadow-2xl border-2 border-[#5A1827]/20">
@@ -106,6 +125,7 @@ const Login = () => {
         )}
         {verificationRequired && <button type="button" onClick={resendVerification} disabled={resending} className="w-full rounded-xl border-2 border-[#E5C158] bg-[#E5C158]/20 px-4 py-3 text-xs font-black uppercase tracking-wider text-[#5A1827] disabled:opacity-50">{resending ? 'Sending...' : 'Resend Verification Email'}</button>}
         {resendMessage && <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">{resendMessage}</div>}
+        {import.meta.env.VITE_GOOGLE_CLIENT_ID && <div className="flex justify-center"><GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError('Google authentication failed.')} useOneTap={false} /></div>}
 
         {/* Input Form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

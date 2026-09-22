@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_URL, parseResponse } from '../api';
+import { GoogleLogin } from '@react-oauth/google';
 
 const StaffRegistration = () => {
   const navigate = useNavigate();
@@ -31,6 +32,27 @@ const StaffRegistration = () => {
   }, [token]);
 
   const updateField = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+
+  const handleGoogleSuccess = async ({ credential }) => {
+    setLoading(true);
+    setStatus({ type: '', text: '' });
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential, role: 'hospital_staff', invitationToken: token, phone: form.phone })
+      });
+      const data = await parseResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Google registration failed.');
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      setStatus({ type: 'error', text: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -73,7 +95,9 @@ const StaffRegistration = () => {
 
         {status.text && <div className={`${status.type === 'error' ? 'bg-rose-100 border-rose-300 text-rose-800' : 'bg-emerald-100 border-emerald-300 text-emerald-800'} mb-5 border-2 rounded-xl px-4 py-3 text-xs font-bold`}>{status.text}</div>}
 
-        {validation.accepted ? <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-5 text-center text-sm font-bold text-emerald-800">This invitation has already been accepted. The linked Hospital Staff account already exists.</div> : <form onSubmit={handleSubmit} className="space-y-4">
+        {validation.accepted ? <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-5 text-center text-sm font-bold text-emerald-800">This invitation has already been accepted. The linked Hospital Staff account already exists.</div> : <>
+          {import.meta.env.VITE_GOOGLE_CLIENT_ID && <div className="mb-5 flex justify-center"><GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setStatus({ type: 'error', text: 'Google authentication failed.' })} useOneTap={false} /></div>}
+          <form onSubmit={handleSubmit} className="space-y-4">
           {['name', 'email', 'phone'].map((field) => (
             <label key={field} className="block text-xs font-black uppercase tracking-wider text-[#5A1827]">
               {field === 'name' ? 'Full name' : field}
@@ -83,7 +107,8 @@ const StaffRegistration = () => {
           <label className="block text-xs font-black uppercase tracking-wider text-[#5A1827]">Password<input name="password" type="password" minLength="6" required value={form.password} onChange={updateField} className="mt-1 w-full rounded-xl border-2 border-[#5A1827]/20 bg-[#FAF9F6] p-3 text-sm" /></label>
           <label className="block text-xs font-black uppercase tracking-wider text-[#5A1827]">Confirm password<input name="confirmPassword" type="password" minLength="6" required value={form.confirmPassword} onChange={updateField} className="mt-1 w-full rounded-xl border-2 border-[#5A1827]/20 bg-[#FAF9F6] p-3 text-sm" /></label>
           <button type="submit" disabled={loading || validation.loading || !validation.valid} className="w-full rounded-xl bg-[#5A1827] py-3 text-xs font-black uppercase tracking-widest text-[#E5C158] disabled:opacity-50">{validation.loading ? 'Validating invitation...' : loading ? 'Creating account...' : 'Create staff account'}</button>
-        </form>}
+          </form>
+        </>}
       </div>
     </div>
   );

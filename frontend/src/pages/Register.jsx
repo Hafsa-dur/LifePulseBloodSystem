@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API_URL, parseResponse } from '../api';
+import { GoogleLogin } from '@react-oauth/google';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -33,6 +34,35 @@ const Register = () => {
   }, [navigate, searchParams]);
 
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+  const handleGoogleSuccess = async ({ credential }) => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credential,
+          role,
+          phone: form.phone,
+          hospitalId: mode === 'existing' ? form.hospitalId : '',
+          hospitalName: mode === 'new' ? form.hospitalName : '',
+          hospitalLocation: mode === 'new' ? form.hospitalLocation : ''
+        })
+      });
+      const data = await parseResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Google registration failed.');
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      navigate(role === 'donor' ? '/profile' : '/dashboard', { replace: true });
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -105,6 +135,9 @@ const Register = () => {
           <button type="button" onClick={() => setMode('existing')} className={`rounded-xl border-2 p-3 text-xs font-black uppercase ${mode === 'existing' ? 'bg-[#5A1827] text-white border-[#5A1827]' : 'border-[#5A1827]/20'}`}>Existing Hospital</button>
           <button type="button" onClick={() => setMode('new')} className={`rounded-xl border-2 p-3 text-xs font-black uppercase ${mode === 'new' ? 'bg-[#5A1827] text-white border-[#5A1827]' : 'border-[#5A1827]/20'}`}>Create New Hospital</button>
         </div>}
+
+        {role !== 'hospital_staff' && import.meta.env.VITE_GOOGLE_CLIENT_ID && <div className="flex justify-center"><GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError('Google authentication failed.')} useOneTap={false} /></div>}
+        {role !== 'hospital_staff' && import.meta.env.VITE_GOOGLE_CLIENT_ID && <div className="text-center text-xs font-black uppercase tracking-wider text-slate-400">Or use the form below</div>}
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input required placeholder="Full name" value={form.name} onChange={(event) => update('name', event.target.value)} className="field" />
