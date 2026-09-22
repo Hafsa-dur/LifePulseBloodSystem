@@ -1,4 +1,4 @@
-import { Menu, Search, Activity } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 
 const Topbar = ({ onMenuClick = () => {} }) => {
@@ -29,8 +29,10 @@ const Topbar = ({ onMenuClick = () => {} }) => {
       </div>
 
       <div className="flex items-center gap-3">
-        <button type="button" onClick={toggleTheme} title="Change Dashboard Theme" aria-label="Change Dashboard Theme" className="theme-toggle flex h-9 w-9 items-center justify-center rounded-xl border">
-          <Activity className="h-4 w-4" />
+        <button type="button" onClick={toggleTheme} title={`Switch to ${theme === 'maroon' ? 'navy' : 'maroon'} theme`} aria-label={`Switch to ${theme === 'maroon' ? 'navy' : 'maroon'} theme`} className={`theme-toggle theme-toggle-switch theme-toggle-${theme}`}>
+          <span className="theme-toggle-option theme-toggle-maroon" aria-hidden="true" />
+          <span className="theme-toggle-option theme-toggle-navy" aria-hidden="true" />
+          <span className="theme-toggle-knob" aria-hidden="true" />
         </button>
         <div className="topbar-profile flex items-center gap-3 px-3 py-1.5 rounded-2xl border-2 shadow-sm">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#E5C158] to-amber-300 text-[#5A1827] font-black flex items-center justify-center text-xs shadow-md border border-white/20">

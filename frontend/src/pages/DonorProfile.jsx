@@ -9,9 +9,11 @@ const Profile = () => {
   const [nextEligibleDate, setNextEligibleDate] = useState('N/A');
   const [bloodGroup, setBloodGroup] = useState(user?.bloodGroup || 'Not Specified');
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: user?.name || '', currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', currentPassword: '', newPassword: '', confirmPassword: '' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   useEffect(() => {
     const fetchUserDonations = async () => {
@@ -19,7 +21,8 @@ const Profile = () => {
         const response = await axios.get(`${API_URL}/donations`, { headers: authHeaders() });
         // Filter user's specific donations
         const myDonations = response.data.filter(
-          (item) => item.donorName?.toLowerCase() === user?.name?.toLowerCase() || item.email === user?.email
+          (item) => item.donorName?.toLowerCase() === user?.name?.toLowerCase()
+            || [user?.email, ...(user?.previousEmails || [])].includes(item.email)
         );
 
         if (myDonations.length > 0) {
@@ -59,25 +62,67 @@ const Profile = () => {
       return;
     }
 
+    const emailChanged = form.email.trim().toLowerCase() !== String(user?.email || '').toLowerCase();
+    const profileChanged = form.name.trim() !== String(user?.name || '').trim() || Boolean(form.newPassword);
+    if (!emailChanged && !profileChanged) {
+      setMessage({ type: 'error', text: 'Make a change before saving.' });
+      return;
+    }
+
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/auth/profile`, {
-        method: 'PUT',
-        headers: authHeaders(true),
-        body: JSON.stringify({ name: form.name, currentPassword: form.currentPassword, newPassword: form.newPassword })
-      });
-      const data = await parseResponse(response);
-      if (!response.ok) throw new Error(data.message || 'Profile update failed.');
+      let updatedUser = user;
+      let messageText = 'Profile updated successfully.';
+      if (emailChanged) {
+        const response = await fetch(`${API_URL}/auth/profile/email`, {
+          method: 'PUT',
+          headers: authHeaders(true),
+          body: JSON.stringify({ email: form.email, currentPassword: form.currentPassword })
+        });
+        const data = await parseResponse(response);
+        if (!response.ok) throw new Error(data.message || 'Email change failed.');
+        setPendingEmail(form.email.trim().toLowerCase());
+        messageText = data.message || 'Verification email sent to your new email address.';
+      }
 
-      setUser(data.user);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setForm({ name: data.user.name || '', currentPassword: '', newPassword: '', confirmPassword: '' });
+      if (profileChanged) {
+        const response = await fetch(`${API_URL}/auth/profile`, {
+          method: 'PUT',
+          headers: authHeaders(true),
+          body: JSON.stringify({ name: form.name, currentPassword: form.currentPassword, newPassword: form.newPassword })
+        });
+        const data = await parseResponse(response);
+        if (!response.ok) throw new Error(data.message || 'Profile update failed.');
+        updatedUser = data.user;
+      }
+
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setForm({ name: updatedUser.name || '', email: updatedUser.email || '', currentPassword: '', newPassword: '', confirmPassword: '' });
       setEditing(false);
-      setMessage({ type: 'success', text: 'Profile updated successfully.' });
+      setMessage({ type: 'success', text: messageText });
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const resendEmailVerification = async () => {
+    setResendingVerification(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/verify-email/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingEmail })
+      });
+      const data = await parseResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Unable to resend verification email.');
+      setMessage({ type: 'success', text: data.message });
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setResendingVerification(false);
     }
   };
 
@@ -98,15 +143,18 @@ const Profile = () => {
           </p>
           <button type="button" onClick={() => { setEditing((current) => !current); setMessage({ type: '', text: '' }); }} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#5A1827] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#E5C158]">
             {editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-            {editing ? 'Cancel' : 'Change Name / Password'}
+            {editing ? 'Cancel' : 'Change Name / Email / Password'}
           </button>
         </div>
 
-        {message.text && <div className={`rounded-xl border-2 px-4 py-3 text-sm font-bold ${message.type === 'success' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-rose-300 bg-rose-100 text-rose-800'}`}>{message.text}</div>}
+        {message.text && <div className={`rounded-xl border-2 px-4 py-3 text-sm font-bold ${message.type === 'success' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-rose-300 bg-rose-100 text-rose-800'}`}>
+          <span>{message.text}</span>
+          {pendingEmail && <button type="button" onClick={resendEmailVerification} disabled={resendingVerification} className="ml-3 underline disabled:opacity-50">{resendingVerification ? 'Sending...' : 'Resend email'}</button>}
+        </div>}
 
         {editing && <form onSubmit={handleProfileUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-2xl border-2 border-[#6B1D2F]/30 bg-[#FAF9F6] p-5">
           <label className="text-xs font-black uppercase tracking-wider">Full Name<input required value={form.name} onChange={(event) => updateForm('name', event.target.value)} className="mt-2 w-full rounded-xl border-2 border-[#6B1D2F]/30 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#5A1827]" /></label>
-          <div />
+          <label className="text-xs font-black uppercase tracking-wider">Email Address<input required type="email" value={form.email} onChange={(event) => updateForm('email', event.target.value)} className="mt-2 w-full rounded-xl border-2 border-[#6B1D2F]/30 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#5A1827]" /></label>
           <label className="text-xs font-black uppercase tracking-wider">Current Password<input type="password" value={form.currentPassword} onChange={(event) => updateForm('currentPassword', event.target.value)} className="mt-2 w-full rounded-xl border-2 border-[#6B1D2F]/30 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#5A1827]" /></label>
           <label className="text-xs font-black uppercase tracking-wider">New Password<input type="password" minLength="6" value={form.newPassword} onChange={(event) => updateForm('newPassword', event.target.value)} className="mt-2 w-full rounded-xl border-2 border-[#6B1D2F]/30 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#5A1827]" /></label>
           <label className="text-xs font-black uppercase tracking-wider">Confirm New Password<input type="password" minLength="6" value={form.confirmPassword} onChange={(event) => updateForm('confirmPassword', event.target.value)} className="mt-2 w-full rounded-xl border-2 border-[#6B1D2F]/30 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#5A1827]" /></label>

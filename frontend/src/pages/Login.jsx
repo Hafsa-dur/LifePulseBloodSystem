@@ -7,6 +7,9 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   // Handle input field value updates
   const handleChange = (e) => {
@@ -18,6 +21,8 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setVerificationRequired(false);
+    setResendMessage('');
     console.log("Sending request to:", `${API_URL}/auth/login`);
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -31,6 +36,7 @@ const Login = () => {
       const data = await parseResponse(response);
 
       if (!response.ok) {
+        if (data.code === 'EMAIL_NOT_VERIFIED') setVerificationRequired(true);
         throw new Error(data.message || 'Login failed. Invalid credentials.');
       }
 
@@ -60,6 +66,25 @@ const Login = () => {
     }
   };
 
+  const resendVerification = async () => {
+    setResending(true);
+    setResendMessage('');
+    try {
+      const response = await fetch(`${API_URL}/auth/verify-email/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      const data = await parseResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Unable to resend verification email.');
+      setResendMessage(data.message);
+    } catch (requestError) {
+      setResendMessage(requestError.message);
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#FAF9F6] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-3xl shadow-2xl border-2 border-[#5A1827]/20">
@@ -79,6 +104,8 @@ const Login = () => {
             {error}
           </div>
         )}
+        {verificationRequired && <button type="button" onClick={resendVerification} disabled={resending} className="w-full rounded-xl border-2 border-[#E5C158] bg-[#E5C158]/20 px-4 py-3 text-xs font-black uppercase tracking-wider text-[#5A1827] disabled:opacity-50">{resending ? 'Sending...' : 'Resend Verification Email'}</button>}
+        {resendMessage && <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">{resendMessage}</div>}
 
         {/* Input Form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

@@ -19,6 +19,7 @@ import DonorPassport from './pages/DonorPassport';
 import DonorProfile from './pages/DonorProfile';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
 import StaffRegistration from './pages/StaffRegistration';
 import HospitalOnboarding from './pages/HospitalOnboarding';
 import GeoPulseRadar from './pages/GeoPulseRadar';
@@ -108,6 +109,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/staff-registration" element={<StaffRegistration />} />
           <Route path="/hospital-onboarding" element={<HospitalOnboarding />} />
           <Route path="/faq" element={<FAQPage />} />

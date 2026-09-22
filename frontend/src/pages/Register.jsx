@@ -16,6 +16,7 @@ const Register = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (role !== 'donor') {
@@ -36,6 +37,7 @@ const Register = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setSuccess('');
     if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
     if (role === 'hospital_staff' && !form.token) return setError('Hospital Staff registration requires an Admin invitation token/link.');
 
@@ -59,6 +61,10 @@ const Register = () => {
         return;
       }
       if (!response.ok) throw new Error(data.message || 'Registration failed.');
+      if (data.pendingVerification) {
+        setSuccess(data.message || 'Verification email sent. Please check your inbox before signing in.');
+        return;
+      }
       if (data.token && data.user) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -91,6 +97,7 @@ const Register = () => {
         </div>
 
         {error && <div className="rounded-xl border-2 border-rose-300 bg-rose-100 px-4 py-3 text-xs font-bold text-rose-800">{error}</div>}
+        {success && <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">{success}</div>}
         {isStaff && <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">Hospital Staff accounts are created only through a Hospital Admin invitation. Paste the token from your invitation link below.</div>}
 
         {showHospitalFields && <div className="grid grid-cols-2 gap-2">
