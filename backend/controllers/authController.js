@@ -13,7 +13,7 @@ const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('h
 const frontendUrl = () => String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 const createVerification = () => {
   const token = crypto.randomBytes(32).toString('hex');
-  return { token, tokenHash: tokenHash(token), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) };
+  return { token, tokenHash: tokenHash(token), expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000) };
 };
 export const sendUserVerification = async (user, purpose = 'account', recipientEmail = user.email) => {
   const verification = createVerification();

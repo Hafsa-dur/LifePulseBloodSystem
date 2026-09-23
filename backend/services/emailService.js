@@ -112,7 +112,7 @@ export const sendVerificationEmail = async ({ recipientEmail, verificationLink, 
   return sendEmailMessage({
     to: recipientEmail,
     subject,
-    text: `${intro}\n\nOpen this secure link to continue:\n${verificationLink}\n\nThis link expires in 24 hours and can only be used once.\n\nLifePulse Blood Bank Management System`,
-    html: `<div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;"><h3 style="color: #5A1827;">LifePulse Email Verification</h3><p>${intro}</p><p><a href="${verificationLink}" style="display:inline-block;background:#5A1827;color:#E5C158;padding:12px 18px;text-decoration:none;border-radius:8px;font-weight:bold;">Verify Email</a></p><p>This link expires in 24 hours and can only be used once.</p><p>Warm regards,<br />LifePulse Blood Bank Management System</p></div>`
+    text: `${intro}\n\nOpen this secure link to continue:\n${verificationLink}\n\nThis link expires in 48 hours and can only be used once.\n\nLifePulse Blood Bank Management System`,
+    html: `<div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;"><h3 style="color: #5A1827;">LifePulse Email Verification</h3><p>${intro}</p><p><a href="${verificationLink}" style="display:inline-block;background:#5A1827;color:#E5C158;padding:12px 18px;text-decoration:none;border-radius:8px;font-weight:bold;">Verify Email</a></p><p>This link expires in 48 hours and can only be used once.</p><p>Warm regards,<br />LifePulse Blood Bank Management System</p></div>`
   });
 };
