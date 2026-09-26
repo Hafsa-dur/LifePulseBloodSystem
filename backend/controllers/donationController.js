@@ -39,10 +39,8 @@ export const geocodeLocation = async (location) => {
   if (!normalizedLocation) return null;
   if (locationCache.has(normalizedLocation)) return locationCache.get(normalizedLocation);
 
-  const locationParts = normalizedLocation.split(/[\/,]/).map((part) => part.trim()).filter(Boolean);
-  const countryContext = normalizedLocation.includes(',') ? normalizedLocation.slice(normalizedLocation.lastIndexOf(',') + 1).trim() : '';
-  const contextualParts = countryContext ? locationParts.slice(0, -1).map((part) => `${part}, ${countryContext}`) : locationParts;
-  const placeSearchLocations = [...new Set([normalizedLocation, ...contextualParts].filter(Boolean))];
+  const placeSearchLocations = [normalizedLocation];
+  const requestedNumbers = [...normalizedLocation.matchAll(/\d+/g)].map((match) => match[0]);
   const request = (async () => {
     for (const searchLocation of placeSearchLocations) {
       try {
@@ -82,7 +80,12 @@ export const geocodeLocation = async (location) => {
         const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         if (!response.ok) continue;
         const results = await response.json();
-        const placeResult = results.find((result) => finiteCoordinate(result.lat, -90, 90) !== null && finiteCoordinate(result.lon, -180, 180) !== null);
+        const placeResult = results.find((result) => {
+          const resultText = `${result.name || ''} ${result.display_name || ''}`;
+          return finiteCoordinate(result.lat, -90, 90) !== null
+            && finiteCoordinate(result.lon, -180, 180) !== null
+            && requestedNumbers.every((number) => new RegExp(`(?:^|\\D)${number}(?:\\D|$)`).test(resultText));
+        });
         if (placeResult) return { latitude: Number(placeResult.lat), longitude: Number(placeResult.lon), precision: 'place' };
       } catch {
         // Try the next real location variant.
@@ -107,16 +110,15 @@ export const distanceInKilometers = (first, second) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, hospitalId, hospitalName, session, excludeDonorIds = [], diagnostics }) => {
+export const findMatchingDonors = async ({ bloodGroup, units, location, hospitalId, hospitalName, session, excludeDonorIds = [], diagnostics }) => {
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
-  const storedRequestCoordinates = getStoredCoordinates({ latitude, longitude });
-  if (!normalizedBloodGroup || (!savedLocation && !storedRequestCoordinates) || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
+  if (!normalizedBloodGroup || !savedLocation || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
     return null;
   }
 
-  const requestCoordinates = storedRequestCoordinates || await geocodeLocation(savedLocation);
+  const requestCoordinates = await geocodeLocation(savedLocation);
   if (!requestCoordinates) {
     diagnostics?.push({ reason: 'hospital-location-unresolved', hospitalLocation: savedLocation });
     return [];
@@ -147,8 +149,8 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
     const availableUnits = donor.availableUnits === undefined ? Number(donor.units || 0) : Number(donor.availableUnits || 0);
     const donorLocation = String(donor.location || donor.address || '').trim();
     const storedCoordinates = getStoredCoordinates(donor);
-    const coordinates = storedCoordinates || await geocodeLocation(donorLocation);
-    if (!storedCoordinates && coordinates) {
+    const coordinates = donorLocation ? await geocodeLocation(donorLocation) : null;
+    if (coordinates && (!storedCoordinates || storedCoordinates.latitude !== coordinates.latitude || storedCoordinates.longitude !== coordinates.longitude)) {
       donor.latitude = coordinates.latitude;
       donor.longitude = coordinates.longitude;
       await donor.save(session ? { session } : undefined);
@@ -244,7 +246,7 @@ export const getDashboardDonations = async (req, res) => {
 // 3. Add New Donation with Strict Duplicate Email Check
 export const addDonation = async (req, res) => {
   try {
-    const { donorName, email, bloodGroup, units, phone, address, location, latitude, longitude, notes, hospitalId, hospitalName, donationDate, lastDonationDate } = req.body;
+    const { donorName, email, bloodGroup, units, phone, address, location, notes, hospitalId, hospitalName, donationDate, lastDonationDate } = req.body;
     const formattedEmail = email ? email.toLowerCase().trim() : '';
 
     if (!formattedEmail) {
@@ -264,11 +266,7 @@ export const addDonation = async (req, res) => {
         });
     }
 
-    const suppliedLatitude = Number(latitude);
-    const suppliedLongitude = Number(longitude);
-    const resolvedCoordinates = Number.isFinite(suppliedLatitude) && Number.isFinite(suppliedLongitude)
-      ? { latitude: suppliedLatitude, longitude: suppliedLongitude }
-      : await geocodeLocation(location || address);
+    const resolvedCoordinates = await geocodeLocation(location || address);
 
     const newDonation = new Donation({
       donorName,
@@ -329,7 +327,11 @@ export const updateDonation = async (req, res) => {
       if (req.body[key] !== undefined) updates[key] = String(req.body[key]).trim();
     }
     if (req.body.location !== undefined || req.body.address !== undefined) {
-      const updatedLocation = updates.location || updates.address || donation.location || donation.address;
+      const updatedLocation = req.body.location !== undefined
+        ? updates.location
+        : req.body.address !== undefined
+          ? updates.address
+          : donation.location || donation.address;
       const resolvedCoordinates = await geocodeLocation(updatedLocation);
       updates.latitude = resolvedCoordinates?.latitude ?? null;
       updates.longitude = resolvedCoordinates?.longitude ?? null;

@@ -46,9 +46,7 @@ export const createPatientRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'A valid blood group and positive whole number of units are required.' });
         }
         const matchingDiagnostics = [];
-        const hospitalCoordinates = Number.isFinite(Number(payload.hospitalLatitude)) && Number.isFinite(Number(payload.hospitalLongitude))
-            ? { latitude: Number(payload.hospitalLatitude), longitude: Number(payload.hospitalLongitude) }
-            : await geocodeLocation(payload.hospitalLocation);
+        const hospitalCoordinates = await geocodeLocation(payload.hospitalLocation);
         const rankedDonors = await findMatchingDonors({
             bloodGroup,
             units: unitsRequired,
@@ -94,15 +92,13 @@ export const getPatientRequests = async (req, res) => {
         await Promise.all(requests.map(async (request) => {
             const diagnostics = [];
             const refreshedCoordinates = await geocodeLocation(request.hospitalLocation);
-            if (refreshedCoordinates) {
-                request.hospitalLatitude = refreshedCoordinates.latitude;
-                request.hospitalLongitude = refreshedCoordinates.longitude;
-            }
+            request.hospitalLatitude = refreshedCoordinates?.latitude;
+            request.hospitalLongitude = refreshedCoordinates?.longitude;
             if (request.status !== 'Pending') {
                 const sourceDonation = request.donorId
-                    ? await Donation.findOne({ _id: request.donorId, ...hospitalScope(req.user) }).select('latitude longitude location address').lean()
+                    ? await Donation.findOne({ _id: request.donorId, ...hospitalScope(req.user) }).select('location address').lean()
                     : null;
-                const donorCoordinates = getStoredCoordinates(sourceDonation);
+                const donorCoordinates = await geocodeLocation(sourceDonation?.location || sourceDonation?.address);
                 const hospitalCoordinates = getStoredCoordinates({ latitude: request.hospitalLatitude, longitude: request.hospitalLongitude });
                 if (donorCoordinates && hospitalCoordinates) request.donorDistance = Number(distanceInKilometers(hospitalCoordinates, donorCoordinates).toFixed(2));
                 await request.save();
