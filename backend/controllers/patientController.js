@@ -48,7 +48,7 @@ export const createPatientRequest = async (req, res) => {
         const matchingDiagnostics = [];
         const hospitalCoordinates = Number.isFinite(Number(payload.hospitalLatitude)) && Number.isFinite(Number(payload.hospitalLongitude))
             ? { latitude: Number(payload.hospitalLatitude), longitude: Number(payload.hospitalLongitude) }
-            : await geocodeLocation(`${payload.hospitalName}, ${payload.hospitalLocation}`);
+            : await geocodeLocation(payload.hospitalLocation);
         const rankedDonors = await findMatchingDonors({
             bloodGroup,
             units: unitsRequired,
@@ -93,7 +93,7 @@ export const getPatientRequests = async (req, res) => {
         const matchingDiagnostics = new Map();
         await Promise.all(requests.map(async (request) => {
             const diagnostics = [];
-            const refreshedCoordinates = await geocodeLocation(`${request.hospitalName}, ${request.hospitalLocation}`);
+            const refreshedCoordinates = await geocodeLocation(request.hospitalLocation);
             if (refreshedCoordinates) {
                 request.hospitalLatitude = refreshedCoordinates.latitude;
                 request.hospitalLongitude = refreshedCoordinates.longitude;

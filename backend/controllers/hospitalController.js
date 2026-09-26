@@ -10,7 +10,7 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { sendStaffInvitationEmail } from '../services/emailService.js';
-import { sendUserVerification } from './authController.js';
+import { emailPattern, sendUserVerification } from './authController.js';
 
 const hospitalFilter = (user) => user.hospitalId
   ? { hospitalId: user.hospitalId }
@@ -47,6 +47,8 @@ export const onboardHospitalAdmin = async (req, res) => {
     const { name, email, password, hospitalId, hospitalName, hospitalLocation, contactPhone = '' } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Admin name, email, and password are required.' });
+    if (!emailPattern.test(normalizedEmail)) return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
     if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
 
     let hospital;
@@ -96,6 +98,7 @@ export const createStaff = async (req, res) => {
     const { name, email, password, phone = '', permissions = [] } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!name || !normalizedEmail || !password) return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
+    if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
     if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'Email already registered.' });
 
     const staff = await User.create({
@@ -185,7 +188,10 @@ export const updateStaff = async (req, res) => {
       updates.dutyStatus = req.body.dutyStatus;
       updates.dutyStatusUpdatedAt = new Date();
     }
-    if (req.body.password) updates.password = await bcrypt.hash(req.body.password, 10);
+    if (req.body.password !== undefined) {
+      if (typeof req.body.password !== 'string' || req.body.password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+      updates.password = await bcrypt.hash(req.body.password, 10);
+    }
     const staff = await User.findOneAndUpdate(filter, updates, { new: true }).select('-password');
     if (!staff) return res.status(404).json({ success: false, message: 'Staff member not found.' });
     return res.json({ success: true, staff });

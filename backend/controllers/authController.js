@@ -8,7 +8,7 @@ import { sendVerificationEmail } from '../services/emailService.js';
 import { OAuth2Client } from 'google-auth-library';
 import Hospital from '../models/Hospital.js';
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const frontendUrl = () => String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 const createVerification = () => {
@@ -120,6 +120,9 @@ export const registerUser = async (req, res) => {
     if (!normalizedEmail || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
 
     const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
@@ -192,6 +195,9 @@ export const registerStaffFromInvitation = async (req, res) => {
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Invitation email, name, and password are required.' });
+    }
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
     }
 
     if (matchingInvitation.email && matchingInvitation.email !== normalizedEmail) {

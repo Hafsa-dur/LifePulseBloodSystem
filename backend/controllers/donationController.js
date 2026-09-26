@@ -40,24 +40,30 @@ export const geocodeLocation = async (location) => {
   if (locationCache.has(normalizedLocation)) return locationCache.get(normalizedLocation);
 
   const locationParts = normalizedLocation.split(/[\/,]/).map((part) => part.trim()).filter(Boolean);
-  const cityContext = normalizedLocation.includes(',') ? normalizedLocation.slice(normalizedLocation.lastIndexOf(',') + 1).trim() : '';
-  const contextualParts = cityContext ? locationParts.slice(0, -1).map((part) => `${part}, ${cityContext}`) : locationParts;
-  const cityFallback = cityContext ? `${cityContext}, Pakistan` : '';
+  const countryContext = normalizedLocation.includes(',') ? normalizedLocation.slice(normalizedLocation.lastIndexOf(',') + 1).trim() : '';
+  const contextualParts = countryContext ? locationParts.slice(0, -1).map((part) => `${part}, ${countryContext}`) : locationParts;
   const placeSearchLocations = [...new Set([normalizedLocation, ...contextualParts].filter(Boolean))];
   const request = (async () => {
     for (const searchLocation of placeSearchLocations) {
       try {
         const photonUrl = new URL('https://photon.komoot.io/api/');
-        photonUrl.searchParams.set('q', `${searchLocation}, Pakistan`);
+        photonUrl.searchParams.set('q', searchLocation);
         photonUrl.searchParams.set('limit', '10');
         const response = await fetch(photonUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         if (!response.ok) continue;
         const result = await response.json();
+        const requestedPlace = searchLocation.split(',')[0].trim().toLowerCase();
+        const placeTypes = new Set(['city', 'town', 'village', 'hamlet', 'suburb', 'district', 'locality', 'municipality', 'country', 'state', 'administrative']);
         const feature = result.features?.find((item) => {
           const properties = item.properties || {};
-          const country = String(properties.country || '');
-          const countryCode = String(properties.countrycode || '').toLowerCase();
-          return countryCode === 'pk' || /pakistan|پاکستان/i.test(country);
+          const coordinates = item.geometry?.coordinates;
+          const candidateNames = [properties.name, properties.city, properties.state, properties.country]
+            .map((value) => String(value || '').trim().toLowerCase());
+          return Array.isArray(coordinates) && coordinates.length === 2
+            && finiteCoordinate(coordinates[1], -90, 90) !== null
+            && finiteCoordinate(coordinates[0], -180, 180) !== null
+            && placeTypes.has(String(properties.type || '').toLowerCase())
+            && candidateNames.includes(requestedPlace);
         });
         if (feature?.geometry?.coordinates?.length === 2) {
           return { latitude: Number(feature.geometry.coordinates[1]), longitude: Number(feature.geometry.coordinates[0]), precision: 'place' };
@@ -71,29 +77,15 @@ export const geocodeLocation = async (location) => {
       try {
         const nominatimUrl = new URL('https://nominatim.openstreetmap.org/search');
         nominatimUrl.searchParams.set('format', 'jsonv2');
-        nominatimUrl.searchParams.set('limit', '1');
-        nominatimUrl.searchParams.set('q', `${searchLocation}, Pakistan`);
+        nominatimUrl.searchParams.set('limit', '5');
+        nominatimUrl.searchParams.set('q', searchLocation);
         const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
         if (!response.ok) continue;
         const results = await response.json();
-        const placeResult = results.find((result) => String(result.address?.country_code || '').toLowerCase() === 'pk' && !['city', 'state', 'country'].includes(String(result.type || '').toLowerCase()));
+        const placeResult = results.find((result) => finiteCoordinate(result.lat, -90, 90) !== null && finiteCoordinate(result.lon, -180, 180) !== null);
         if (placeResult) return { latitude: Number(placeResult.lat), longitude: Number(placeResult.lon), precision: 'place' };
       } catch {
         // Try the next real location variant.
-      }
-    }
-
-    if (cityFallback) {
-      try {
-        const cityUrl = new URL('https://nominatim.openstreetmap.org/search');
-        cityUrl.searchParams.set('format', 'jsonv2');
-        cityUrl.searchParams.set('limit', '1');
-        cityUrl.searchParams.set('q', `${cityFallback}, Pakistan`);
-        const response = await fetch(cityUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
-        const results = response.ok ? await response.json() : [];
-        if (results[0]) return { latitude: Number(results[0].lat), longitude: Number(results[0].lon), precision: 'city' };
-      } catch {
-        // No usable city fallback.
       }
     }
     return null;
@@ -119,9 +111,15 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
-  const requestCoordinates = getStoredCoordinates({ latitude, longitude });
-  if (!normalizedBloodGroup || (!savedLocation && !requestCoordinates) || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
+  const storedRequestCoordinates = getStoredCoordinates({ latitude, longitude });
+  if (!normalizedBloodGroup || (!savedLocation && !storedRequestCoordinates) || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
     return null;
+  }
+
+  const requestCoordinates = storedRequestCoordinates || await geocodeLocation(savedLocation);
+  if (!requestCoordinates) {
+    diagnostics?.push({ reason: 'hospital-location-unresolved', hospitalLocation: savedLocation });
+    return [];
   }
 
   const donorFilter = {
@@ -144,16 +142,17 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
   if (donors.length === 0) return [];
 
   const targetCoordinates = requestCoordinates;
-  if (!targetCoordinates) {
-    diagnostics?.push({ reason: 'hospital-location-unresolved', hospitalLocation: savedLocation });
-    return [];
-  }
 
   const rankedDonors = await Promise.all(donors.map(async (donor) => {
     const availableUnits = donor.availableUnits === undefined ? Number(donor.units || 0) : Number(donor.availableUnits || 0);
-    const donorCoordinates = getStoredCoordinates(donor);
     const donorLocation = String(donor.location || donor.address || '').trim();
-    const coordinates = donorCoordinates;
+    const storedCoordinates = getStoredCoordinates(donor);
+    const coordinates = storedCoordinates || await geocodeLocation(donorLocation);
+    if (!storedCoordinates && coordinates) {
+      donor.latitude = coordinates.latitude;
+      donor.longitude = coordinates.longitude;
+      await donor.save(session ? { session } : undefined);
+    }
     const donorDiagnostic = {
       donorId: String(donor._id),
       donorName: donor.donorName,
@@ -328,6 +327,12 @@ export const updateDonation = async (req, res) => {
     const updates = {};
     for (const key of ['donorName', 'bloodGroup', 'phone', 'address', 'location', 'notes']) {
       if (req.body[key] !== undefined) updates[key] = String(req.body[key]).trim();
+    }
+    if (req.body.location !== undefined || req.body.address !== undefined) {
+      const updatedLocation = updates.location || updates.address || donation.location || donation.address;
+      const resolvedCoordinates = await geocodeLocation(updatedLocation);
+      updates.latitude = resolvedCoordinates?.latitude ?? null;
+      updates.longitude = resolvedCoordinates?.longitude ?? null;
     }
     if (req.body.units !== undefined) {
       const units = Number(req.body.units);
