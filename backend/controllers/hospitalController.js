@@ -86,7 +86,34 @@ export const getStaff = async (req, res) => {
       ...hospitalFilter(req.user),
       role: { $in: ['hospital_staff', 'staff'] }
     }).select('-password').sort({ createdAt: -1 }).lean();
-    return res.json({ success: true, staff });
+    const presenceCutoff = Date.now() - 60_000;
+    return res.json({ success: true, staff: staff.map((member) => ({
+      ...member,
+      dutyStatus: member.dutyStatus === 'on_duty' && new Date(member.dutyStatusUpdatedAt).getTime() > presenceCutoff
+        ? 'on_duty'
+        : 'off_duty'
+    })) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateStaffPresence = async (req, res) => {
+  try {
+    if (normalizeRole(req.user.role) !== 'hospital_staff') {
+      return res.status(403).json({ success: false, message: 'Only hospital staff can update their duty presence.' });
+    }
+    const { dutyStatus } = req.body || {};
+    if (!['on_duty', 'off_duty'].includes(dutyStatus)) {
+      return res.status(400).json({ success: false, message: 'A valid duty status is required.' });
+    }
+    const staff = await User.findOneAndUpdate({
+      _id: req.user._id,
+      ...hospitalFilter(req.user),
+      role: { $in: ['hospital_staff', 'staff'] }
+    }, { dutyStatus, dutyStatusUpdatedAt: new Date() }, { new: true }).select('-password');
+    if (!staff) return res.status(404).json({ success: false, message: 'Staff account not found.' });
+    return res.json({ success: true, dutyStatus: staff.dutyStatus });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

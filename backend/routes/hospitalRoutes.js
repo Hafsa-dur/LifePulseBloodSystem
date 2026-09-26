@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth, requireHospitalRole, requireAdmin, requirePermission } from '../middleware/auth.js';
-import { getStaff, createStaff, updateStaff, deleteStaff, getHospitalSettings, updateHospitalSettings, getHospitalAnalytics, updateAccount, listHospitals, onboardHospitalAdmin, createStaffInvitation, getSystemHealth } from '../controllers/hospitalController.js';
+import { getStaff, updateStaffPresence, createStaff, updateStaff, deleteStaff, getHospitalSettings, updateHospitalSettings, getHospitalAnalytics, updateAccount, listHospitals, onboardHospitalAdmin, createStaffInvitation, getSystemHealth } from '../controllers/hospitalController.js';
 import { sendDonorEmergencyEmail } from '../services/emailService.js';
 import Donation from '../models/donationModel.js';
 import PatientRequest from '../models/PatientRequest.js';
@@ -9,6 +9,7 @@ const router = express.Router();
 router.get('/directory', listHospitals);
 router.post('/onboard', onboardHospitalAdmin);
 router.use(requireAuth, requireHospitalRole);
+router.post('/staff/presence', updateStaffPresence);
 router.get('/staff', requireAdmin, getStaff);
 router.post('/staff', requireAdmin, createStaff);
 router.post('/staff/invite', requireAdmin, createStaffInvitation);
