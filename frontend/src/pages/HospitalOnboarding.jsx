@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building2, ShieldCheck } from 'lucide-react';
 import { API_URL, parseResponse } from '../api';
 
 const HospitalOnboarding = () => {
+  const navigate = useNavigate();
   const [hospitals, setHospitals] = useState([]);
   const [mode, setMode] = useState('existing');
   const [form, setForm] = useState({ name: '', email: '', password: '', hospitalId: '', hospitalName: '', hospitalLocation: '', contactPhone: '' });
@@ -22,6 +24,12 @@ const HospitalOnboarding = () => {
       const response = await fetch(`${API_URL}/hospital/onboard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, ...(mode === 'existing' ? { hospitalName: '', hospitalLocation: '' } : { hospitalId: '' }) }) });
       const data = await parseResponse(response);
       if (!response.ok) throw new Error(data.message || 'Hospital onboarding failed.');
+      if (data.pendingVerification) {
+        const email = form.email.trim().toLowerCase();
+        localStorage.setItem('pendingVerificationEmail', email);
+        navigate('/email-verification-pending', { replace: true, state: { email } });
+        return;
+      }
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       window.location.href = '/dashboard';
