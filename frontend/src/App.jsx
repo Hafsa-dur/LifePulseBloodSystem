@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from './ThemeContext';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
@@ -37,6 +37,7 @@ import StaffManagement from './pages/StaffManagement';
 import AccountCenter from './pages/AccountCenter';
 import HospitalSettings from './pages/HospitalSettings';
 import ReportsAnalytics from './pages/ReportsAnalytics';
+import { API_URL, authHeaders } from './api';
 import './styles/Responsive.css';
 
 const getUser = () => JSON.parse(localStorage.getItem('user') || '{}');
@@ -91,6 +92,35 @@ const PublicLayout = () => (
 const DashboardShell = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme } = useTheme();
+  const user = getUser();
+  const isHospitalStaff = normalizeRole(user.role) === 'hospital_staff';
+
+  useEffect(() => {
+    if (!isHospitalStaff || !localStorage.getItem('token')) return undefined;
+
+    const updatePresence = (dutyStatus = 'on_duty') => fetch(`${API_URL}/hospital/staff/presence`, {
+      method: 'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify({ dutyStatus })
+    }).catch((error) => console.error('Could not update staff duty presence:', error));
+
+    updatePresence();
+    const heartbeat = window.setInterval(() => updatePresence(), 20_000);
+    const handlePageHide = () => {
+      fetch(`${API_URL}/hospital/staff/presence`, {
+        method: 'POST',
+        headers: authHeaders(true),
+        body: JSON.stringify({ dutyStatus: 'off_duty' }),
+        keepalive: true
+      }).catch(() => {});
+    };
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      window.clearInterval(heartbeat);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [isHospitalStaff]);
 
   return (
     <div data-dashboard-theme={theme} className="dashboard-layout flex h-screen overflow-hidden bg-slate-950 text-slate-100">

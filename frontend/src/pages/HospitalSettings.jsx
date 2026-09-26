@@ -36,6 +36,16 @@ const HospitalSettings = () => {
       }
     };
     loadData();
+    const staffRefresh = window.setInterval(async () => {
+      try {
+        const response = await fetch(`${API_URL}/hospital/staff`, { headers: authHeaders() });
+        const data = await parseResponse(response);
+        if (response.ok) setStaff(data.staff || []);
+      } catch (error) {
+        console.error('Could not refresh staff duty status:', error);
+      }
+    }, 15_000);
+    return () => window.clearInterval(staffRefresh);
   }, []);
 
   const saveSettings = async (event) => {

@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { API_URL, authHeaders } from '../api';
 import { 
   LayoutDashboard, 
   PlusCircle, 
@@ -27,6 +28,14 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   const can = (permission) => normalizedRole === 'hospital_admin' || (user.permissions || []).includes(permission);
 
   const handleLogout = () => {
+    if (normalizedRole === 'hospital_staff') {
+      fetch(`${API_URL}/hospital/staff/presence`, {
+        method: 'POST',
+        headers: authHeaders(true),
+        body: JSON.stringify({ dutyStatus: 'off_duty' }),
+        keepalive: true
+      }).catch(() => {});
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
