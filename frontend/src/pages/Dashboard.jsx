@@ -149,7 +149,7 @@ const Dashboard = () => {
           </div>
 
           {/* Buttons Group aligned in a single responsive row without wrapping issues */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             
             {/* Conditional Live Transport Button */}
             {activeTransit && (

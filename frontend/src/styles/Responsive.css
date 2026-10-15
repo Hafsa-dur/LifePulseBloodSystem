@@ -114,6 +114,11 @@ table {
 	flex-wrap: wrap;
 }
 
+.mobile-public-menu-button,
+.mobile-public-menu {
+	display: none;
+}
+
 @media (max-width: 1023px) {
 	.dashboard-content {
 		padding: 1.25rem;
@@ -185,7 +190,7 @@ table {
 		gap: 1rem;
 	}
 
-	.navbar-responsive > div:last-child {
+	.navbar-auth-actions {
 		gap: 0.75rem;
 	}
 
@@ -304,23 +309,15 @@ table {
 		flex-wrap: wrap;
 	}
 
-	.public-nav-links {
-		order: 3;
-		width: 100%;
-		justify-content: center;
-		gap: 0.75rem 1rem;
-		padding-top: 0.35rem;
-	}
-
 	.navbar-responsive > a span {
 		font-size: 1rem;
 	}
 
-	.navbar-responsive > div:last-child a {
+	.navbar-auth-actions a {
 		font-size: 0.65rem;
 	}
 
-	.navbar-responsive > div:last-child a:last-child {
+	.navbar-auth-actions a:last-child {
 		padding: 0.55rem 0.7rem;
 	}
 
@@ -384,6 +381,74 @@ table {
 	}
 }
 
+@media (max-width: 767px) {
+	.navbar-responsive {
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.navbar-responsive > a:first-child {
+		min-width: 0;
+	}
+
+	.public-nav-links {
+		display: none;
+	}
+
+	.mobile-public-menu-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex: 0 0 auto;
+		width: 2.5rem;
+		height: 2.5rem;
+		padding: 0;
+		border: 1px solid rgb(229 193 88 / 0.45);
+		border-radius: 0.75rem;
+		background: #4a121f;
+		color: #e5c158;
+		font-size: 1.35rem;
+		line-height: 1;
+	}
+
+	.mobile-public-menu-button:focus-visible {
+		outline: 2px solid #e5c158;
+		outline-offset: 2px;
+	}
+
+	.mobile-public-menu {
+		order: 4;
+		width: 100%;
+		flex-direction: column;
+		gap: 0.25rem;
+		padding: 0.75rem;
+		border: 1px solid rgb(229 193 88 / 0.3);
+		border-radius: 0.75rem;
+		background: #4a121f;
+	}
+
+	.mobile-public-menu-open {
+		display: flex;
+	}
+
+	.mobile-public-menu a {
+		padding: 0.75rem 0.5rem;
+		border-radius: 0.5rem;
+		color: #ffe4e6;
+		font-size: 0.75rem;
+		font-weight: 900;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+	}
+
+	.mobile-public-menu a:hover,
+	.mobile-public-menu a:focus-visible {
+		background: rgb(229 193 88 / 0.15);
+		color: #e5c158;
+		outline: none;
+	}
+}
+
 @media (max-width: 420px) {
 	.sidebar-responsive nav a,
 	.sidebar-responsive > div:last-child button {
@@ -412,11 +477,11 @@ table {
 		max-width: 8rem;
 	}
 
-	.navbar-responsive > div:last-child {
+	.navbar-auth-actions {
 		gap: 0.4rem;
 	}
 
-	.navbar-responsive > div:last-child a:first-child {
+	.navbar-auth-actions a:first-child {
 		display: none;
 	}
 
