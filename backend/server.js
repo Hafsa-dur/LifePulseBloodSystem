@@ -375,10 +375,10 @@ const PORT = process.env.PORT || 5000;
 if (!process.env.VERCEL) {
   connectDB()
     .then(() => {
-      server.listen(PORT, () => console.log(`VitalRoute Server running successfully on port ${PORT}`));
+      server.listen(PORT, () => console.log(`VitalTrack Server running successfully on port ${PORT}`));
     })
     .catch((error) => {
-      console.error('Unable to start VitalRoute server:', error.message);
+      console.error('Unable to start VitalTrack server:', error.message);
       process.exit(1);
     });
 }

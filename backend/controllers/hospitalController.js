@@ -191,7 +191,7 @@ export const createStaffInvitation = async (req, res) => {
     const inviteLink = `${frontendUrl}/staff-registration?token=${encodeURIComponent(token)}`;
     const emailResult = await sendStaffInvitationEmail({
       recipientEmail: normalizedEmail,
-      hospitalName: req.user.hospitalName || 'VitalRoute Hospital',
+      hospitalName: req.user.hospitalName || 'VitalTrack Hospital',
       inviteLink,
       staffRole: 'Hospital Staff'
     });
@@ -278,7 +278,7 @@ export const getSystemHealth = async (req, res) => {
     return res.json({
       success: true,
       checkedAt,
-      api: { status: 'operational', service: 'VitalRoute API' },
+      api: { status: 'operational', service: 'VitalTrack API' },
       database: { status: databaseConnected ? 'connected' : 'disconnected', provider: 'MongoDB' },
       service: { status: 'operational', uptimeSeconds: Math.round(process.uptime()) },
       backup: {
