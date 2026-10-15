@@ -20,8 +20,15 @@
   --dashboard-border: #c7d2df;
   --dashboard-text: #17304f;
   --dashboard-muted: #5f7185;
+  --brand-logo-drop: #173b68;
+  --brand-logo-accent: #d6a62a;
   background: #e8eef5 !important;
   color: var(--dashboard-text) !important;
+}
+
+.dashboard-layout[data-dashboard-theme='navy'] .brand-logo {
+  --brand-logo-drop: #173b68;
+  --brand-logo-accent: #d6a62a;
 }
 
 .dashboard-layout[data-dashboard-theme='navy'] .dashboard-content { background: #e8eef5 !important; }
