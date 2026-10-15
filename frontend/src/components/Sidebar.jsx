@@ -94,12 +94,6 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
     <aside className={`sidebar-responsive ${isOpen ? 'sidebar-open' : ''} w-64 flex flex-col h-screen sticky top-0 z-40 font-sans shadow-xl shrink-0`}>
       <div className="sidebar-brand p-6 flex items-center gap-3">
         <BrandLogo compact inverse />
-        <div>
-          <h1 className="sr-only">VitalRoute</h1>
-          <p className="sidebar-kicker text-[10px] font-black uppercase tracking-widest">
-            {normalizedRole === 'hospital_admin' ? 'Admin Portal' : normalizedRole === 'hospital_staff' ? 'Staff Portal' : 'Donor Portal'}
-          </p>
-        </div>
       </div>
 
       {/* Navigation Links Section */}

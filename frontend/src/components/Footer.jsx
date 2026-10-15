@@ -71,14 +71,14 @@ const Footer = () => {
             <div className="p-4 rounded-2xl bg-[#4A121F] border-2 border-[#E5C158]/30 shadow-inner">
               <p className="text-[10px] text-rose-300 font-bold uppercase tracking-wider mb-1">24/7 Urgent Requests</p>
               <p className="text-base font-black text-[#E5C158]">+1 (800) 555-BLOOD</p>
-              <p className="text-[10px] text-rose-200 mt-2 font-semibold">support@vitalroute.org</p>
+              <p className="text-[10px] text-rose-200 mt-2 font-semibold">support@vitaltrack.org</p>
             </div>
           </div>
 
         </div>
 
         <div className="mt-12 pt-8 border-t-2 border-[#E5C158]/20 flex flex-col sm:flex-row justify-between items-center text-xs text-rose-200 font-medium gap-4">
-          <p>© {new Date().getFullYear()} VitalRoute Intelligent Donor Matching &amp; Tracking System. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} VitalTrack Intelligent Donor Matching &amp; Tracking System. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-[#E5C158] transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-[#E5C158] transition-colors">Terms of Service</a>

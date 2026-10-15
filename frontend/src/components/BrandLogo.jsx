@@ -1,6 +1,6 @@
 const BrandLogo = ({ compact = false, showTagline = false, inverse = false }) => (
   <div className={`brand-logo${compact ? ' brand-logo-compact' : ''}${inverse ? ' brand-logo-inverse' : ''}`}>
-    <svg className="brand-logo-mark" viewBox="0 0 48 52" role="img" aria-label="VitalRoute logo">
+    <svg className="brand-logo-mark" viewBox="0 0 48 52" role="img" aria-label="VitalTrack logo">
       <rect x="1" y="1" width="46" height="50" rx="14" fill="#FAF9F6" />
       <path
         d="M24 2C17.5 11.2 8 21.5 8 32.2A16 16 0 0 0 40 32.2C40 21.5 30.5 11.2 24 2Z"
@@ -15,7 +15,7 @@ const BrandLogo = ({ compact = false, showTagline = false, inverse = false }) =>
       <circle cx="24" cy="24.5" r="1.7" fill="#5A1827" />
     </svg>
     <span className="brand-logo-copy">
-      <span className="brand-logo-wordmark">Vital<span>Route</span></span>
+      <span className="brand-logo-wordmark">Vital<span>Track</span></span>
       {showTagline && <span className="brand-logo-tagline">Intelligent Donor Matching &amp; Tracking System</span>}
     </span>
   </div>

@@ -40,7 +40,7 @@ const DonorPassport = () => {
               Digital Identity Passport
             </span>
             <h2 className="text-xl font-black text-[#5A1827] tracking-tight mt-3">
-              VitalRoute Donor Passport
+              VitalTrack Donor Passport
             </h2>
             <p className="text-xs font-bold text-slate-600 mt-0.5">
               Verified Donor: <span className="text-[#990000]">{user.name || 'Aqsa'}</span>

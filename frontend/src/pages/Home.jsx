@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import heroBg from '../assets/hero.png';
 import { API_URL, parseResponse } from '../api';
 import AddBlood from './AddBlood';
-import BrandLogo from '../components/BrandLogo';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -54,7 +53,7 @@ const Home = () => {
     {
       id: 2,
       title: 'Preparation Tips Before Donating Blood',
-      excerpt: 'Stay hydrated, eat an iron-rich meal, and get good rest. Learn what you should do before stepping into a VitalRoute donation drive.',
+      excerpt: 'Stay hydrated, eat an iron-rich meal, and get good rest. Learn what you should do before stepping into a VitalTrack donation drive.',
       date: 'Aug 15, 2026'
     }
   ];
@@ -62,7 +61,7 @@ const Home = () => {
   const quotes = [
     {
       text: "Tears of a mother cannot save her child, but your blood can.",
-      author: "VitalRoute Motto"
+      author: "VitalTrack Motto"
     },
     {
       text: "Every blood donor is a real-life superhero in disguise.",
@@ -74,13 +73,13 @@ const Home = () => {
     {
       name: "Sajid Rehman",
       role: "Patient Family Member",
-      comment: "VitalRoute helped us arrange 3 units of O+ blood during my father's surgery within 30 minutes. The quick request system is a lifesaver!",
+      comment: "VitalTrack helped us arrange 3 units of O+ blood during my father's surgery within 30 minutes. The quick request system is a lifesaver!",
       rating: 5
     },
     {
       name: "Dr. Ayesha Malik",
       role: "Emergency Care Unit",
-      comment: "The real-time coordination between VitalRoute and hospitals reduces emergency dispatch delay drastically.",
+      comment: "The real-time coordination between VitalTrack and hospitals reduces emergency dispatch delay drastically.",
       rating: 5
     }
   ];
@@ -94,9 +93,8 @@ const Home = () => {
           
           <div className="flex-1 space-y-6 text-center lg:text-left">
             <span className="inline-block px-4 py-1.5 rounded-full bg-[#E5C158]/20 text-[#E5C158] border border-[#E5C158]/40 text-xs font-black tracking-widest uppercase shadow-md">
-              VitalRoute Blood Management System
+              Intelligent Donor Matching &amp; Tracking System
             </span>
-            <BrandLogo showTagline inverse />
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight uppercase drop-shadow-md">
               Every Drop Counts. <br />
               <span className="text-[#E5C158]">Save Lives Today.</span>
@@ -218,7 +216,7 @@ const Home = () => {
       <section className="py-20 max-w-7xl mx-auto px-6">
         <div className="mb-10 text-center sm:text-left">
           <span className="text-xs font-black text-[#5A1827] uppercase tracking-widest bg-[#E5C158]/30 px-3 py-1 rounded-full border border-[#E5C158]/50">Resources</span>
-          <h2 className="text-3xl font-black uppercase tracking-tight text-[#5A1827] mt-2">VitalRoute Blogs</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tight text-[#5A1827] mt-2">VitalTrack Blogs</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           {blogs.map((blog) => (
@@ -250,7 +248,7 @@ const Home = () => {
       <section className="py-20 max-w-7xl mx-auto px-6 pb-24">
         <div className="text-center mb-12 space-y-2">
           <span className="text-xs font-black text-[#5A1827] uppercase tracking-widest bg-[#E5C158]/30 px-3 py-1 rounded-full border border-[#E5C158]/50">Testimonials</span>
-          <h2 className="text-3xl font-black uppercase tracking-tight text-[#5A1827]">What People Say About VitalRoute</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tight text-[#5A1827]">What People Say About VitalTrack</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           {reviews.map((r, i) => (

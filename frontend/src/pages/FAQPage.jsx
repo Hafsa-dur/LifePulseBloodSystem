@@ -19,8 +19,8 @@ const FAQPage = () => {
       a: "Whole blood donation can be done once every 3 months (90 days) for male donors and 4 months for female donors."
     },
     {
-      q: "Is VitalRoute free for emergency patients?",
-      a: "Yes, VitalRoute is a non-profit open initiative connecting donors directly with hospital care units without any fee."
+      q: "Is VitalTrack free for emergency patients?",
+      a: "Yes, VitalTrack is a non-profit open initiative connecting donors directly with hospital care units without any fee."
     }
   ];
 
@@ -32,7 +32,7 @@ const FAQPage = () => {
     <div className="bg-[#FAF9F6] min-h-screen text-[#5A1827] flex flex-col justify-between selection:bg-[#E5C158] selection:text-[#5A1827]">
       <div className="py-20 max-w-4xl mx-auto px-6 w-full space-y-10">
         
-        {/* Modern Centered Banner Layout matching VitalRoute theme */}
+        {/* Modern Centered Banner Layout matching VitalTrack theme */}
         <div className="bg-gradient-to-br from-[#5A1827] to-[#4A121F] border-2 border-[#E5C158]/30 rounded-[2rem] p-10 text-center space-y-4 shadow-2xl">
           <div className="inline-flex p-4 bg-[#E5C158]/10 border border-[#E5C158]/30 rounded-2xl text-[#E5C158] shadow-inner">
             <HelpCircle className="w-8 h-8" />

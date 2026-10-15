@@ -111,9 +111,8 @@ const Login = () => {
         
         {/* Header Section */}
         <div className="text-center">
-          <BrandLogo compact showTagline />
+          <BrandLogo compact />
           <h2 className="text-3xl font-black text-[#5A1827] tracking-tight">Welcome Back</h2>
-          <p className="mt-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Sign in to access your VitalRoute portal</p>
         </div>
 
         {/* Dynamic Error Banner */}

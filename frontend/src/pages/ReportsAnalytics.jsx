@@ -63,7 +63,7 @@ const ReportsAnalytics = () => {
     const rows = [['Metric', 'Value'], ...Object.entries(metrics), [], ['Blood Group', 'Units'], ...bloodBreakdown.map((item) => [item.group, item.units]), [], ['Performance', 'Value'], ...performance.map((item) => [item.label, item.value])];
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([rows.map((row) => row.join(',')).join('\n')], { type: 'text/csv' }));
-    link.download = `vitalroute-report-${dateRange.from || 'all'}-${dateRange.to || 'time'}.csv`;
+    link.download = `vitaltrack-report-${dateRange.from || 'all'}-${dateRange.to || 'time'}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
   };

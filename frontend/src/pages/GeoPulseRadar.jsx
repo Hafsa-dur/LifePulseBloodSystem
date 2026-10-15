@@ -135,7 +135,7 @@ const GeoPulseRadar = () => {
       }
 
       setEmailLoading(false);
-      setEmailStatus({ type: 'success', text: 'Email successfully sent to the selected donor via VitalRoute.' });
+      setEmailStatus({ type: 'success', text: 'Email successfully sent to the selected donor via VitalTrack.' });
       
       setTimeout(() => {
         setIsEmailModalOpen(false);
@@ -155,17 +155,17 @@ const GeoPulseRadar = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-3.5 py-1 bg-[#E5C158]/20 border border-[#E5C158] text-[#7A6305] font-bold text-xs rounded-full uppercase tracking-wider">
-              Real Physical Address Matching
+              Worldwide Location Intelligence
             </span>
             <span className="text-emerald-700 bg-emerald-100 border border-emerald-300 text-xs px-3 py-0.5 rounded-full flex items-center gap-1 font-bold">
               <Navigation className="w-3.5 h-3.5 text-emerald-700" /> Nearest First Matrix Active
             </span>
           </div>
           <h1 className="text-3xl font-black text-[#5A1827] flex items-center gap-2.5 mt-2">
-            <Radio className="text-rose-600 animate-pulse w-7 h-7" /> GeoPulse Donor Radar Matrix
+            <Radio className="text-rose-600 animate-pulse w-7 h-7" /> Global Location
           </h1>
           <p className="text-sm text-slate-600 font-medium mt-1">
-            Real physical address proximity sorting for verified registered donors only.
+            Professional worldwide address intelligence for verified donor matching across the USA and other countries.
           </p>
         </div>
 
@@ -174,8 +174,26 @@ const GeoPulseRadar = () => {
           className="bg-[#E5C158] hover:bg-[#D4AF37] text-slate-950 font-black px-6 py-3 rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 text-sm uppercase tracking-wider cursor-pointer"
         >
           <MapPin className="w-4 h-4 text-slate-950" />
-          Refresh Radar Matrix
+          Refresh Global Locations
         </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Coverage</p>
+          <p className="mt-2 text-lg font-black text-[#5A1827]">Worldwide addresses</p>
+          <p className="mt-1 text-xs text-slate-600">Locations are resolved from saved donor and hospital addresses using live geocoding.</p>
+        </div>
+        <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Matching method</p>
+          <p className="mt-2 text-lg font-black text-[#5A1827]">Haversine distance</p>
+          <p className="mt-1 text-xs text-slate-600">Straight-line geographic distance used for nearest compatible donor ranking.</p>
+        </div>
+        <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Distance context</p>
+          <p className="mt-2 text-lg font-black text-[#5A1827]">Road distance separate</p>
+          <p className="mt-1 text-xs text-slate-600">Displayed distances are not driving routes or travel-time estimates.</p>
+        </div>
       </div>
 
       <div className="flex justify-end bg-white p-5 rounded-2xl border-2 border-[#6B1D2F] shadow-sm w-full">
@@ -194,7 +212,7 @@ const GeoPulseRadar = () => {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#FAF9F6] text-[#5A1827] text-xs uppercase font-black"><tr><th className="p-4">Patient</th><th className="p-4">Group</th><th className="p-4">Hospital / Location</th><th className="p-4">Matched Donor / Location</th><th className="p-4">Distance</th><th className="p-4">Availability</th></tr></thead>
+            <thead className="bg-[#FAF9F6] text-[#5A1827] text-xs uppercase font-black"><tr><th className="p-4">Patient</th><th className="p-4">Group</th><th className="p-4">Hospital / Location</th><th className="p-4">Matched Donor / Location</th><th className="p-4">Straight-line Distance</th><th className="p-4">Availability</th></tr></thead>
             <tbody className="divide-y divide-[#6B1D2F]/10">
               {requestMatches.length > 0 ? requestMatches.map((request) => <tr key={request._id}>
                 <td className="p-4 font-black text-[#5A1827]">{request.patientName}</td>
@@ -218,7 +236,7 @@ const GeoPulseRadar = () => {
                 <th className="py-4 px-6">Group</th>
                 <th className="py-4 px-6">Donor Details</th>
                 <th className="py-4 px-6">Exact Real Physical Address</th>
-                <th className="py-4 px-6">Proximity Status</th>
+                <th className="py-4 px-6">Straight-line Proximity</th>
                 <th className="py-4 px-6">Availability</th>
                 <th className="py-4 px-6 text-right">Dispatch Action (Email)</th>
               </tr>
@@ -295,7 +313,7 @@ const GeoPulseRadar = () => {
             <div className="flex justify-between items-center mb-4 border-b-2 border-[#5A1827]/15 pb-3">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-[#990000] animate-pulse" />
-                <h2 className="text-lg font-black text-[#5A1827]">Send Email Alert via VitalRoute</h2>
+                <h2 className="text-lg font-black text-[#5A1827]">Send Email Alert via VitalTrack</h2>
               </div>
               <button 
                 onClick={() => setIsEmailModalOpen(false)} 
