@@ -28,7 +28,13 @@
 
 .dashboard-layout[data-dashboard-theme='navy'] .brand-logo {
   --brand-logo-drop: #173b68;
+  --brand-logo-detail: #f3f6fa;
   --brand-logo-accent: #d6a62a;
+}
+
+.dashboard-layout[data-dashboard-theme='navy'] .brand-logo-inverse {
+  --brand-logo-drop: #f3f6fa;
+  --brand-logo-detail: #173b68;
 }
 
 .dashboard-layout[data-dashboard-theme='navy'] .dashboard-content { background: #e8eef5 !important; }

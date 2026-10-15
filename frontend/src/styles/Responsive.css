@@ -119,10 +119,16 @@ table {
 	align-items: center;
 	gap: 0.6rem;
 	color: #5a1827;
+	--brand-logo-drop: #5a1827;
+	--brand-logo-detail: #faf9f6;
+	--brand-logo-accent: #e5c158;
 }
 
 .brand-logo-inverse {
 	color: #e5c158;
+	--brand-logo-drop: #faf9f6;
+	--brand-logo-detail: #5a1827;
+	--brand-logo-accent: #e5c158;
 }
 
 .brand-logo-mark {
@@ -168,8 +174,8 @@ table {
 }
 
 .brand-logo-compact .brand-logo-mark {
-	width: 3.35rem;
-	height: 3.35rem;
+	width: 3.55rem;
+	height: 3.55rem;
 }
 
 .brand-logo-compact .brand-logo-wordmark {
@@ -463,8 +469,8 @@ table {
 	}
 
 	.navbar-responsive .brand-logo-mark {
-		width: 2.35rem;
-		height: 2.35rem;
+		width: 2.5rem;
+		height: 2.5rem;
 	}
 
 	.public-nav-links {
