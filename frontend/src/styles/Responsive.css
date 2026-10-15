@@ -114,6 +114,11 @@ table {
 	flex-wrap: wrap;
 }
 
+.navbar-actions {
+	display: contents;
+}
+
+.mobile-public-search-button,
 .mobile-public-menu-button,
 .mobile-public-menu {
 	display: none;
@@ -395,6 +400,30 @@ table {
 		display: none;
 	}
 
+	.navbar-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-left: auto;
+	}
+
+	.mobile-public-search-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.5rem;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: #e5c158;
+	}
+
+	.mobile-public-search-button svg {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
 	.mobile-public-menu-button {
 		display: inline-flex;
 		align-items: center;
@@ -411,9 +440,15 @@ table {
 		line-height: 1;
 	}
 
+	.mobile-public-search-button:focus-visible,
 	.mobile-public-menu-button:focus-visible {
 		outline: 2px solid #e5c158;
 		outline-offset: 2px;
+	}
+
+	.navbar-auth-actions {
+		order: -1;
+		gap: 0.5rem;
 	}
 
 	.mobile-public-menu {
@@ -479,10 +514,6 @@ table {
 
 	.navbar-auth-actions {
 		gap: 0.4rem;
-	}
-
-	.navbar-auth-actions a:first-child {
-		display: none;
 	}
 
 	.dashboard-content .overflow-x-auto table {

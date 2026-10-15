@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Search } from 'lucide-react';
 
 const Navbar = () => {
   const [hasRegisteredAccount] = useState(() => Boolean(localStorage.getItem('user')));
@@ -25,27 +26,33 @@ const Navbar = () => {
         <Link to="/faq" className="hover:text-[#E5C158] transition-colors">FAQs</Link>
       </div>
 
-      <button
-        type="button"
-        className="mobile-public-menu-button"
-        aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-        aria-expanded={isMobileMenuOpen}
-        onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
-      >
-        <span aria-hidden="true">{isMobileMenuOpen ? '×' : '☰'}</span>
-      </button>
+      <div className="navbar-actions">
+        <button type="button" className="mobile-public-search-button" aria-label="Search">
+          <Search aria-hidden="true" />
+        </button>
 
-      {/* Auth Buttons */}
-      <div className="navbar-auth-actions flex items-center gap-4 text-xs font-black uppercase tracking-wider">
-        {hasRegisteredAccount ? (
-          <Link to="/login" className="px-4 py-2 bg-[#E5C158] hover:bg-amber-300 text-[#5A1827] rounded-xl transition-all shadow-md border border-white/20">
-            Sign In
-          </Link>
-        ) : (
-          <Link to="/register" className="px-4 py-2 bg-[#E5C158] hover:bg-amber-300 text-[#5A1827] rounded-xl transition-all shadow-md border border-white/20">
-            Sign Up
-          </Link>
-        )}
+        <button
+          type="button"
+          className="mobile-public-menu-button"
+          aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={isMobileMenuOpen}
+          onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
+        >
+          <span aria-hidden="true">{isMobileMenuOpen ? '×' : '☰'}</span>
+        </button>
+
+        {/* Auth Buttons */}
+        <div className="navbar-auth-actions flex items-center gap-4 text-xs font-black uppercase tracking-wider">
+          {hasRegisteredAccount ? (
+            <Link to="/login" className="px-4 py-2 bg-[#E5C158] hover:bg-amber-300 text-[#5A1827] rounded-xl transition-all shadow-md border border-white/20">
+              Sign In
+            </Link>
+          ) : (
+            <Link to="/register" className="px-4 py-2 bg-[#E5C158] hover:bg-amber-300 text-[#5A1827] rounded-xl transition-all shadow-md border border-white/20">
+              Sign Up
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className={`mobile-public-menu${isMobileMenuOpen ? ' mobile-public-menu-open' : ''}`}>
