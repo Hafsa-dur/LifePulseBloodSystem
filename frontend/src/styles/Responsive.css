@@ -126,8 +126,8 @@ table {
 }
 
 .brand-logo-mark {
-	width: 2.75rem;
-	height: 2.75rem;
+	width: 3.25rem;
+	height: 3.25rem;
 	flex: 0 0 auto;
 }
 
@@ -168,12 +168,12 @@ table {
 }
 
 .brand-logo-compact .brand-logo-mark {
-	width: 2.75rem;
-	height: 2.95rem;
+	width: 3.35rem;
+	height: 3.35rem;
 }
 
 .brand-logo-compact .brand-logo-wordmark {
-	font-size: 1.3rem;
+	font-size: 1.45rem;
 }
 
 .navbar-actions {
@@ -459,12 +459,12 @@ table {
 	}
 
 	.navbar-responsive .brand-logo-wordmark {
-		font-size: 1rem;
+		font-size: 1.1rem;
 	}
 
 	.navbar-responsive .brand-logo-mark {
-		width: 2rem;
-		height: 2.2rem;
+		width: 2.35rem;
+		height: 2.35rem;
 	}
 
 	.public-nav-links {
