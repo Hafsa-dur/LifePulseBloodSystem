@@ -40,10 +40,10 @@ export const sendDonorEmergencyEmail = async ({ donorEmail, donorName, bloodGrou
   return sendEmailMessage({
     to: donorEmail,
     subject: `${String(urgency || 'Urgent').toUpperCase()} blood request: ${bloodGroup} needed at ${hospitalName}`,
-    text: `Dear ${donorName || 'Donor'},\n\n${donorMessage}\n\nBlood group: ${bloodGroup}\nUnits required: ${unitsRequired}\nPatient: ${patientName || 'Urgent patient request'}\nHospital: ${hospitalName}\nLocation: ${hospitalLocation}\n\nPlease contact the hospital if you are available to donate and help save a life.\n\nWarm regards,\nLifePulse Blood Bank Management System`,
+    text: `Dear ${donorName || 'Donor'},\n\n${donorMessage}\n\nBlood group: ${bloodGroup}\nUnits required: ${unitsRequired}\nPatient: ${patientName || 'Urgent patient request'}\nHospital: ${hospitalName}\nLocation: ${hospitalLocation}\n\nPlease contact the hospital if you are available to donate and help save a life.\n\nWarm regards,\nVitalRoute Intelligent Donor Matching & Tracking System`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;">
-        <h3 style="color: #5A1827;">LifePulse Blood Donation Alert</h3>
+        <h3 style="color: #5A1827;">VitalRoute Blood Donation Alert</h3>
         <p>Dear ${donorName || 'Donor'},</p>
         <p>${donorMessage}</p>
         <p><strong>Blood group:</strong> ${bloodGroup}<br />
@@ -52,7 +52,7 @@ export const sendDonorEmergencyEmail = async ({ donorEmail, donorName, bloodGrou
         <strong>Hospital:</strong> ${hospitalName}<br />
         <strong>Location:</strong> ${hospitalLocation}</p>
         <p>Please contact the hospital if you are available to donate.</p>
-        <p>Warm regards,<br />LifePulse Blood Bank Management System</p>
+        <p>Warm regards,<br />VitalRoute Intelligent Donor Matching &amp; Tracking System</p>
       </div>
     `
   });
@@ -61,16 +61,16 @@ export const sendDonorEmergencyEmail = async ({ donorEmail, donorName, bloodGrou
 export const sendDonorThankYouEmail = async ({ donorEmail, donorName, bloodGroup, units }) => {
   return sendEmailMessage({
     to: donorEmail,
-    subject: 'Thank you for your blood donation with LifePulse',
-    text: `Dear ${donorName || 'Donor'},\n\nThank you for donating ${units || 1} unit(s) of ${bloodGroup} blood through LifePulse. Your generosity can save lives and support patients in urgent need.\n\nWe sincerely appreciate your contribution and commitment to the community.\n\nWarm regards,\nLifePulse Blood Bank Management System`,
+    subject: 'Thank you for your blood donation with VitalRoute',
+    text: `Dear ${donorName || 'Donor'},\n\nThank you for donating ${units || 1} unit(s) of ${bloodGroup} blood through VitalRoute. Your generosity can save lives and support patients in urgent need.\n\nWe sincerely appreciate your contribution and commitment to the community.\n\nWarm regards,\nVitalRoute Intelligent Donor Matching & Tracking System`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;">
         <h3 style="color: #5A1827;">Thank you for your donation</h3>
         <p>Dear ${donorName || 'Donor'},</p>
-        <p>Thank you for donating ${units || 1} unit(s) of <strong>${bloodGroup}</strong> blood through LifePulse.</p>
+        <p>Thank you for donating ${units || 1} unit(s) of <strong>${bloodGroup}</strong> blood through VitalRoute.</p>
         <p>Your generosity helps save lives and strengthens the community’s emergency response network.</p>
         <p>We sincerely appreciate your support.</p>
-        <p>Warm regards,<br />LifePulse Blood Bank Management System</p>
+        <p>Warm regards,<br />VitalRoute Intelligent Donor Matching &amp; Tracking System</p>
       </div>
     `
   });
@@ -79,9 +79,9 @@ export const sendDonorThankYouEmail = async ({ donorEmail, donorName, bloodGroup
 export const sendRewardEmail = async ({ donorEmail, donorName, rewardTitle, partner, points, voucherCode }) => {
   return sendEmailMessage({
     to: donorEmail,
-    subject: `LifePulse reward unlocked: ${rewardTitle}`,
-    text: `Dear ${donorName || 'Donor'},\n\nYour LifePulse reward has been unlocked.\n\nReward: ${rewardTitle}\nPartner: ${partner}\nPoints used: ${points}\nVoucher code: ${voucherCode}\n\nPlease show this voucher code at the partner lab counter.\n\nWarm regards,\nLifePulse Blood Bank Management System`,
-    html: `<div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;"><h3 style="color: #5A1827;">LifePulse Reward Voucher</h3><p>Dear ${donorName || 'Donor'},</p><p>Your reward has been unlocked successfully.</p><p><strong>Reward:</strong> ${rewardTitle}<br /><strong>Partner:</strong> ${partner}<br /><strong>Points used:</strong> ${points}<br /><strong>Voucher code:</strong> ${voucherCode}</p><p>Please show this voucher code at the partner lab counter.</p><p>Warm regards,<br />LifePulse Blood Bank Management System</p></div>`
+    subject: `VitalRoute reward unlocked: ${rewardTitle}`,
+    text: `Dear ${donorName || 'Donor'},\n\nYour VitalRoute reward has been unlocked.\n\nReward: ${rewardTitle}\nPartner: ${partner}\nPoints used: ${points}\nVoucher code: ${voucherCode}\n\nPlease show this voucher code at the partner lab counter.\n\nWarm regards,\nVitalRoute Intelligent Donor Matching & Tracking System`,
+    html: `<div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;"><h3 style="color: #5A1827;">VitalRoute Reward Voucher</h3><p>Dear ${donorName || 'Donor'},</p><p>Your reward has been unlocked successfully.</p><p><strong>Reward:</strong> ${rewardTitle}<br /><strong>Partner:</strong> ${partner}<br /><strong>Points used:</strong> ${points}<br /><strong>Voucher code:</strong> ${voucherCode}</p><p>Please show this voucher code at the partner lab counter.</p><p>Warm regards,<br />VitalRoute Intelligent Donor Matching &amp; Tracking System</p></div>`
   });
 };
 
@@ -89,30 +89,30 @@ export const sendStaffInvitationEmail = async ({ recipientEmail, hospitalName, i
   const recipient = recipientEmail;
   return sendEmailMessage({
     to: recipient,
-    subject: `LifePulse Hospital Staff invitation for ${hospitalName}`,
-    text: `You have been invited to join ${hospitalName} as Hospital Staff on the LifePulse platform.\n\nOpen this secure link to complete your staff registration:\n${inviteLink}\n\nThis invitation is time-limited and can only be used once.\n\nLifePulse Blood Bank Management System`,
+    subject: `VitalRoute Hospital Staff invitation for ${hospitalName}`,
+    text: `You have been invited to join ${hospitalName} as Hospital Staff on the VitalRoute platform.\n\nOpen this secure link to complete your staff registration:\n${inviteLink}\n\nThis invitation is time-limited and can only be used once.\n\nVitalRoute Intelligent Donor Matching & Tracking System`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;">
-        <h3 style="color: #5A1827;">LifePulse Staff Invitation</h3>
+        <h3 style="color: #5A1827;">VitalRoute Staff Invitation</h3>
         <p>You have been invited to join <strong>${hospitalName}</strong> as <strong>Hospital Staff</strong>.</p>
         <p>Use the secure link below to complete your registration:</p>
         <p><a href="${inviteLink}">${inviteLink}</a></p>
         <p>This invitation is time-limited and can only be used once.</p>
-        <p>Warm regards,<br />LifePulse Blood Bank Management System</p>
+        <p>Warm regards,<br />VitalRoute Intelligent Donor Matching &amp; Tracking System</p>
       </div>
     `
   });
 };
 
 export const sendVerificationEmail = async ({ recipientEmail, verificationLink, purpose = 'account' }) => {
-  const subject = purpose === 'email-change' ? 'Confirm your new LifePulse email address' : 'Verify your LifePulse email address';
+  const subject = purpose === 'email-change' ? 'Confirm your new VitalRoute email address' : 'Verify your VitalRoute email address';
   const intro = purpose === 'email-change'
-    ? 'Confirm this new email address to finish changing the email on your LifePulse account.'
-    : 'Verify your email address to activate your LifePulse account.';
+    ? 'Confirm this new email address to finish changing the email on your VitalRoute account.'
+    : 'Verify your email address to activate your VitalRoute account.';
   return sendEmailMessage({
     to: recipientEmail,
     subject,
-    text: `${intro}\n\nOpen this secure link to continue:\n${verificationLink}\n\nThis link expires in 48 hours and can only be used once.\n\nLifePulse Blood Bank Management System`,
-    html: `<div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;"><h3 style="color: #5A1827;">LifePulse Email Verification</h3><p>${intro}</p><p><a href="${verificationLink}" style="display:inline-block;background:#5A1827;color:#E5C158;padding:12px 18px;text-decoration:none;border-radius:8px;font-weight:bold;">Verify Email</a></p><p>This link expires in 48 hours and can only be used once.</p><p>Warm regards,<br />LifePulse Blood Bank Management System</p></div>`
+    text: `${intro}\n\nOpen this secure link to continue:\n${verificationLink}\n\nThis link expires in 48 hours and can only be used once.\n\nVitalRoute Intelligent Donor Matching & Tracking System`,
+    html: `<div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.7;"><h3 style="color: #5A1827;">VitalRoute Email Verification</h3><p>${intro}</p><p><a href="${verificationLink}" style="display:inline-block;background:#5A1827;color:#E5C158;padding:12px 18px;text-decoration:none;border-radius:8px;font-weight:bold;">Verify Email</a></p><p>This link expires in 48 hours and can only be used once.</p><p>Warm regards,<br />VitalRoute Intelligent Donor Matching &amp; Tracking System</p></div>`
   });
 };

@@ -47,7 +47,7 @@ export const geocodeLocation = async (location) => {
         const photonUrl = new URL('https://photon.komoot.io/api/');
         photonUrl.searchParams.set('q', searchLocation);
         photonUrl.searchParams.set('limit', '10');
-        const response = await fetch(photonUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
+        const response = await fetch(photonUrl, {         headers: { 'User-Agent': 'VitalRouteBloodSystem/1.0' } });
         if (!response.ok) continue;
         const result = await response.json();
         const requestedPlace = searchLocation.split(',')[0].trim().toLowerCase();
@@ -77,7 +77,7 @@ export const geocodeLocation = async (location) => {
         nominatimUrl.searchParams.set('format', 'jsonv2');
         nominatimUrl.searchParams.set('limit', '5');
         nominatimUrl.searchParams.set('q', searchLocation);
-        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'LifePulseBloodSystem/1.0' } });
+        const response = await fetch(nominatimUrl, {         headers: { 'User-Agent': 'VitalRouteBloodSystem/1.0' } });
         if (!response.ok) continue;
         const results = await response.json();
         const placeResult = results.find((result) => {
@@ -411,7 +411,7 @@ export const dispatchBlood = async (req, res) => {
 
       savedDispatch = await new Donation({
         donorName: donorName ? `Dispatched to: ${hospitalName} (${donorName})` : `Dispatched to: ${hospitalName || 'Hospital'}`,
-        email: `dispatch-${new mongoose.Types.ObjectId()}@lifepulse.com`,
+        email: `dispatch-${new mongoose.Types.ObjectId()}@vitalroute.com`,
         bloodGroup: normalizedBloodGroup,
         patientName: patientName || '',
         units: -requestedUnits,
