@@ -114,6 +114,68 @@ table {
 	flex-wrap: wrap;
 }
 
+.brand-logo {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6rem;
+	color: #5a1827;
+}
+
+.brand-logo-inverse {
+	color: #e5c158;
+}
+
+.brand-logo-mark {
+	width: 2.75rem;
+	height: 2.75rem;
+	flex: 0 0 auto;
+}
+
+.brand-logo-copy {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.brand-logo-wordmark {
+	color: #5a1827;
+	font-size: 1.2rem;
+	font-weight: 900;
+	letter-spacing: -0.025em;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.brand-logo-wordmark span {
+	color: #e5c158;
+}
+
+.brand-logo-inverse .brand-logo-wordmark {
+	color: #fff;
+}
+
+.brand-logo-tagline {
+	margin-top: 0.35rem;
+	color: #5a1827;
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	line-height: 1.25;
+}
+
+.brand-logo-inverse .brand-logo-tagline {
+	color: #fff1f2;
+}
+
+.brand-logo-compact .brand-logo-mark {
+	width: 2.25rem;
+	height: 2.45rem;
+}
+
+.brand-logo-compact .brand-logo-wordmark {
+	font-size: 1.1rem;
+}
+
 .navbar-actions {
 	display: contents;
 }
@@ -394,6 +456,15 @@ table {
 
 	.navbar-responsive > a:first-child {
 		min-width: 0;
+	}
+
+	.navbar-responsive .brand-logo-wordmark {
+		font-size: 1rem;
+	}
+
+	.navbar-responsive .brand-logo-mark {
+		width: 2rem;
+		height: 2.2rem;
 	}
 
 	.public-nav-links {

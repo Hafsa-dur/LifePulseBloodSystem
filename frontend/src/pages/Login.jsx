@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { API_URL, parseResponse } from '../api';
+import BrandLogo from '../components/BrandLogo';
 import { GoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
@@ -110,11 +111,9 @@ const Login = () => {
         
         {/* Header Section */}
         <div className="text-center">
-          <div className="mx-auto w-12 h-12 bg-rose-100 border-2 border-rose-300 rounded-2xl flex items-center justify-center mb-3 shadow-inner">
-            <span className="text-2xl font-black text-[#990000]">♥</span>
-          </div>
+          <BrandLogo compact showTagline />
           <h2 className="text-3xl font-black text-[#5A1827] tracking-tight">Welcome Back</h2>
-          <p className="mt-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Sign in to access your LifePulse portal</p>
+          <p className="mt-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Sign in to access your VitalRoute portal</p>
         </div>
 
         {/* Dynamic Error Banner */}

@@ -61,13 +61,13 @@ const AboutUsPage = () => {
         {/* Hero Content positioned neatly on top */}
         <div className="relative z-10 max-w-4xl mx-auto space-y-6">
           <span className="px-4 py-1.5 bg-[#E5C158] text-[#5A1827] border-2 border-white/20 text-xs font-black rounded-full uppercase tracking-widest shadow-lg inline-block">
-            About LifePulse
+            About VitalRoute
           </span>
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight uppercase text-white drop-shadow-lg">
             Saving Lives Through Technology
           </h1>
           <p className="text-rose-100 font-bold text-sm sm:text-base max-w-2xl mx-auto leading-relaxed drop-shadow-md">
-            LifePulse is a modern blood bank & emergency management network designed to bridge the critical gap between voluntary blood donors, patients in urgent need, and hospital care units.
+            VitalRoute is a modern blood bank & emergency management network designed to bridge the critical gap between voluntary blood donors, patients in urgent need, and hospital care units.
           </p>
         </div>
       </div>
@@ -80,7 +80,7 @@ const AboutUsPage = () => {
           <div className="space-y-6">
             <h2 className="text-2xl font-black text-[#5A1827] uppercase tracking-tight">Get In Touch</h2>
             <p className="text-slate-600 font-medium text-xs leading-relaxed">
-              Have questions or want to partner with LifePulse for a community blood drive? Send us a direct message and our support team will respond to your email.
+              Have questions or want to partner with VitalRoute for a community blood drive? Send us a direct message and our support team will respond to your email.
             </p>
 
             <div className="space-y-4 text-xs font-bold text-[#5A1827]">

@@ -118,7 +118,7 @@ const Register = () => {
       <div className="w-full max-w-2xl space-y-6 bg-white p-8 rounded-3xl shadow-2xl border-2 border-[#5A1827]/20">
         <div className="text-center">
           <h1 className="text-3xl font-black text-[#5A1827]">Create an Account</h1>
-          <p className="mt-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Choose the account type that matches your LifePulse access.</p>
+          <p className="mt-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Choose the account type that matches your VitalRoute access.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

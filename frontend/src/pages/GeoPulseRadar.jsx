@@ -135,7 +135,7 @@ const GeoPulseRadar = () => {
       }
 
       setEmailLoading(false);
-      setEmailStatus({ type: 'success', text: 'Email successfully sent to the selected donor via LifePulse.' });
+      setEmailStatus({ type: 'success', text: 'Email successfully sent to the selected donor via VitalRoute.' });
       
       setTimeout(() => {
         setIsEmailModalOpen(false);
@@ -295,7 +295,7 @@ const GeoPulseRadar = () => {
             <div className="flex justify-between items-center mb-4 border-b-2 border-[#5A1827]/15 pb-3">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-[#990000] animate-pulse" />
-                <h2 className="text-lg font-black text-[#5A1827]">Send Email Alert via LifePulse</h2>
+                <h2 className="text-lg font-black text-[#5A1827]">Send Email Alert via VitalRoute</h2>
               </div>
               <button 
                 onClick={() => setIsEmailModalOpen(false)} 

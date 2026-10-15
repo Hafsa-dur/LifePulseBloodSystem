@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 
 const Navbar = () => {
   const [hasRegisteredAccount] = useState(() => Boolean(localStorage.getItem('user')));
@@ -11,12 +12,7 @@ const Navbar = () => {
   return (
     <nav className="navbar-responsive bg-[#5A1827] border-b-2 border-[#E5C158]/30 py-4 px-6 md:px-12 flex justify-between items-center text-white font-sans shadow-md sticky top-0 z-50">
       <Link to="/" className="flex items-center gap-3 group">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#E5C158] to-amber-300 flex items-center justify-center text-[#5A1827] font-black shadow-lg border border-white/20">
-          ♥
-        </div>
-        <span className="font-black text-xl tracking-tight text-white">
-          Life<span className="text-[#E5C158]">Pulse</span>
-        </span>
+        <BrandLogo compact inverse />
       </Link>
 
       {/* Navigation Links */}

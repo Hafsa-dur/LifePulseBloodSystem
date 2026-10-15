@@ -17,6 +17,7 @@ import {
   Award,      
   HeartHandshake 
 } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 
 const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   const navigate = useNavigate();
@@ -92,11 +93,9 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   return (
     <aside className={`sidebar-responsive ${isOpen ? 'sidebar-open' : ''} w-64 flex flex-col h-screen sticky top-0 z-40 font-sans shadow-xl shrink-0`}>
       <div className="sidebar-brand p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black shadow-lg border border-white/20">
-          LP
-        </div>
+        <BrandLogo compact inverse />
         <div>
-          <h1 className="text-base font-black tracking-wider">LifePulse</h1>
+          <h1 className="sr-only">VitalRoute</h1>
           <p className="sidebar-kicker text-[10px] font-black uppercase tracking-widest">
             {normalizedRole === 'hospital_admin' ? 'Admin Portal' : normalizedRole === 'hospital_staff' ? 'Staff Portal' : 'Donor Portal'}
           </p>
