@@ -300,6 +300,36 @@ table {
 	text-align: center;
 }
 
+.global-search-answer {
+	padding: 1rem;
+	border: 1px solid rgb(107 29 47 / .16);
+	border-radius: .75rem;
+	background: #fff;
+}
+
+.global-search-answer small {
+	color: #7a6305;
+	font-size: .7rem;
+	font-weight: 800;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+}
+
+.global-search-answer h2 {
+	margin: .45rem 0 .4rem;
+	color: #5a1827;
+	font-size: 1.05rem;
+	font-weight: 900;
+}
+
+.global-search-answer p {
+	margin: 0;
+	color: #334155;
+	font-size: .9rem;
+	font-weight: 600;
+	line-height: 1.55;
+}
+
 .global-search-error {
 	color: #9f1239;
 	font-size: .75rem;
