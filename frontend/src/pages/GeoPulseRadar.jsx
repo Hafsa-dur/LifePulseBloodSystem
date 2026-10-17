@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Navigation, Send, X, Droplet } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { MapPin, Mail, Radio, CheckCircle, AlertCircle, Navigation, Send, X, Droplet, RefreshCcw } from 'lucide-react';
 import { API_URL, authHeaders, parseResponse } from '../api';
 
 const GeoPulseRadar = () => {
@@ -13,6 +13,8 @@ const GeoPulseRadar = () => {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailStatus, setEmailStatus] = useState({ type: '', text: '' });
   const [customMessage, setCustomMessage] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
 
   const getDonorProximityInfo = (donor, matches = []) => {
     const donorKey = String(donor.donorName || donor.name || '').trim().toLowerCase();
@@ -40,10 +42,11 @@ const GeoPulseRadar = () => {
     };
   };
 
-  const fetchRealDonors = async (matches = []) => {
+  const fetchRealDonors = useCallback(async (matches = []) => {
     try {
       const response = await fetch(`${API_URL}/donations`, { headers: authHeaders() });
-      if (response.ok) {
+      if (!response.ok) throw new Error('Unable to refresh donor locations.');
+      {
         const data = await parseResponse(response);
 
         const activeDonors = data.filter(item => {
@@ -73,26 +76,48 @@ const GeoPulseRadar = () => {
 
         setDonors(enrichedDonors);
       }
+      return true;
     } catch (error) {
       console.error("Error fetching live donors:", error);
+      throw error;
+    }
+  }, []);
+
+  const refreshLocationData = async () => {
+    setIsRefreshing(true);
+    setRefreshError('');
+    try {
+      const response = await fetch(`${API_URL}/patient-requests`, { headers: authHeaders() });
+      if (!response.ok) throw new Error('Unable to refresh location matches.');
+      const data = await parseResponse(response);
+      const matchedRequests = Array.isArray(data) ? data.filter((request) => request.locationMatchStatus) : [];
+      setRequestMatches(matchedRequests);
+      await fetchRealDonors(matchedRequests);
+    } catch (error) {
+      console.error('Error refreshing location intelligence:', error);
+      setRefreshError(error.message || 'Location data could not be refreshed.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadInitialLocationData = async () => {
       try {
         const response = await fetch(`${API_URL}/patient-requests`, { headers: authHeaders() });
+        if (!response.ok) throw new Error('Unable to load location matches.');
         const data = await parseResponse(response);
         const matchedRequests = Array.isArray(data) ? data.filter((request) => request.locationMatchStatus) : [];
         setRequestMatches(matchedRequests);
         await fetchRealDonors(matchedRequests);
       } catch (error) {
         console.error('Error fetching request matches:', error);
+        setRefreshError(error.message || 'Location data could not be loaded.');
       }
     };
 
-    loadData();
-  }, []);
+    loadInitialLocationData();
+  }, [fetchRealDonors]);
 
   // Open Email Dispatch Modal
   const openEmailModal = (donor) => {
@@ -170,13 +195,15 @@ const GeoPulseRadar = () => {
         </div>
 
         <button
-          onClick={() => fetchRealDonors(requestMatches)}
-          className="bg-[#E5C158] hover:bg-[#D4AF37] text-slate-950 font-black px-6 py-3 rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 text-sm uppercase tracking-wider cursor-pointer"
+          onClick={refreshLocationData}
+          disabled={isRefreshing}
+          className="location-refresh-button bg-[#E5C158] hover:bg-[#D4AF37] text-slate-950 font-black px-6 py-3 rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 text-sm uppercase tracking-wider cursor-pointer disabled:opacity-60 disabled:cursor-wait"
         >
-          <MapPin className="w-4 h-4 text-slate-950" />
-          Refresh Global Locations
+          <RefreshCcw className={`w-4 h-4 text-slate-950 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing Locations...' : 'Refresh Global Locations'}
         </button>
       </div>
+      {refreshError && <div role="alert" className="bg-rose-100 border-2 border-rose-300 text-rose-800 rounded-xl px-4 py-3 text-sm font-bold">{refreshError}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-5 shadow-sm">

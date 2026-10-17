@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL, authHeaders } from '../api';
+import { useTheme } from '../ThemeContext';
 
 const LifeImpactBoard = () => {
   const [impactData, setImpactData] = useState({ stats: {}, logs: [] });
   const [loading, setLoading] = useState(true);
+  const { theme } = useTheme();
 
   useEffect(() => {
     fetchUserLifeImpact();
@@ -59,9 +61,9 @@ const LifeImpactBoard = () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto bg-[#FAFAFA] min-h-screen">
+    <div className={`life-impact-board life-impact-board-${theme} p-6 max-w-6xl mx-auto bg-[#FAFAFA] min-h-screen`}>
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-[#800000] tracking-wide">Your Life Impact Dashboard</h2>
+        <h2 className="life-impact-heading text-3xl font-bold text-[#800000] tracking-wide">Your Life Impact Dashboard</h2>
         <p className="text-gray-600 mt-1">See how your generous blood donations directly transformed and saved lives.</p>
       </div>
 

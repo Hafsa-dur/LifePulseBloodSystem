@@ -134,6 +134,31 @@
 .dashboard-layout[data-dashboard-theme='maroon'] .sidebar-logout { background: rgba(76, 5, 25, .4) !important; color: #fecdd3 !important; border: 1px solid rgba(244, 63, 94, .3) !important; }
 .dashboard-layout[data-dashboard-theme='maroon'] .sidebar-logout:hover { background: rgba(136, 19, 55, .6) !important; }
 
+.dashboard-layout[data-dashboard-theme='navy'] .mobile-menu-button {
+  background: var(--dashboard-navy-light) !important;
+  color: var(--dashboard-gold) !important;
+  border-color: rgba(214, 166, 42, .65) !important;
+}
+
+.dashboard-layout[data-dashboard-theme='navy'] .donor-passport .passport-label {
+  background: #e6eef8 !important;
+  border-color: #9bb6d2 !important;
+  color: var(--dashboard-text) !important;
+}
+.dashboard-layout[data-dashboard-theme='navy'] .donor-passport .passport-heading,
+.dashboard-layout[data-dashboard-theme='navy'] .donor-passport .passport-accent-text { color: var(--dashboard-text) !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .donor-passport .passport-download {
+  background: var(--dashboard-navy) !important;
+  border-color: var(--dashboard-navy-light) !important;
+}
+.dashboard-layout[data-dashboard-theme='navy'] .donor-passport .passport-download-icon { color: var(--dashboard-gold) !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .life-impact-heading { color: var(--dashboard-text) !important; }
+.dashboard-layout[data-dashboard-theme='navy'] .location-refresh-button {
+  background: var(--dashboard-navy) !important;
+  color: #ffffff !important;
+}
+.dashboard-layout[data-dashboard-theme='navy'] .location-refresh-button svg { color: var(--dashboard-gold) !important; }
+
 /* Custom Scrollbar for professional look */
 ::-webkit-scrollbar {
   width: 6px;

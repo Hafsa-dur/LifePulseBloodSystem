@@ -2,10 +2,12 @@ import React, { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { ShieldCheck, Download, History } from 'lucide-react';
+import { useTheme } from '../ThemeContext';
 
 
 const DonorPassport = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { theme } = useTheme();
   const passportRef = useRef(null);
 
   const handleDownload = async () => {
@@ -19,7 +21,7 @@ const DonorPassport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#5A1827] py-12 px-4 sm:px-6 lg:px-8 font-sans flex flex-col items-center justify-center">
+    <div className={`donor-passport donor-passport-${theme} min-h-screen bg-[#FAF9F6] text-[#5A1827] py-12 px-4 sm:px-6 lg:px-8 font-sans flex flex-col items-center justify-center`}>
       <div className="max-w-md w-full space-y-6 flex flex-col items-center">
         
         {/* 🌟 Luxury Cream & Maroon Passport Container */}
@@ -36,27 +38,27 @@ const DonorPassport = () => {
 
           {/* Passport Title Header */}
           <div className="text-center mb-6 relative z-10">
-            <span className="px-3 py-1 bg-rose-100 border border-rose-300 text-[#990000] font-black text-xs rounded-xl uppercase tracking-wider shadow-sm">
+            <span className="passport-label px-3 py-1 bg-rose-100 border border-rose-300 text-[#990000] font-black text-xs rounded-xl uppercase tracking-wider shadow-sm">
               Digital Identity Passport
             </span>
-            <h2 className="text-xl font-black text-[#5A1827] tracking-tight mt-3">
+            <h2 className="passport-heading text-xl font-black text-[#5A1827] tracking-tight mt-3">
               VitalTrack Donor Passport
             </h2>
             <p className="text-xs font-bold text-slate-600 mt-0.5">
-              Verified Donor: <span className="text-[#990000]">{user.name || 'Aqsa'}</span>
+              Verified Donor:               <span className="passport-accent-text text-[#990000]">{user.name || 'Aqsa'}</span>
             </p>
           </div>
 
           {/* Clean QR Code Container with Frame */}
           <div className="relative z-10 p-5 rounded-2xl bg-white shadow-md border-2 border-[#6B1D2F]/20">
-            <QRCodeSVG 
+            <QRCodeSVG
               value={JSON.stringify({ 
                 id: user.donorId || 'LP-DONOR-882', 
                 name: user.name || 'Aqsa',
                 bloodGroup: user.bloodGroup || 'A+'
               })} 
               size={180}
-              fgColor="#5A1827"
+              fgColor={theme === 'navy' ? '#173B68' : '#5A1827'}
             />
           </div>
 
@@ -69,11 +71,11 @@ const DonorPassport = () => {
         </div>
 
         {/* Download Action Button (Tight Golden / Maroon Theme) */}
-        <button 
+        <button
+          className="passport-download w-full py-4 bg-[#5A1827] hover:bg-[#4A121F] text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md shadow-rose-950/20 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-[#6B1D2F]"
           onClick={handleDownload} 
-          className="w-full py-4 bg-[#5A1827] hover:bg-[#4A121F] text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md shadow-rose-950/20 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-[#6B1D2F]"
         >
-          <Download className="w-4 h-4 text-[#E5C158]" /> Download QR Passport
+          <Download className="passport-download-icon w-4 h-4 text-[#E5C158]" /> Download QR Passport
         </button>
       </div>
     </div>

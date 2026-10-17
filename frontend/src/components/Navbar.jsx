@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import GlobalSearch from './GlobalSearch';
 
 const Navbar = () => {
   const [hasRegisteredAccount] = useState(() => Boolean(localStorage.getItem('user')));
@@ -23,9 +23,7 @@ const Navbar = () => {
       </div>
 
       <div className="navbar-actions">
-        <button type="button" className="mobile-public-search-button" aria-label="Search">
-          <Search aria-hidden="true" />
-        </button>
+        <GlobalSearch variant="public" />
 
         <button
           type="button"

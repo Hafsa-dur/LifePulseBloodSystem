@@ -1,5 +1,6 @@
-import { Menu, Search } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
+import GlobalSearch from './GlobalSearch';
 
 const Topbar = ({ onMenuClick = () => {} }) => {
   const { theme, toggleTheme } = useTheme();
@@ -17,15 +18,7 @@ const Topbar = ({ onMenuClick = () => {} }) => {
         <button className="mobile-menu-button" type="button" aria-label="Open navigation" onClick={onMenuClick}>
           <Menu className="w-5 h-5" />
         </button>
-        <label className="topbar-search relative">
-          <Search className="topbar-search-icon" aria-hidden="true" />
-          <input
-            type="search"
-            aria-label="Search inventory"
-            placeholder="Search inventory..."
-            className="topbar-search-input w-full border-2 text-xs rounded-xl pl-10 pr-4 py-2.5 text-white font-bold focus:outline-none shadow-inner transition-all"
-          />
-        </label>
+        <GlobalSearch />
       </div>
 
       <div className="flex items-center gap-3">
