@@ -160,9 +160,15 @@ export const createStaffInvitation = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Staff name and invited email are required.' });
     }
 
-    const configuredFrontendUrl = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
+    const configuredFrontendUrl = String(process.env.FRONTEND_URL || '')
+      .trim()
+      .replace(/\/$/, '')
+      .replace(
+        /^https:\/\/life-pulse-blood-system\.vercel\.app(?=\/|$)/,
+        'https://life-track-blood-system.vercel.app'
+      );
     const frontendUrl = configuredFrontendUrl || (process.env.NODE_ENV === 'production'
-      ? 'https://life-pulse-blood-system.vercel.app'
+      ? 'https://life-track-blood-system.vercel.app'
       : 'http://localhost:5173');
     if (process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/i.test(frontendUrl)) {
       return res.status(500).json({ success: false, message: 'Production FRONTEND_URL cannot be localhost. Invitation was not created.' });
