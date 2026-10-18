@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { parseResponse } from '../api';
+import { useState } from 'react';
+import { API_URL, authHeaders, parseResponse } from '../api';
 import { Send, Mail, Phone, MapPin } from 'lucide-react';
 import aboutImage from '../assets/About us .png';
 
@@ -8,22 +8,16 @@ const AboutUsPage = () => {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
 
-  // Handle Web3Forms Submission directly without backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
 
     try {
-      const formData = new FormData();
-      formData.append("access_key", "086142c1-1ea1-4e42-9ddd-e2aa7c064067");
-      formData.append("name", contactData.name);
-      formData.append("email", contactData.email);
-      formData.append("message", contactData.message);
-
-      const response = await fetch("https://api.web3forms.com/submit", {
+      const response = await fetch(`${API_URL}/contact`, {
         method: "POST",
-        body: formData
+        headers: authHeaders(true),
+        body: JSON.stringify(contactData)
       });
 
       const data = await parseResponse(response);
@@ -32,13 +26,13 @@ const AboutUsPage = () => {
         throw new Error(data.message || 'Failed to send message. Please try again.');
       }
 
-      setLoading(false);
-      setStatusMessage({ type: 'success', text: 'Message successfully sent to your email!' });
+      setStatusMessage({ type: 'success', text: 'Message sent to the VitalTrack support team.' });
       setContactData({ name: '', email: '', message: '' });
 
     } catch (err) {
+      setStatusMessage({ type: 'error', text: err.message || 'Something went wrong. Please try again.' });
+    } finally {
       setLoading(false);
-      setStatusMessage({ type: 'error', text: 'Something went wrong. Please try again.' });
     }
   };
 

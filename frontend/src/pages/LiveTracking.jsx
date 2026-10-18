@@ -1,219 +1,81 @@
-import { useState, useEffect } from 'react';
-import { Truck, Thermometer, MapPin, ArrowLeft, AlertCircle, Clock, Building2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, ArrowLeft, CheckCircle2, ClipboardList, Database, Droplet, GitBranch, PackageCheck, Send, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_URL, authHeaders, parseResponse } from '../api';
-import { isSocketEnabled, socket } from '../socket';
+import { useTheme } from '../ThemeContext';
 
-const LiveTracking = () => {
-  const [activeDispatch, setActiveDispatch] = useState(null);
+const stages = [
+  { key: 'request', label: 'Request submitted', icon: ClipboardList },
+  { key: 'matching', label: 'Donor / inventory match', icon: GitBranch },
+  { key: 'approval', label: 'Hospital approval', icon: CheckCircle2 },
+  { key: 'allocation', label: 'Units allocated', icon: PackageCheck },
+  { key: 'dispatch', label: 'Blood dispatched', icon: Send }
+];
+
+const statusRank = { Pending: 1, Approved: 3, Rejected: 0, Dispatched: 5, Delivered: 5 };
+
+const formatDate = (value) => value ? new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not recorded';
+
+const DonationToDispatchTracking = () => {
+  const { theme } = useTheme();
+  const [requests, setRequests] = useState([]);
+  const [selectedId, setSelectedId] = useState('');
   const [loading, setLoading] = useState(true);
-  const [temperature] = useState(3.9); // Safe Biomedical Cold-chain range (2°C - 6°C)
-  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes delivery countdown
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadActiveDispatch = () => fetch(`${API_URL}/patient-requests`, { headers: authHeaders() })
-      .then(res => parseResponse(res))
-      .then(data => {
-        const requests = Array.isArray(data) ? data : data.data || [];
-        
-        // Sirf wohi requests filter hongi jinka status 'Dispatched' ya 'In Transit' ho 
-        // (Pending ya Approved yahan bilkul show nahi hongi)
-        const activeRequests = requests.filter(r => 
-          r.status === 'Dispatched' || r.status === 'In Transit'
-        );
-        
-        if (activeRequests.length > 0) {
-          // MongoDB ke _id ke mutabiq sabse latest dispatched record ko sabse upar laane ke liye sorting
-          const sortedRequests = [...activeRequests].sort((a, b) => {
-            const timeA = a._id ? parseInt(a._id.substring(0, 8), 16) : new Date(a.createdAt || 0).getTime();
-            const timeB = b._id ? parseInt(b._id.substring(0, 8), 16) : new Date(b.createdAt || 0).getTime();
-            return timeB - timeA; // Descending order: Newest first!
-          });
-
-          // Sabse naya dispatch kiya gaya record
-          const current = sortedRequests[0];
-
-          setActiveDispatch({
-            _id: current._id,
-            patientName: current.patientName || 'Patient',
-            hospitalName: current.hospitalName || 'Hospital',
-            bloodGroup: current.bloodGroup || 'A+',
-            hospitalLocation: current.hospitalLocation || '',
-            status: current.status,
-            currentLocationNote: current.currentLocationNote || 'Dispatched securely from blood bank.'
-          });
-          setTimeRemaining(300);
-        } else {
-          // Agar koi bhi dispatch nahi hua, toh null set ho jayega
-          setActiveDispatch(null);
+    let active = true;
+    const loadRequests = async () => {
+      try {
+        const response = await fetch(`${API_URL}/patient-requests`, { headers: authHeaders() });
+        const data = await parseResponse(response);
+        if (!response.ok) throw new Error(data.message || 'Unable to load dispatch records.');
+        if (active) {
+          const rows = Array.isArray(data) ? data : [];
+          setRequests(rows);
+          setSelectedId((current) => current || rows[0]?._id || '');
+          setError('');
         }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching requests for tracking:', err);
-        setLoading(false);
-      });
-
-    const handleUpdate = () => loadActiveDispatch();
-    if (isSocketEnabled) {
-      socket.auth = { token: localStorage.getItem('token') || '' };
-      if (!socket.connected) socket.connect();
-      socket.on('update_patient_request', handleUpdate);
-    }
-    const refreshTimer = setInterval(loadActiveDispatch, 15000);
-    loadActiveDispatch();
-    return () => {
-      if (isSocketEnabled) socket.off('update_patient_request', handleUpdate);
-      clearInterval(refreshTimer);
+      } catch (loadError) {
+        if (active) setError(loadError.message);
+      } finally {
+        if (active) setLoading(false);
+      }
     };
+    loadRequests();
+    const timer = setInterval(loadRequests, 15000);
+    return () => { active = false; clearInterval(timer); };
   }, []);
 
-  useEffect(() => {
-    if (!activeDispatch || activeDispatch.status === 'Delivered') return;
+  const selected = useMemo(() => requests.find((item) => item._id === selectedId) || requests[0], [requests, selectedId]);
+  const currentRank = statusRank[selected?.status] || 0;
+  const sourceLabel = selected?.sourceType === 'donor' ? selected.donorName || 'Matched donor' : selected?.sourceType === 'inventory' ? 'Hospital inventory' : 'Awaiting match';
 
-    const countdown = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(countdown);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#F7F4EC] font-black text-[#4A1521]">Loading donation-to-dispatch records...</div>;
 
-    return () => clearInterval(countdown);
-  }, [activeDispatch]);
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F7F4EC] text-[#4A1521] flex items-center justify-center font-sans">
-        <p className="text-sm font-black animate-pulse">Syncing Active Dispatches...</p>
-      </div>
-    );
-  }
-
-  if (!activeDispatch) {
-    return (
-      <div className="min-h-screen bg-[#F7F4EC] text-[#4A1521] py-12 px-4 flex flex-col items-center justify-center font-sans">
-        <div className="bg-white p-8 rounded-3xl border-2 border-[#6B1D2F]/25 shadow-xl max-w-md w-full text-center space-y-4">
-          <div className="w-16 h-16 bg-rose-100 text-[#990000] rounded-full flex items-center justify-center mx-auto border-2 border-rose-300">
-            <AlertCircle className="w-8 h-8" />
+  return <div className={`min-h-screen px-4 py-8 font-sans sm:px-6 lg:px-8 ${theme === 'navy' ? 'bg-[#EEF4FA] text-[#173B68]' : 'bg-[#F7F4EC] text-[#4A1521]'}`}>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <header className="rounded-3xl border-2 border-[#6B1D2F]/20 bg-white p-6 shadow-md">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex items-start gap-3">
+            <Link to="/" className="rounded-xl border border-[#6B1D2F]/20 bg-white p-2 shadow-sm transition hover:bg-[#5A1827] hover:text-white"><ArrowLeft className="h-5 w-5" /></Link>
+            <div><span className="rounded-full border border-[#E5C158] bg-[#E5C158]/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#7A6305]">Workflow monitor</span><h1 className="mt-2 flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl"><Droplet className="h-7 w-7 text-[#990000]" />Donation-to-Dispatch Tracking</h1><p className="mt-1 text-sm font-medium text-slate-600">A record-based view of matching, approval, allocation, inventory updates, and dispatch.</p></div>
           </div>
-          <h2 className="text-xl font-black text-[#4A1521]">No Active Dispatch Found</h2>
-          <p className="text-xs text-slate-600 font-medium">
-            Abhi tak kisi bhi request ko Dispatch nahi kiya gaya. Jab aap 'Dispatch' button par click karengi, tabhi yahan live tracking shuru hogi.
-          </p>
-          <Link 
-            to="/" 
-            className="inline-block w-full py-3 bg-[#5A1827] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md hover:bg-[#3D101A] transition-all"
-          >
-            Go Back to Dashboard
-          </Link>
+          <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-emerald-800">Database records synced</div>
         </div>
-      </div>
-    );
-  }
+      </header>
 
-  return (
-    <div className="min-h-screen bg-[#F7F4EC] text-[#4A1521] py-8 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-4xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between border-b-2 border-[#6B1D2F]/20 pb-4 bg-white p-5 rounded-2xl shadow-sm border-2">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="p-2 rounded-xl bg-white border border-[#6B1D2F]/20 hover:bg-[#6B1D2F] hover:text-white transition-all shadow-sm">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-black text-[#4A1521] tracking-tight flex items-center gap-2">
-                <Truck className="w-7 h-7 text-[#990000] animate-bounce" />
-                Live Hospital Dispatch & Transit
-              </h1>
-              <p className="text-xs text-slate-600 font-medium">Connected directly with Patient Request database.</p>
-            </div>
-          </div>
-
-          <div className="px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider border-2 shadow-md bg-amber-100 text-[#5A1827] border-amber-400 animate-pulse">
-            In Transit
-          </div>
-        </div>
-
-        {/* Notification Banner */}
-        <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl shadow-md flex items-center justify-between text-amber-900">
-          <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
-              Hospital Notification Active
-            </span>
-            <h4 className="text-sm font-black text-[#4A1521]">Blood Bag En Route to {activeDispatch.hospitalName}</h4>
-            <p className="text-xs text-slate-600 font-medium">
-              Patient: <strong className="text-slate-800">{activeDispatch.patientName}</strong> | Location: <strong className="text-slate-800">{activeDispatch.hospitalLocation || 'Not provided'}</strong>
-            </p>
-          </div>
-          <div className="text-right bg-white p-4 rounded-xl border border-amber-200 shadow-sm shrink-0">
-            <span className="text-[10px] font-black text-slate-500 uppercase block">Estimated Arrival</span>
-            <span className="text-xl font-black text-[#990000] flex items-center gap-1">
-              <Clock className="w-4 h-4 text-amber-700" /> {formatTime(timeRemaining)}
-            </span>
-          </div>
-        </div>
-
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Patient & Hospital Details */}
-          <div className="bg-white p-6 rounded-2xl border-2 border-[#6B1D2F]/20 shadow-md space-y-3">
-            <span className="text-[11px] font-black uppercase tracking-wider text-[#5A1827] flex items-center gap-1.5">
-              <Building2 className="w-4 h-4 text-[#990000]" /> Destination Details
-            </span>
-            <h3 className="text-lg font-black text-[#4A1521]">{activeDispatch.hospitalName}</h3>
-            <p className="text-xs text-slate-600 font-medium">
-              Patient Name: <strong className="text-slate-800">{activeDispatch.patientName}</strong>
-            </p>
-            <p className="text-xs text-slate-600 font-medium">
-              Hospital Location: <strong className="text-slate-800">{activeDispatch.hospitalLocation || 'Not provided'}</strong>
-            </p>
-            <div className="pt-2">
-              <span className="bg-rose-100 text-[#990000] px-2.5 py-1 rounded-lg text-xs font-black border border-rose-200">
-                Blood Group: {activeDispatch.bloodGroup}
-              </span>
-            </div>
-          </div>
-
-          {/* Cold Chain IoT Card */}
-          <div className="bg-white p-6 rounded-2xl border-2 border-[#6B1D2F]/20 shadow-md space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#5A1827] flex items-center gap-1.5">
-                <Thermometer className="w-4 h-4 text-blue-600" /> Medical Cold-Chain Storage
-              </span>
-              <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                IoT Active
-              </span>
-            </div>
-            
-            <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-black text-[#4A1521]">{temperature}°C</span>
-              <span className="text-xs text-slate-500 font-medium">Safe Range (2°C - 6°C)</span>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 space-y-1">
-              <p className="text-xs font-black text-[#4A1521] flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#990000]" /> Status Note:
-              </p>
-              <p className="text-xs text-slate-600 font-medium">{activeDispatch.currentLocationNote}</p>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
+      {error && <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 text-sm font-bold text-rose-800">{error}</div>}
+      {!requests.length ? <div className="rounded-3xl border-2 border-[#6B1D2F]/20 bg-white p-12 text-center shadow-md"><AlertCircle className="mx-auto h-10 w-10 text-[#990000]" /><h2 className="mt-4 text-xl font-black">No patient requests recorded</h2><p className="mt-2 text-sm text-slate-600">Submit a hospital request to see its donation-to-dispatch workflow here.</p></div> : <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+        <aside className="rounded-3xl border-2 border-[#6B1D2F]/20 bg-white p-4 shadow-md"><div className="mb-3 flex items-center justify-between"><h2 className="font-black">Request records</h2><span className="rounded-full bg-[#E5C158]/25 px-2 py-1 text-[10px] font-black">{requests.length}</span></div><div className="space-y-2">{requests.map((request) => <button type="button" key={request._id} onClick={() => setSelectedId(request._id)} className={`w-full rounded-2xl border-2 p-3 text-left transition ${selected?._id === request._id ? 'border-[#5A1827] bg-[#5A1827] text-white' : 'border-[#6B1D2F]/10 bg-[#FAF9F6] hover:border-[#5A1827]/40'}`}><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-black">{request.patientName || 'Patient request'}</span><span className="rounded-full bg-white/20 px-2 py-1 text-[9px] font-black uppercase">{request.status || 'Pending'}</span></div><p className={`mt-1 text-xs ${selected?._id === request._id ? 'text-rose-100' : 'text-slate-500'}`}>{request.bloodGroup} · {request.unitsRequired} unit(s)</p></button>)}</div></aside>
+        <main className="space-y-6">
+          <section className="rounded-3xl border-2 border-[#6B1D2F]/20 bg-white p-6 shadow-md"><div className="flex flex-col justify-between gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-start"><div><span className="text-[10px] font-black uppercase tracking-widest text-[#990000]">Selected request</span><h2 className="mt-1 text-2xl font-black">{selected.patientName || 'Patient request'}</h2><p className="text-sm font-medium text-slate-600">{selected.hospitalName} · {selected.hospitalLocation}</p></div><span className="w-fit rounded-xl border-2 border-[#E5C158] bg-[#E5C158]/20 px-3 py-2 text-xs font-black uppercase tracking-wider text-[#7A6305]">{selected.status || 'Pending'}</span></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="rounded-2xl bg-[#FAF9F6] p-4"><Droplet className="h-4 w-4 text-[#990000]" /><p className="mt-2 text-[10px] font-black uppercase text-slate-500">Blood group</p><p className="text-lg font-black">{selected.bloodGroup}</p></div><div className="rounded-2xl bg-[#FAF9F6] p-4"><Database className="h-4 w-4 text-[#990000]" /><p className="mt-2 text-[10px] font-black uppercase text-slate-500">Units</p><p className="text-lg font-black">{selected.unitsRequired}</p></div><div className="rounded-2xl bg-[#FAF9F6] p-4"><UserRound className="h-4 w-4 text-[#990000]" /><p className="mt-2 text-[10px] font-black uppercase text-slate-500">Source</p><p className="truncate text-sm font-black">{sourceLabel}</p></div><div className="rounded-2xl bg-[#FAF9F6] p-4"><ClipboardList className="h-4 w-4 text-[#990000]" /><p className="mt-2 text-[10px] font-black uppercase text-slate-500">Submitted</p><p className="text-xs font-black">{formatDate(selected.createdAt)}</p></div></div></section>
+          <section className="rounded-3xl border-2 border-[#6B1D2F]/20 bg-white p-6 shadow-md"><h2 className="text-xl font-black">Donation-to-dispatch workflow</h2><p className="mt-1 text-sm text-slate-600">Each stage reflects the persisted request and allocation state. Dispatch is the point at which inventory is deducted.</p><div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-5">{stages.map((stage, index) => { const complete = currentRank >= index + 1; const Icon = stage.icon; const detail = stage.key === 'request' ? formatDate(selected.createdAt) : stage.key === 'matching' ? sourceLabel : stage.key === 'approval' ? (currentRank >= 3 ? 'Approved' : 'Awaiting review') : stage.key === 'allocation' ? (selected.isAllocated ? 'Allocation recorded' : 'Not allocated') : currentRank >= 5 ? formatDate(selected.updatedAt) : 'Awaiting dispatch'; return <div key={stage.key} className="relative"><div className={`flex h-14 w-14 items-center justify-center rounded-2xl border-2 transition ${complete ? 'border-[#5A1827] bg-[#5A1827] text-[#E5C158] shadow-lg' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><Icon className="h-6 w-6" /></div>{index < stages.length - 1 && <div className={`absolute left-14 top-7 hidden h-0.5 w-[calc(100%-2rem)] md:block ${currentRank > index + 1 ? 'bg-[#5A1827]' : 'bg-slate-200'}`} />}<h3 className="mt-3 text-sm font-black">{stage.label}</h3><p className="mt-1 text-xs font-medium text-slate-500">{detail}</p></div>; })}</div></section>
+          <section className="rounded-3xl border-2 border-[#6B1D2F]/20 bg-white p-6 shadow-md"><h2 className="text-xl font-black">Dispatch record details</h2><div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"><div className="rounded-2xl border border-slate-100 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Allocation</p><p className="mt-1 font-black">{selected.isAllocated ? 'Allocated' : 'Not allocated'}</p><p className="mt-1 text-xs text-slate-500">Match status: {selected.matchStatus || 'Not recorded'}</p></div><div className="rounded-2xl border border-slate-100 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Inventory effect</p><p className="mt-1 font-black">{currentRank >= 5 ? 'Units deducted at dispatch' : 'No deduction yet'}</p><p className="mt-1 text-xs text-slate-500">Dispatch status: {currentRank >= 5 ? 'Dispatched' : 'Pending'}</p></div></div>{selected.currentLocationNote && <p className="mt-4 rounded-2xl bg-[#FAF9F6] p-4 text-sm font-medium text-slate-600"><strong className="text-[#5A1827]">Recorded note:</strong> {selected.currentLocationNote}</p>}</section>
+        </main>
+      </div>}
     </div>
-  );
+  </div>;
 };
 
-export default LiveTracking;
+export default DonationToDispatchTracking;

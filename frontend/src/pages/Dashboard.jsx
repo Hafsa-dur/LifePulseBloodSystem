@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import '../styles/Dashboard.css';
 import { 
   Droplet, Users, AlertTriangle, Clock, Plus, ArrowRight, 
-  Activity, CheckCircle2, Clock3, TrendingDown, Send, Truck
+  Activity, CheckCircle2, Clock3, TrendingDown, Send, GitBranch
 } from 'lucide-react';
 import DispatchModal from './DispatchModal';
 import StockAlertModal from '../components/StockAlertModal';
@@ -157,9 +157,9 @@ const Dashboard = () => {
                 to="/tracking"
                 className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-[#FCD34D] via-[#F59E0B] to-[#D97706] hover:from-[#F59E0B] hover:to-[#B45309] text-[#5A1827] font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-lg active:scale-95 cursor-pointer border-2 border-[#5A1827] whitespace-nowrap overflow-hidden relative"
               >
-                <Truck className="w-4 h-4 text-[#5A1827] animate-bounce shrink-0" />
+                <GitBranch className="w-4 h-4 text-[#5A1827] shrink-0" />
                 <span className="inline-block animate-pulse tracking-wide font-black">
-                  LIVE TRANSPORT: IN TRANSIT...
+                  DONATION-TO-DISPATCH TRACKING
                 </span>
               </Link>
             )}

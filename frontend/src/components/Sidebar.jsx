@@ -13,7 +13,7 @@ import {
   GitPullRequest,
   Hospital,
   ClipboardList,
-  Truck,
+  GitBranch,
   Award,      
   HeartHandshake 
 } from 'lucide-react';
@@ -54,7 +54,7 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
         { path: '/request-management', label: 'Request Management', icon: GitPullRequest },
         { path: '/patient-request', label: 'Submit Patient Request', icon: ClipboardList },
         { path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio },
-        { path: '/tracking', label: 'Live Transport Tracking', icon: Truck },
+        { path: '/tracking', label: 'Donation-to-Dispatch Tracking', icon: GitBranch },
         { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList },
         { path: '/account-center', label: 'Account Center', icon: User },
       ];
@@ -65,7 +65,7 @@ const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
           ...(can('inventory') ? [{ path: '/add-blood', label: 'Blood Inventory', icon: PlusCircle }, { path: '/blood-list', label: 'Stock Directory', icon: Droplets }] : []),
           ...(can('requests') ? [{ path: '/request-management', label: 'Request Management', icon: GitPullRequest }, { path: '/patient-request', label: 'Submit Patient Request', icon: ClipboardList }] : []),
           ...(can('dispatch') ? [{ path: '/geopulse-radar', label: 'Location Intelligence', icon: Radio }, { path: '/donor-recipient-dispatch-log', label: 'Dispatch Log', icon: ClipboardList }] : []),
-          ...(can('tracking') ? [{ path: '/tracking', label: 'Live Transport Tracking', icon: Truck }] : []),
+          ...(can('tracking') ? [{ path: '/tracking', label: 'Donation-to-Dispatch Tracking', icon: GitBranch }] : []),
           { path: '/reports', label: 'Reports & Analytics', icon: Activity },
           { path: '/staff-management', label: 'Staff Management', icon: User },
           { path: '/settings', label: 'Settings', icon: Hospital },
