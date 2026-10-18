@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { API_URL, authHeaders, parseResponse } from '../api';
 import { Award, Gift, Sparkles, Star, Zap, ShieldCheck, Mail } from 'lucide-react';
+import BrandedSuccessDialog from '../components/BrandedSuccessDialog';
 
 const GamificationRewards = () => {
   const [points, setPoints] = useState(420);
   const [donorEmail, setDonorEmail] = useState(() => JSON.parse(localStorage.getItem('user') || '{}').email || '');
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const rewardOffers = [
     { id: 1, title: '25% Off Complete Blood Count (CBC)', pointsCost: 150, partner: 'Chughtai Lab' },
@@ -46,7 +48,7 @@ const GamificationRewards = () => {
       }
 
       setPoints(points - offer.pointsCost);
-      alert(`LifeTrack: 🎉 Success! ${offer.title} has been redeemed and the voucher has been successfully sent to your email (${selectedEmail})!`);
+      setSuccessMessage(`🎉 Success! ${offer.title} has been redeemed and the voucher has been successfully sent to your email (${selectedEmail})!`);
       setDonorEmail('');
 
     } catch (error) {
@@ -58,6 +60,7 @@ const GamificationRewards = () => {
   };
 
   return (
+    <>
     <div className="w-full px-6 py-6 space-y-6 text-[#5A1827] min-h-screen bg-[#FAF9F6] font-sans">
       
       {/* Header Section */}
@@ -159,6 +162,8 @@ const GamificationRewards = () => {
       </div>
 
     </div>
+    <BrandedSuccessDialog message={successMessage} onClose={() => setSuccessMessage('')} />
+    </>
   );
 };
 

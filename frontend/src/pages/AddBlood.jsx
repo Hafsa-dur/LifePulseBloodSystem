@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { UserPlus, Send, Calendar, Clock, Mail } from 'lucide-react';
 import { API_URL } from '../api';
+import BrandedSuccessDialog from '../components/BrandedSuccessDialog';
 
 const AddBlood = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const AddBlood = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Handle Last Donation Date change and automatically calculate Next Eligible Date (e.g., +56 days gap)
   const handleLastDonationChange = (e) => {
@@ -61,7 +63,7 @@ const AddBlood = () => {
       });
 
       if (response.status === 200 || response.status === 201) {
-        alert('LifeTrack: Blood donation record added successfully!');
+        setSuccessMessage('Blood donation record added successfully!');
         setFormData({
           donorName: '',
           email: '',
@@ -88,6 +90,7 @@ const AddBlood = () => {
   };
 
   return (
+    <>
     <div className="max-w-xl mx-auto bg-white border-2 border-[#5A1827]/15 rounded-[2rem] p-6 sm:p-8 shadow-2xl text-[#5A1827] font-sans">
       <div className="text-center mb-6">
         <span className="inline-block px-4 py-1.5 rounded-full bg-[#E5C158]/20 text-[#5A1827] border border-[#E5C158]/40 text-xs font-black tracking-widest uppercase">
@@ -232,6 +235,8 @@ const AddBlood = () => {
         </button>
       </form>
     </div>
+    <BrandedSuccessDialog message={successMessage} onClose={() => setSuccessMessage('')} />
+    </>
   );
 };
 
