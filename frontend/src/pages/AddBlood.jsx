@@ -61,7 +61,7 @@ const AddBlood = () => {
       });
 
       if (response.status === 200 || response.status === 201) {
-        alert('Blood donation record added successfully!');
+        alert('LifeTrack: Blood donation record added successfully!');
         setFormData({
           donorName: '',
           email: '',

@@ -219,21 +219,14 @@ const GeoPulseRadar = () => {
       </div>
       {refreshError && <div role="alert" className="bg-rose-100 border-2 border-rose-300 text-rose-800 rounded-xl px-4 py-3 text-sm font-bold">{refreshError}</div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-5 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Coverage</p>
-          <p className="mt-2 text-lg font-black text-[#5A1827]">Worldwide addresses</p>
-          <p className="mt-1 text-xs text-slate-600">Locations are resolved from saved donor and hospital addresses using live geocoding.</p>
+          <p className="mt-2 text-lg font-black text-[#5A1827]">Worldwide Addresses</p>
         </div>
         <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-5 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Matching method</p>
-          <p className="mt-2 text-lg font-black text-[#5A1827]">Haversine distance</p>
-          <p className="mt-1 text-xs text-slate-600">Straight-line geographic distance used for nearest compatible donor ranking.</p>
-        </div>
-        <div className="bg-white border-2 border-[#6B1D2F]/20 rounded-2xl p-5 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Distance context</p>
-          <p className="mt-2 text-lg font-black text-[#5A1827]">Road distance separate</p>
-          <p className="mt-1 text-xs text-slate-600">Displayed distances are not driving routes or travel-time estimates.</p>
+          <p className="mt-2 text-lg font-black text-[#5A1827]">Haversine Distance</p>
         </div>
       </div>
 
@@ -246,7 +239,7 @@ const GeoPulseRadar = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+      <div className="space-y-6">
       <div className="bg-white border-2 border-[#6B1D2F] rounded-2xl overflow-hidden shadow-md w-full">
         <div className="p-5 border-b-2 border-[#6B1D2F]/15">
           <h2 className="text-xl font-black text-[#5A1827]">Nearest Donor Matches</h2>

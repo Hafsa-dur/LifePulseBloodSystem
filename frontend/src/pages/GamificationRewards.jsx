@@ -46,7 +46,7 @@ const GamificationRewards = () => {
       }
 
       setPoints(points - offer.pointsCost);
-      alert(`🎉 Success! ${offer.title} has been redeemed and the voucher has been successfully sent to your email (${selectedEmail})!`);
+      alert(`LifeTrack: 🎉 Success! ${offer.title} has been redeemed and the voucher has been successfully sent to your email (${selectedEmail})!`);
       setDonorEmail('');
 
     } catch (error) {
