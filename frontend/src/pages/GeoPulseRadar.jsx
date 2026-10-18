@@ -131,6 +131,20 @@ const GeoPulseRadar = () => {
     setIsEmailModalOpen(true);
   };
 
+  const openRequestEmailModal = (request) => {
+    const matchedDonor = donors.find((donor) => String(donor._id || '') === String(request.donorId || ''));
+    setSelectedDonor({
+      ...matchedDonor,
+      _id: request.donorId,
+      donorName: request.donorName || matchedDonor?.donorName || 'Donor',
+      email: request.donorEmail || matchedDonor?.email || ''
+    });
+    setSelectedRequest(request);
+    setCustomMessage(`Urgent requirement for ${request.bloodGroup} blood for patient ${request.patientName} at ${request.hospitalName}. Please respond immediately.`);
+    setEmailStatus({ type: '', text: '' });
+    setIsEmailModalOpen(true);
+  };
+
   // Send the selected donor alert through the backend mail service.
   const handleSendEmailSubmit = async (e) => {
     e.preventDefault();
@@ -232,6 +246,7 @@ const GeoPulseRadar = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
       <div className="bg-white border-2 border-[#6B1D2F] rounded-2xl overflow-hidden shadow-md w-full">
         <div className="p-5 border-b-2 border-[#6B1D2F]/15">
           <h2 className="text-xl font-black text-[#5A1827]">Nearest Donor Matches</h2>
@@ -245,7 +260,21 @@ const GeoPulseRadar = () => {
                 <td className="p-4 font-black text-[#5A1827]">{request.patientName}</td>
                 <td className="p-4 font-black text-rose-700">{request.bloodGroup}</td>
                 <td className="p-4"><div className="font-bold">{request.hospitalName}</div><div className="text-xs text-slate-500">{request.hospitalLocation}</div></td>
-                <td className="p-4"><div className="font-black">{request.donorName || 'No suitable donor found'}</div><div className="text-xs text-slate-500">{request.donorLocation || 'Inventory fallback'}</div></td>
+                <td className="p-4">
+                  <div className="font-black">{request.donorName || 'No suitable donor found'}</div>
+                  <div className="text-xs text-slate-500">{request.donorLocation || 'Inventory fallback'}</div>
+                  {request.locationMatchStatus === 'Matched' && request.donorId && <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500">/ Sending Email</span>
+                    <button
+                      type="button"
+                      onClick={() => openRequestEmailModal(request)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5C158]/50 bg-[#5A1827] px-3 py-2 text-xs font-black text-white shadow-md transition hover:bg-[#3D101A] active:scale-95"
+                    >
+                      <Mail className="h-4 w-4 text-[#E5C158]" />
+                      Send Email
+                    </button>
+                  </div>}
+                </td>
                 <td className="p-4 font-bold">{request.donorDistance !== null && request.donorDistance !== undefined ? `${request.donorDistance} km` : 'N/A'}</td>
                 <td className="p-4"><span title={request.matchingDiagnostics?.map((item) => item.rejectionReason || 'eligible').join(', ')} className={`px-2 py-1 rounded-lg text-xs font-black ${request.locationMatchStatus === 'Matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{request.locationMatchStatus === 'Matched' ? 'Nearest Donor Selected' : request.matchingDiagnostics?.length ? `No suitable donor found (${request.matchingDiagnostics.map((item) => item.rejectionReason).filter(Boolean).join(', ')})` : 'No suitable donor found'}</span></td>
               </tr>) : <tr><td colSpan="6" className="p-8 text-center text-slate-500 italic">No patient request matches available yet.</td></tr>}
@@ -256,6 +285,10 @@ const GeoPulseRadar = () => {
 
       {/* Donor Table Section with Real Physical Addresses & Nearest Sorting */}
       <div className="bg-white border-2 border-[#6B1D2F] rounded-2xl overflow-hidden shadow-md w-full">
+        <div className="p-5 border-b-2 border-[#6B1D2F]/15">
+          <h2 className="text-xl font-black text-[#5A1827]">Saved Donor Location Used for Matching</h2>
+          <p className="text-xs text-slate-600 font-medium mt-1">Active donors with saved locations, ordered by nearest available match.</p>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -330,6 +363,7 @@ const GeoPulseRadar = () => {
           </table>
         </div>
       </div>
+      </div>
 
       {/* Backend Nodemailer Email Modal */}
       {isEmailModalOpen && (
@@ -360,6 +394,8 @@ const GeoPulseRadar = () => {
             {/* Modal Form */}
             <form onSubmit={handleSendEmailSubmit} className="space-y-3 text-xs">
               {selectedRequest ? <div className="space-y-2 rounded-xl border-2 border-[#5A1827]/20 bg-white p-3 text-xs font-bold">
+                <p><span className="text-slate-500">Donor:</span> {selectedDonor?.donorName}</p>
+                <p><span className="text-slate-500">Donor email:</span> {selectedDonor?.email || 'Email unavailable'}</p>
                 <p><span className="text-slate-500">Hospital:</span> {selectedRequest.hospitalName}</p>
                 <p><span className="text-slate-500">Patient:</span> {selectedRequest.patientName}</p>
                 <p><span className="text-slate-500">Blood group:</span> {selectedRequest.bloodGroup}</p>
