@@ -15,8 +15,27 @@ const availableStockFilter = {
 };
 
 const finiteCoordinate = (value, minimum, maximum) => {
-  const numericValue = Number(value);
+  if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
+  if (typeof value !== 'number' && (typeof value !== 'string'
+    || !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()))) return null;
+  const numericValue = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(numericValue) && numericValue >= minimum && numericValue <= maximum ? numericValue : null;
+};
+
+export const normalizeCoordinatePair = (latitude, longitude) => {
+  const latitudeProvided = latitude !== null && latitude !== undefined && String(latitude).trim() !== '';
+  const longitudeProvided = longitude !== null && longitude !== undefined && String(longitude).trim() !== '';
+  if (!latitudeProvided && !longitudeProvided) return null;
+  if (!latitudeProvided || !longitudeProvided) {
+    throw new Error('Both latitude and longitude are required when coordinates are provided.');
+  }
+
+  const normalizedLatitude = finiteCoordinate(latitude, -90, 90);
+  const normalizedLongitude = finiteCoordinate(longitude, -180, 180);
+  if (normalizedLatitude === null || normalizedLongitude === null) {
+    throw new Error('Latitude must be between -90 and 90 and longitude between -180 and 180.');
+  }
+  return { latitude: normalizedLatitude, longitude: normalizedLongitude };
 };
 
 export const getStoredCoordinates = (record) => {
@@ -37,37 +56,42 @@ export const getStoredCoordinates = (record) => {
 export const geocodeLocation = async (location) => {
   const normalizedLocation = String(location || '').trim();
   if (!normalizedLocation) return null;
-  if (locationCache.has(normalizedLocation)) return locationCache.get(normalizedLocation);
+  const cacheKey = normalizedLocation.toLocaleLowerCase();
+  if (locationCache.has(cacheKey)) return locationCache.get(cacheKey);
 
   const placeSearchLocations = [normalizedLocation];
-  const requestedNumbers = [...normalizedLocation.matchAll(/\d+/g)].map((match) => match[0]);
   const request = (async () => {
     for (const searchLocation of placeSearchLocations) {
       try {
         const photonUrl = new URL('https://photon.komoot.io/api/');
         photonUrl.searchParams.set('q', searchLocation);
         photonUrl.searchParams.set('limit', '10');
-        const response = await fetch(photonUrl, {         headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' } });
-        if (!response.ok) continue;
-        const result = await response.json();
-        const requestedPlace = searchLocation.split(',')[0].trim().toLowerCase();
-        const placeTypes = new Set(['city', 'town', 'village', 'hamlet', 'suburb', 'district', 'locality', 'municipality', 'country', 'state', 'administrative']);
-        const feature = result.features?.find((item) => {
-          const properties = item.properties || {};
-          const coordinates = item.geometry?.coordinates;
-          const candidateNames = [properties.name, properties.city, properties.state, properties.country]
-            .map((value) => String(value || '').trim().toLowerCase());
-          return Array.isArray(coordinates) && coordinates.length === 2
-            && finiteCoordinate(coordinates[1], -90, 90) !== null
-            && finiteCoordinate(coordinates[0], -180, 180) !== null
-            && placeTypes.has(String(properties.type || '').toLowerCase())
-            && candidateNames.includes(requestedPlace);
-        });
-        if (feature?.geometry?.coordinates?.length === 2) {
-          return { latitude: Number(feature.geometry.coordinates[1]), longitude: Number(feature.geometry.coordinates[0]), precision: 'place' };
+        const response = await fetch(photonUrl, { headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' } });
+        if (!response.ok) {
+          console.warn(`Photon geocoding returned HTTP ${response.status}.`);
+          continue;
         }
-      } catch {
-        // Continue with the next real provider.
+        const result = await response.json();
+        const features = Array.isArray(result.features) ? result.features : [];
+        const validFeatures = features.filter((item) => {
+          const coordinates = item.geometry?.coordinates;
+          return Array.isArray(coordinates) && coordinates.length >= 2
+            && finiteCoordinate(coordinates[1], -90, 90) !== null
+            && finiteCoordinate(coordinates[0], -180, 180) !== null;
+        });
+        const requestedPlace = searchLocation.split(',')[0].trim().toLocaleLowerCase();
+        const feature = validFeatures.find((item) =>
+          String(item.properties?.name || '').trim().toLocaleLowerCase() === requestedPlace
+        ) || validFeatures[0];
+        if (feature) {
+          return {
+            latitude: Number(feature.geometry.coordinates[1]),
+            longitude: Number(feature.geometry.coordinates[0]),
+            precision: 'place'
+          };
+        }
+      } catch (error) {
+        console.warn(`Photon geocoding failed: ${error.message}`);
       }
     }
 
@@ -77,48 +101,54 @@ export const geocodeLocation = async (location) => {
         nominatimUrl.searchParams.set('format', 'jsonv2');
         nominatimUrl.searchParams.set('limit', '5');
         nominatimUrl.searchParams.set('q', searchLocation);
-        const response = await fetch(nominatimUrl, {         headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' } });
-        if (!response.ok) continue;
+        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' } });
+        if (!response.ok) {
+          console.warn(`Nominatim geocoding returned HTTP ${response.status}.`);
+          continue;
+        }
         const results = await response.json();
-        const placeResult = results.find((result) => {
-          const resultText = `${result.name || ''} ${result.display_name || ''}`;
-          return finiteCoordinate(result.lat, -90, 90) !== null
-            && finiteCoordinate(result.lon, -180, 180) !== null
-            && requestedNumbers.every((number) => new RegExp(`(?:^|\\D)${number}(?:\\D|$)`).test(resultText));
-        });
+        const placeResult = results.find((result) =>
+          finiteCoordinate(result.lat, -90, 90) !== null
+          && finiteCoordinate(result.lon, -180, 180) !== null
+        );
         if (placeResult) return { latitude: Number(placeResult.lat), longitude: Number(placeResult.lon), precision: 'place' };
-      } catch {
-        // Try the next real location variant.
+      } catch (error) {
+        console.warn(`Nominatim geocoding failed: ${error.message}`);
       }
     }
     return null;
   })();
 
-  locationCache.set(normalizedLocation, request);
-  return request;
+  locationCache.set(cacheKey, request);
+  const coordinates = await request;
+  if (!coordinates) locationCache.delete(cacheKey);
+  return coordinates;
 };
 
 export const distanceInKilometers = (first, second) => {
-  if (!first || !second) return Number.POSITIVE_INFINITY;
+  const firstCoordinates = normalizeCoordinatePair(first?.latitude, first?.longitude);
+  const secondCoordinates = normalizeCoordinatePair(second?.latitude, second?.longitude);
+  if (!firstCoordinates || !secondCoordinates) return Number.POSITIVE_INFINITY;
   const toRadians = (value) => (value * Math.PI) / 180;
-  const latitudeDelta = toRadians(second.latitude - first.latitude);
-  const longitudeDelta = toRadians(second.longitude - first.longitude);
+  const latitudeDelta = toRadians(secondCoordinates.latitude - firstCoordinates.latitude);
+  const longitudeDelta = toRadians(secondCoordinates.longitude - firstCoordinates.longitude);
   const a = Math.sin(latitudeDelta / 2) ** 2
-    + Math.cos(toRadians(first.latitude))
-    * Math.cos(toRadians(second.latitude))
+    + Math.cos(toRadians(firstCoordinates.latitude))
+    * Math.cos(toRadians(secondCoordinates.latitude))
     * Math.sin(longitudeDelta / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const boundedA = Math.min(1, Math.max(0, a));
+  return 6371 * 2 * Math.atan2(Math.sqrt(boundedA), Math.sqrt(1 - boundedA));
 };
 
-export const findMatchingDonors = async ({ bloodGroup, units, location, hospitalId, hospitalName, session, excludeDonorIds = [], diagnostics }) => {
+export const findMatchingDonors = async ({ bloodGroup, units, location, latitude, longitude, hospitalId, hospitalName, session, excludeDonorIds = [], diagnostics }) => {
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
   if (!normalizedBloodGroup || !savedLocation || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
-    return null;
+    return [];
   }
 
-  const requestCoordinates = await geocodeLocation(savedLocation);
+  const requestCoordinates = normalizeCoordinatePair(latitude, longitude) || await geocodeLocation(savedLocation);
   if (!requestCoordinates) {
     diagnostics?.push({ reason: 'hospital-location-unresolved', hospitalLocation: savedLocation });
     return [];
@@ -149,8 +179,8 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, hospital
     const availableUnits = donor.availableUnits === undefined ? Number(donor.units || 0) : Number(donor.availableUnits || 0);
     const donorLocation = String(donor.location || donor.address || '').trim();
     const storedCoordinates = getStoredCoordinates(donor);
-    const coordinates = donorLocation ? await geocodeLocation(donorLocation) : null;
-    if (coordinates && (!storedCoordinates || storedCoordinates.latitude !== coordinates.latitude || storedCoordinates.longitude !== coordinates.longitude)) {
+    const coordinates = storedCoordinates || (donorLocation ? await geocodeLocation(donorLocation) : null);
+    if (!storedCoordinates && coordinates) {
       donor.latitude = coordinates.latitude;
       donor.longitude = coordinates.longitude;
       await donor.save(session ? { session } : undefined);
@@ -167,13 +197,15 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, hospital
       hospitalCoordinates: { latitude: targetCoordinates.latitude, longitude: targetCoordinates.longitude },
       nextEligibleDate: donor.nextEligibleDate || null,
       status: donor.status,
+      bloodGroupCompatible: String(donor.bloodGroup || '').trim().toUpperCase() === normalizedBloodGroup,
       available: availableUnits >= requestedUnits && donor.status !== 'Dispatched',
       eligible: !donor.nextEligibleDate || new Date(donor.nextEligibleDate) <= new Date()
     };
     const distance = coordinates ? distanceInKilometers(targetCoordinates, coordinates) : Number.POSITIVE_INFINITY;
     donorDiagnostic.distanceKm = Number.isFinite(distance) ? Number(distance.toFixed(2)) : null;
 
-    if (!coordinates) donorDiagnostic.rejectionReason = 'donor-location-unresolved';
+    if (!donorDiagnostic.bloodGroupCompatible) donorDiagnostic.rejectionReason = 'blood-group-incompatible';
+    else if (!coordinates) donorDiagnostic.rejectionReason = 'donor-location-unresolved';
     else if (!donorDiagnostic.available) donorDiagnostic.rejectionReason = 'insufficient-available-units-or-dispatched';
     else if (!donorDiagnostic.eligible) donorDiagnostic.rejectionReason = 'donation-not-yet-eligible';
     else diagnostics?.push({ ...donorDiagnostic, rejectionReason: null });
@@ -246,8 +278,14 @@ export const getDashboardDonations = async (req, res) => {
 // 3. Add New Donation with Strict Duplicate Email Check
 export const addDonation = async (req, res) => {
   try {
-    const { donorName, email, bloodGroup, units, phone, address, location, notes, hospitalId, hospitalName, donationDate, lastDonationDate } = req.body;
+    const { donorName, email, bloodGroup, units, phone, address, location, latitude, longitude, notes, hospitalId, hospitalName, donationDate, lastDonationDate } = req.body;
     const formattedEmail = email ? email.toLowerCase().trim() : '';
+    let suppliedCoordinates;
+    try {
+      suppliedCoordinates = normalizeCoordinatePair(latitude, longitude);
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
 
     if (!formattedEmail) {
       return res.status(400).json({ message: 'Email address is required for unique tracking!' });
@@ -266,7 +304,8 @@ export const addDonation = async (req, res) => {
         });
     }
 
-    const resolvedCoordinates = await geocodeLocation(location || address);
+    const donorLocation = String(location || '').trim() || String(address || '').trim();
+    const resolvedCoordinates = suppliedCoordinates || await geocodeLocation(donorLocation);
 
     const newDonation = new Donation({
       donorName,
@@ -277,8 +316,8 @@ export const addDonation = async (req, res) => {
       availableUnits: Number(units) || 1,
       dispatchedUnits: 0,
       phone: phone || '03000000000',
-      address: address || location || '',
-      location: location || address || '',
+      address: address || donorLocation,
+      location: donorLocation,
       latitude: resolvedCoordinates?.latitude,
       longitude: resolvedCoordinates?.longitude,
       hospitalId: hospitalId || '',
@@ -306,7 +345,10 @@ export const addDonation = async (req, res) => {
       }).catch((error) => console.error('Thank-you email failed:', error.message));
     }
 
-    res.status(201).json(savedDonation);
+    res.status(201).json({
+      ...savedDonation.toObject(),
+      locationWarning: resolvedCoordinates ? undefined : 'Donation saved, but its location could not be geocoded. Add valid coordinates before distance matching.'
+    });
   } catch (error) {
     console.error('Error in addDonation:', error);
     if (error.code === 11000) return res.status(400).json({ message: 'This email already exists in the database! Duplicate donations are not allowed.' });
@@ -346,7 +388,14 @@ export const updateDonation = async (req, res) => {
     }
 
     const updated = await Donation.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true }).select('-__v');
-    return res.json({ success: true, donation: updated });
+    return res.json({
+      success: true,
+      donation: updated,
+      locationWarning: (req.body.location !== undefined || req.body.address !== undefined)
+        && (updates.latitude === null || updates.longitude === null)
+        ? 'Donation updated, but its location could not be geocoded. Distance matching is unavailable until valid coordinates are added.'
+        : undefined
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

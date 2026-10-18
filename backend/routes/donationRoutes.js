@@ -7,6 +7,7 @@ import {
   getDonorHistory, 
   dispatchBlood,
   findMatchingDonors,
+  normalizeCoordinatePair,
   getPublicDonationStats
 } from '../controllers/donationController.js';
 import { requireAuth, requireHospitalRole, requirePermission } from '../middleware/auth.js';
@@ -23,8 +24,22 @@ router.patch('/:id', requireAuth, requireHospitalRole, requirePermission('invent
 router.get('/history/:donorName', getDonorHistory);          // Get specific donor history
 router.get('/match', requireAuth, requireHospitalRole, async (req, res) => {
   try {
+    const requestedUnits = Number(req.query.units);
+    if (!String(req.query.bloodGroup || '').trim() || !String(req.query.location || '').trim()
+      || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
+      return res.status(400).json({ success: false, message: 'Blood group, hospital location, and a positive whole number of units are required.' });
+    }
+    let coordinates;
+    try {
+      coordinates = normalizeCoordinatePair(req.query.latitude, req.query.longitude);
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     const rankedDonors = await findMatchingDonors({
       ...req.query,
+      units: requestedUnits,
+      latitude: coordinates?.latitude,
+      longitude: coordinates?.longitude,
       hospitalId: req.user.hospitalId,
       hospitalName: req.user.hospitalName
     });

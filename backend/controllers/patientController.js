@@ -2,7 +2,7 @@ import PatientRequest from '../models/PatientRequest.js';
 import Donation from '../models/donationModel.js';
 import DonorRecipientLog from '../models/DonorRecipientLog.js';
 import mongoose from 'mongoose';
-import { findMatchingDonors, geocodeLocation, getStoredCoordinates, distanceInKilometers } from './donationController.js';
+import { findMatchingDonors, geocodeLocation, getStoredCoordinates, distanceInKilometers, normalizeCoordinatePair } from './donationController.js';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const realDonorFilter = {
@@ -29,8 +29,10 @@ export const createPatientRequest = async (req, res) => {
         const payload = {
             ...req.body,
             hospitalId: req.user.hospitalId || '',
-            hospitalName: req.user.hospitalName || req.body.hospitalName || '',
-            hospitalLocation: req.user.hospitalLocation || req.body.hospitalLocation || '',
+            hospitalName: String(req.user.hospitalName || req.body.hospitalName || '').trim(),
+            hospitalLocation: String(req.body.hospitalLocation || req.user.hospitalLocation || '').trim(),
+            patientName: String(req.body.patientName || '').trim(),
+            contactPhone: String(req.body.contactPhone || '').trim(),
             hospitalLatitude: req.body.hospitalLatitude,
             hospitalLongitude: req.body.hospitalLongitude,
             createdBy: String(req.user._id)
@@ -40,13 +42,20 @@ export const createPatientRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Hospital, patient, and contact details are required.' });
         }
 
+        let suppliedHospitalCoordinates;
+        try {
+            suppliedHospitalCoordinates = normalizeCoordinatePair(payload.hospitalLatitude, payload.hospitalLongitude);
+        } catch (error) {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+
         const bloodGroup = String(payload.bloodGroup || '').trim().toUpperCase();
         const unitsRequired = Number(payload.unitsRequired);
         if (!['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(bloodGroup) || !Number.isInteger(unitsRequired) || unitsRequired <= 0) {
             return res.status(400).json({ success: false, message: 'A valid blood group and positive whole number of units are required.' });
         }
         const matchingDiagnostics = [];
-        const hospitalCoordinates = await geocodeLocation(payload.hospitalLocation);
+        const hospitalCoordinates = suppliedHospitalCoordinates || await geocodeLocation(payload.hospitalLocation);
         const rankedDonors = await findMatchingDonors({
             bloodGroup,
             units: unitsRequired,
@@ -75,7 +84,18 @@ export const createPatientRequest = async (req, res) => {
         });
         const savedRequest = await newRequest.save();
         req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('new_patient_request', savedRequest);
-        res.status(201).json({ success: true, message: 'Request submitted successfully', data: savedRequest, matchingDiagnostics });
+        const unresolvedDonorLocations = matchingDiagnostics.some((item) => item.rejectionReason === 'donor-location-unresolved');
+        res.status(201).json({
+            success: true,
+            message: 'Request submitted successfully',
+            data: savedRequest,
+            matchingDiagnostics,
+            locationWarning: !hospitalCoordinates
+                ? 'Request saved, but the hospital location could not be geocoded. Distance matching is unavailable until valid coordinates are added or geocoding succeeds.'
+                : unresolvedDonorLocations
+                    ? 'Some donor locations could not be geocoded and were excluded from distance ranking.'
+                    : undefined
+        });
     } catch (err) {
         console.error("Error saving patient request:", err);
         res.status(500).json({ success: false, message: err.message });
@@ -91,14 +111,16 @@ export const getPatientRequests = async (req, res) => {
         const matchingDiagnostics = new Map();
         await Promise.all(requests.map(async (request) => {
             const diagnostics = [];
-            const refreshedCoordinates = await geocodeLocation(request.hospitalLocation);
-            request.hospitalLatitude = refreshedCoordinates?.latitude;
-            request.hospitalLongitude = refreshedCoordinates?.longitude;
+            const refreshedCoordinates = getStoredCoordinates(request) || await geocodeLocation(request.hospitalLocation);
+            if (refreshedCoordinates) {
+                request.hospitalLatitude = refreshedCoordinates.latitude;
+                request.hospitalLongitude = refreshedCoordinates.longitude;
+            }
             if (request.status !== 'Pending') {
                 const sourceDonation = request.donorId
-                    ? await Donation.findOne({ _id: request.donorId, ...hospitalScope(req.user) }).select('location address').lean()
+                    ? await Donation.findOne({ _id: request.donorId, ...hospitalScope(req.user) }).select('location address latitude longitude').lean()
                     : null;
-                const donorCoordinates = await geocodeLocation(sourceDonation?.location || sourceDonation?.address);
+                const donorCoordinates = getStoredCoordinates(sourceDonation) || await geocodeLocation(sourceDonation?.location || sourceDonation?.address);
                 const hospitalCoordinates = getStoredCoordinates({ latitude: request.hospitalLatitude, longitude: request.hospitalLongitude });
                 if (donorCoordinates && hospitalCoordinates) request.donorDistance = Number(distanceInKilometers(hospitalCoordinates, donorCoordinates).toFixed(2));
                 await request.save();
@@ -108,8 +130,8 @@ export const getPatientRequests = async (req, res) => {
                 bloodGroup: request.bloodGroup,
                 units: request.unitsRequired,
                 location: request.hospitalLocation,
-                latitude: refreshedCoordinates?.latitude ?? request.hospitalLatitude,
-                longitude: refreshedCoordinates?.longitude ?? request.hospitalLongitude,
+                latitude: refreshedCoordinates?.latitude,
+                longitude: refreshedCoordinates?.longitude,
                 hospitalId: request.hospitalId,
                 hospitalName: request.hospitalName,
                 diagnostics
