@@ -10,7 +10,19 @@ import Hospital from '../models/Hospital.js';
 
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
-const frontendUrl = () => String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+const frontendUrl = () => {
+  const configuredUrl = String(process.env.FRONTEND_URL || '')
+    .trim()
+    .replace(/\/$/, '')
+    .replace(/^https:\/\/life-pulse-blood-system\.vercel\.app(?=\/|$)/, 'https://life-track-blood-system.vercel.app');
+  const url = configuredUrl || (process.env.NODE_ENV === 'production'
+    ? 'https://life-track-blood-system.vercel.app'
+    : 'http://localhost:5173');
+  if (process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/i.test(url)) {
+    throw new Error('Production FRONTEND_URL cannot be localhost.');
+  }
+  return url;
+};
 const createVerification = () => {
   const token = crypto.randomBytes(32).toString('hex');
   return { token, tokenHash: tokenHash(token), expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000) };

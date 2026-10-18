@@ -201,6 +201,10 @@ app.post('/api/hospital-requests', requireAuth, requireHospitalRole, async (req,
     const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
     const savedHospitalLocation = String(req.user.hospitalLocation || hospitalLocation || '').trim();
     const requestedUnits = Number(unitsRequired);
+    if (!['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(normalizedBloodGroup)
+      || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
+      return res.status(400).json({ success: false, message: 'A valid blood group and positive whole number of units are required.' });
+    }
     if (!savedHospitalLocation) {
       return res.status(400).json({ success: false, message: 'Hospital location is required.' });
     }
@@ -273,7 +277,7 @@ app.post('/api/hospital-requests', requireAuth, requireHospitalRole, async (req,
     });
   } catch (error) {
     console.error('Error saving & broadcasting hospital request:', error);
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
       message: 'Failed to broadcast hospital request.',
       error: error.message

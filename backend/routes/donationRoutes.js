@@ -24,8 +24,10 @@ router.patch('/:id', requireAuth, requireHospitalRole, requirePermission('invent
 router.get('/history/:donorName', getDonorHistory);          // Get specific donor history
 router.get('/match', requireAuth, requireHospitalRole, async (req, res) => {
   try {
+    const requestedBloodGroup = String(req.query.bloodGroup || '').trim().toUpperCase();
     const requestedUnits = Number(req.query.units);
-    if (!String(req.query.bloodGroup || '').trim() || !String(req.query.location || '').trim()
+    if (!['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(requestedBloodGroup)
+      || !String(req.query.location || '').trim()
       || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
       return res.status(400).json({ success: false, message: 'Blood group, hospital location, and a positive whole number of units are required.' });
     }
@@ -35,16 +37,31 @@ router.get('/match', requireAuth, requireHospitalRole, async (req, res) => {
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
+    const matchingDiagnostics = [];
     const rankedDonors = await findMatchingDonors({
       ...req.query,
+      bloodGroup: requestedBloodGroup,
       units: requestedUnits,
       latitude: coordinates?.latitude,
       longitude: coordinates?.longitude,
       hospitalId: req.user.hospitalId,
-      hospitalName: req.user.hospitalName
+      hospitalName: req.user.hospitalName,
+      diagnostics: matchingDiagnostics
     });
+    const matchingIncomplete = matchingDiagnostics.some((item) =>
+      item.reason === 'hospital-location-unresolved' || item.rejectionReason === 'donor-location-unresolved'
+    );
+    if (rankedDonors.length === 0 && matchingIncomplete) {
+      return res.status(503).json({
+        success: false,
+        message: 'Donor matching is incomplete because location data could not be resolved.',
+        matchingDiagnostics
+      });
+    }
     return res.status(200).json({
       success: true,
+      matchingComplete: !matchingIncomplete,
+      matchingDiagnostics,
       donor: rankedDonors[0]?.donor || null,
       donors: rankedDonors.map(({ donor, distance }) => ({
         ...donor.toObject(),

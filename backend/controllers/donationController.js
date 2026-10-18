@@ -6,6 +6,13 @@ import { sendDonorThankYouEmail } from '../services/emailService.js';
 
 const locationCache = new Map();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const bloodGroups = new Set(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
+const isBloodGroupCompatible = (donorGroup, recipientGroup) => {
+  const normalizedDonorGroup = String(donorGroup || '').trim().toUpperCase();
+  const normalizedRecipientGroup = String(recipientGroup || '').trim().toUpperCase();
+  // The records do not identify a blood component, so only exact ABO/Rh matches are safe.
+  return bloodGroups.has(normalizedDonorGroup) && normalizedDonorGroup === normalizedRecipientGroup;
+};
 const availableStockFilter = {
   $or: [
     { availableUnits: { $gt: 0 } },
@@ -66,7 +73,10 @@ export const geocodeLocation = async (location) => {
         const photonUrl = new URL('https://photon.komoot.io/api/');
         photonUrl.searchParams.set('q', searchLocation);
         photonUrl.searchParams.set('limit', '10');
-        const response = await fetch(photonUrl, { headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' } });
+        const response = await fetch(photonUrl, {
+          headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' },
+          signal: AbortSignal.timeout(5000)
+        });
         if (!response.ok) {
           console.warn(`Photon geocoding returned HTTP ${response.status}.`);
           continue;
@@ -101,7 +111,10 @@ export const geocodeLocation = async (location) => {
         nominatimUrl.searchParams.set('format', 'jsonv2');
         nominatimUrl.searchParams.set('limit', '5');
         nominatimUrl.searchParams.set('q', searchLocation);
-        const response = await fetch(nominatimUrl, { headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' } });
+        const response = await fetch(nominatimUrl, {
+          headers: { 'User-Agent': 'VitalTrackBloodSystem/1.0' },
+          signal: AbortSignal.timeout(5000)
+        });
         if (!response.ok) {
           console.warn(`Nominatim geocoding returned HTTP ${response.status}.`);
           continue;
@@ -144,7 +157,7 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
   const normalizedBloodGroup = String(bloodGroup || '').trim().toUpperCase();
   const requestedUnits = Number(units);
   const savedLocation = String(location || '').trim();
-  if (!normalizedBloodGroup || !savedLocation || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
+  if (!bloodGroups.has(normalizedBloodGroup) || !savedLocation || !Number.isInteger(requestedUnits) || requestedUnits <= 0) {
     return [];
   }
 
@@ -177,7 +190,37 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
 
   const rankedDonors = await Promise.all(donors.map(async (donor) => {
     const availableUnits = donor.availableUnits === undefined ? Number(donor.units || 0) : Number(donor.availableUnits || 0);
+    const donorBloodGroup = String(donor.bloodGroup || '').trim().toUpperCase();
+    const bloodGroupCompatible = isBloodGroupCompatible(donorBloodGroup, normalizedBloodGroup);
+    const available = Number.isFinite(availableUnits) && availableUnits >= requestedUnits && donor.status !== 'Dispatched';
+    const eligible = !donor.nextEligibleDate || new Date(donor.nextEligibleDate) <= new Date();
     const donorLocation = String(donor.location || donor.address || '').trim();
+    const donorDiagnostic = {
+      donorId: String(donor._id),
+      donorName: donor.donorName,
+      donorBloodGroup,
+      requestedBloodGroup: normalizedBloodGroup,
+      units: availableUnits,
+      requestedUnits,
+      donorLocation,
+      donorCoordinates: null,
+      hospitalCoordinates: { latitude: targetCoordinates.latitude, longitude: targetCoordinates.longitude },
+      nextEligibleDate: donor.nextEligibleDate || null,
+      status: donor.status,
+      bloodGroupCompatible,
+      available,
+      eligible,
+      distanceKm: null
+    };
+
+    if (!bloodGroupCompatible) donorDiagnostic.rejectionReason = 'blood-group-incompatible';
+    else if (!available) donorDiagnostic.rejectionReason = 'insufficient-available-units-or-dispatched';
+    else if (!eligible) donorDiagnostic.rejectionReason = 'donation-not-yet-eligible';
+    if (donorDiagnostic.rejectionReason) {
+      diagnostics?.push(donorDiagnostic);
+      return null;
+    }
+
     const storedCoordinates = getStoredCoordinates(donor);
     const coordinates = storedCoordinates || (donorLocation ? await geocodeLocation(donorLocation) : null);
     if (!storedCoordinates && coordinates) {
@@ -185,32 +228,18 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
       donor.longitude = coordinates.longitude;
       await donor.save(session ? { session } : undefined);
     }
-    const donorDiagnostic = {
-      donorId: String(donor._id),
-      donorName: donor.donorName,
-      donorBloodGroup: String(donor.bloodGroup || '').trim().toUpperCase(),
-      requestedBloodGroup: normalizedBloodGroup,
-      units: availableUnits,
-      requestedUnits,
-      donorLocation,
-      donorCoordinates: coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : null,
-      hospitalCoordinates: { latitude: targetCoordinates.latitude, longitude: targetCoordinates.longitude },
-      nextEligibleDate: donor.nextEligibleDate || null,
-      status: donor.status,
-      bloodGroupCompatible: String(donor.bloodGroup || '').trim().toUpperCase() === normalizedBloodGroup,
-      available: availableUnits >= requestedUnits && donor.status !== 'Dispatched',
-      eligible: !donor.nextEligibleDate || new Date(donor.nextEligibleDate) <= new Date()
-    };
+    donorDiagnostic.donorCoordinates = coordinates
+      ? { latitude: coordinates.latitude, longitude: coordinates.longitude }
+      : null;
     const distance = coordinates ? distanceInKilometers(targetCoordinates, coordinates) : Number.POSITIVE_INFINITY;
     donorDiagnostic.distanceKm = Number.isFinite(distance) ? Number(distance.toFixed(2)) : null;
 
-    if (!donorDiagnostic.bloodGroupCompatible) donorDiagnostic.rejectionReason = 'blood-group-incompatible';
-    else if (!coordinates) donorDiagnostic.rejectionReason = 'donor-location-unresolved';
-    else if (!donorDiagnostic.available) donorDiagnostic.rejectionReason = 'insufficient-available-units-or-dispatched';
-    else if (!donorDiagnostic.eligible) donorDiagnostic.rejectionReason = 'donation-not-yet-eligible';
-    else diagnostics?.push({ ...donorDiagnostic, rejectionReason: null });
-    if (diagnostics && donorDiagnostic.rejectionReason) diagnostics.push(donorDiagnostic);
-    if (donorDiagnostic.rejectionReason) return null;
+    if (!coordinates) {
+      donorDiagnostic.rejectionReason = 'donor-location-unresolved';
+      diagnostics?.push(donorDiagnostic);
+      return null;
+    }
+    diagnostics?.push({ ...donorDiagnostic, rejectionReason: null });
 
     return { donor, distance };
   })).then((matches) => matches.filter(Boolean));
@@ -222,7 +251,16 @@ export const findMatchingDonors = async ({ bloodGroup, units, location, latitude
 };
 
 export const findNearestMatchingDonor = async (options) => {
-  const rankedDonors = await findMatchingDonors(options);
+  const diagnostics = options.diagnostics || [];
+  const rankedDonors = await findMatchingDonors({ ...options, diagnostics });
+  if (rankedDonors.length === 0 && diagnostics.some((item) =>
+    item.reason === 'hospital-location-unresolved' || item.rejectionReason === 'donor-location-unresolved'
+  )) {
+    throw Object.assign(
+      new Error('Donor matching is incomplete because one or more locations could not be resolved. Inventory fallback is not available until matching can be retried.'),
+      { status: 503 }
+    );
+  }
   return rankedDonors[0]?.donor || null;
 };
 

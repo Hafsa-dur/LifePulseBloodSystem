@@ -22,6 +22,9 @@ const stockFilter = {
 const hospitalScope = (user) => user.hospitalId
     ? { hospitalId: user.hospitalId }
     : { hospitalName: new RegExp(`^${escapeRegex(String(user.hospitalName || ''))}$`, 'i') };
+const hasIncompleteLocationSearch = (diagnostics) => diagnostics.some((item) =>
+    item.reason === 'hospital-location-unresolved' || item.rejectionReason === 'donor-location-unresolved'
+);
 
 // Create a new patient request
 export const createPatientRequest = async (req, res) => {
@@ -56,17 +59,23 @@ export const createPatientRequest = async (req, res) => {
         }
         const matchingDiagnostics = [];
         const hospitalCoordinates = suppliedHospitalCoordinates || await geocodeLocation(payload.hospitalLocation);
-        const rankedDonors = await findMatchingDonors({
-            bloodGroup,
-            units: unitsRequired,
-            location: payload.hospitalLocation,
-            latitude: hospitalCoordinates?.latitude,
-            longitude: hospitalCoordinates?.longitude,
-            hospitalId: payload.hospitalId,
-            hospitalName: payload.hospitalName,
-            diagnostics: matchingDiagnostics
-        });
+        let rankedDonors = [];
+        if (hospitalCoordinates) {
+            rankedDonors = await findMatchingDonors({
+                bloodGroup,
+                units: unitsRequired,
+                location: payload.hospitalLocation,
+                latitude: hospitalCoordinates.latitude,
+                longitude: hospitalCoordinates.longitude,
+                hospitalId: payload.hospitalId,
+                hospitalName: payload.hospitalName,
+                diagnostics: matchingDiagnostics
+            });
+        } else {
+            matchingDiagnostics.push({ reason: 'hospital-location-unresolved', hospitalLocation: payload.hospitalLocation });
+        }
         const nearestMatch = rankedDonors?.[0] || null;
+        const locationSearchFailed = !nearestMatch && hasIncompleteLocationSearch(matchingDiagnostics);
         const newRequest = new PatientRequest({
             ...payload,
             bloodGroup,
@@ -78,23 +87,20 @@ export const createPatientRequest = async (req, res) => {
             donorDistance: Number.isFinite(nearestMatch?.distance) ? Number(nearestMatch.distance.toFixed(2)) : null,
             hospitalLatitude: hospitalCoordinates?.latitude,
             hospitalLongitude: hospitalCoordinates?.longitude,
-            sourceType: nearestMatch ? 'donor' : 'inventory',
+            sourceType: nearestMatch ? 'donor' : locationSearchFailed ? undefined : 'inventory',
             matchStatus: nearestMatch ? 'Matched' : undefined,
-            locationMatchStatus: nearestMatch ? 'Matched' : 'No Donor'
+            locationMatchStatus: nearestMatch ? 'Matched' : locationSearchFailed ? 'Failed' : 'No Donor'
         });
         const savedRequest = await newRequest.save();
         req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('new_patient_request', savedRequest);
-        const unresolvedDonorLocations = matchingDiagnostics.some((item) => item.rejectionReason === 'donor-location-unresolved');
         res.status(201).json({
             success: true,
             message: 'Request submitted successfully',
             data: savedRequest,
             matchingDiagnostics,
-            locationWarning: !hospitalCoordinates
-                ? 'Request saved, but the hospital location could not be geocoded. Distance matching is unavailable until valid coordinates are added or geocoding succeeds.'
-                : unresolvedDonorLocations
-                    ? 'Some donor locations could not be geocoded and were excluded from distance ranking.'
-                    : undefined
+            locationWarning: locationSearchFailed
+                ? 'Request saved, but donor matching could not be completed because one or more locations could not be resolved. Inventory fallback is paused until matching can be retried.'
+                : undefined
         });
     } catch (err) {
         console.error("Error saving patient request:", err);
@@ -126,26 +132,32 @@ export const getPatientRequests = async (req, res) => {
                 await request.save();
                 return;
             }
-            const rankedDonors = await findMatchingDonors({
-                bloodGroup: request.bloodGroup,
-                units: request.unitsRequired,
-                location: request.hospitalLocation,
-                latitude: refreshedCoordinates?.latitude,
-                longitude: refreshedCoordinates?.longitude,
-                hospitalId: request.hospitalId,
-                hospitalName: request.hospitalName,
-                diagnostics
-            });
+            let rankedDonors = [];
+            if (refreshedCoordinates) {
+                rankedDonors = await findMatchingDonors({
+                    bloodGroup: request.bloodGroup,
+                    units: request.unitsRequired,
+                    location: request.hospitalLocation,
+                    latitude: refreshedCoordinates.latitude,
+                    longitude: refreshedCoordinates.longitude,
+                    hospitalId: request.hospitalId,
+                    hospitalName: request.hospitalName,
+                    diagnostics
+                });
+            } else {
+                diagnostics.push({ reason: 'hospital-location-unresolved', hospitalLocation: request.hospitalLocation });
+            }
             matchingDiagnostics.set(String(request._id), diagnostics);
             const nearestMatch = rankedDonors?.[0] || null;
+            const locationSearchFailed = !nearestMatch && hasIncompleteLocationSearch(diagnostics);
             request.donorId = nearestMatch?.donor?._id || null;
             request.donorName = nearestMatch?.donor?.donorName || '';
             request.donorEmail = nearestMatch?.donor?.email || '';
             request.donorLocation = nearestMatch?.donor?.location || nearestMatch?.donor?.address || '';
             request.donorDistance = Number.isFinite(nearestMatch?.distance) ? Number(nearestMatch.distance.toFixed(2)) : null;
-            request.sourceType = nearestMatch ? 'donor' : 'inventory';
+            request.sourceType = nearestMatch ? 'donor' : locationSearchFailed ? undefined : 'inventory';
             request.matchStatus = nearestMatch ? 'Matched' : undefined;
-            request.locationMatchStatus = nearestMatch ? 'Matched' : 'No Donor';
+            request.locationMatchStatus = nearestMatch ? 'Matched' : locationSearchFailed ? 'Failed' : 'No Donor';
             await request.save();
         }));
         res.status(200).json(requests.map((request) => ({
@@ -175,27 +187,65 @@ export const approveRequest = async (req, res) => {
             if (!Number.isInteger(requiredUnits) || requiredUnits <= 0) {
                 throw Object.assign(new Error('Requested units must be a positive whole number'), { status: 400 });
             }
+            if (request.locationMatchStatus === 'Failed' || !['donor', 'inventory'].includes(request.sourceType)) {
+                throw Object.assign(new Error('Donor matching is incomplete because location data could not be resolved. Refresh Location Intelligence and retry; inventory fallback has not been activated.'), { status: 503 });
+            }
+
+            let donor = null;
+            let sourceType = request.sourceType;
+            if (request.sourceType === 'donor') {
+                const hospitalCoordinates = getStoredCoordinates(request) || await geocodeLocation(request.hospitalLocation);
+                if (!hospitalCoordinates) {
+                    throw Object.assign(new Error('Hospital location could not be resolved during approval. Donor matching is incomplete; inventory fallback has not been activated.'), { status: 503 });
+                }
+                const donorDiagnostics = [];
+                const currentMatches = await findMatchingDonors({
+                    bloodGroup,
+                    units: requiredUnits,
+                    location: request.hospitalLocation,
+                    latitude: hospitalCoordinates.latitude,
+                    longitude: hospitalCoordinates.longitude,
+                    hospitalId: request.hospitalId,
+                    hospitalName: request.hospitalName,
+                    session,
+                    diagnostics: donorDiagnostics
+                });
+                donor = currentMatches[0]?.donor || null;
+                if (!donor && hasIncompleteLocationSearch(donorDiagnostics)) {
+                    throw Object.assign(new Error('Donor location could not be resolved during approval. Matching is incomplete; inventory fallback has not been activated.'), { status: 503 });
+                }
+                if (donor) {
+                    request.donorId = donor._id;
+                    request.donorName = donor.donorName;
+                    request.donorEmail = donor.email;
+                    request.donorLocation = donor.location || donor.address || '';
+                    request.donorDistance = Number(currentMatches[0].distance.toFixed(2));
+                } else {
+                    sourceType = 'inventory';
+                    request.donorId = null;
+                    request.donorName = '';
+                    request.donorEmail = '';
+                    request.donorLocation = '';
+                    request.donorDistance = null;
+                }
+            }
 
             const groupFilter = { bloodGroup: new RegExp(`^${escapeRegex(bloodGroup)}$`, 'i') };
             const hospitalInventoryFilter = req.user.hospitalId
                 ? { hospitalId: req.user.hospitalId }
                 : { hospitalName: new RegExp(`^${escapeRegex(String(req.user.hospitalName || ''))}$`, 'i') };
-            const allStock = request.sourceType === 'donor' && request.donorId
-                ? await Donation.find({ ...groupFilter, ...stockFilter, ...hospitalInventoryFilter, _id: request.donorId }).session(session)
+            const allStock = sourceType === 'donor' && donor
+                ? [donor]
                 : await Donation.find({ ...groupFilter, ...stockFilter, ...hospitalInventoryFilter })
                     .sort({ createdAt: 1, _id: 1 }).session(session);
             const availableUnits = allStock.reduce((total, donation) => total + (donation.availableUnits === undefined ? Number(donation.units || 0) : Number(donation.availableUnits || 0)), 0);
-            if (availableUnits <= 0) {
+            if (availableUnits < requiredUnits) {
                 request.status = 'Rejected';
                 await request.save({ session });
                 approvedRequest = request;
                 return;
             }
 
-            const donor = request.sourceType === 'donor' && request.donorId
-                ? allStock[0]
-                : null;
-            const sourceType = request.sourceType === 'donor' && donor ? 'donor' : 'inventory';
             const donorName = donor ? donor.donorName.trim() : 'Inventory';
             const donorEmail = donor ? donor.email : undefined;
 
@@ -234,7 +284,7 @@ export const approveRequest = async (req, res) => {
         });
 
         if (approvedRequest.status === 'Rejected') {
-            return res.status(200).json({ success: false, autoRejected: true, message: 'No matching blood inventory is available.', request: approvedRequest });
+            return res.status(200).json({ success: false, autoRejected: true, message: 'No suitable donor or sufficient compatible inventory is available for the complete request.', request: approvedRequest });
         }
         req.io?.to(`hospital:${req.user.hospitalId || req.user.hospitalName}`).emit('update_patient_request', approvedRequest);
         return res.status(200).json({ success: true, message: `Request matched to ${matchLog.sourceType}.`, request: approvedRequest, match: matchLog });
