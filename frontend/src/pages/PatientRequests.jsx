@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { isSocketEnabled, socket } from '../socket';
 import { Users, CheckCircle, XCircle, Clock, AlertCircle, Truck } from 'lucide-react';
 import { API_URL, authHeaders, parseResponse } from '../api';
@@ -206,7 +206,13 @@ const PatientRequests = () => {
                       <td className="py-4 px-5 text-xs">
                         <div className="font-black text-[#5A1827]">{row.donorName || 'Stock Inventory'}</div>
                         {row.donorLocation && <div className="text-slate-500">{row.donorLocation}</div>}
-                        <div className="text-[10px] font-black uppercase text-emerald-700">{row.locationMatchStatus === 'Matched' ? `Nearest · ${row.donorDistance ?? 'N/A'} km` : 'Inventory fallback'}</div>
+                        <div className={`text-[10px] font-black uppercase ${row.locationMatchStatus === 'Failed' ? 'text-rose-700' : 'text-emerald-700'}`}>
+                          {row.locationMatchStatus === 'Matched'
+                            ? `Nearest · ${row.donorDistance ?? 'N/A'} km`
+                            : row.locationMatchStatus === 'Failed'
+                              ? 'Location match incomplete'
+                              : 'Inventory fallback'}
+                        </div>
                       </td>
                       <td className="py-4 px-5">
                         <span

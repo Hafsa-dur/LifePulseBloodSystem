@@ -36,14 +36,14 @@ const faqCategories = [
   {
     title: 'Donor matching and Location Intelligence',
     questions: [
-      ['How does donor matching work?', 'Matching checks the requested blood group, positive available units, donor information, hospital scope, and saved location data. Matching results are ranked by calculated geographic distance when locations can be resolved.'],
+      ['How does donor matching work?', 'Matching checks the exact ABO/Rh blood group, complete available units, donor eligibility, hospital scope, and valid saved coordinates before ranking candidates by straight-line geographic distance.'],
       ['What happens if no suitable donor is available?', 'The request is marked for inventory fallback. If no compatible stock is available when staff approve it, the backend rejects the request.'],
       ['What is Location Intelligence?', 'Location Intelligence helps hospital staff compare saved donor and hospital locations and identify nearby matching donor records.'],
       ['What is geocoding?', 'Geocoding converts a text location into latitude and longitude. VitalTrack attempts to resolve locations through its configured public geocoding providers.'],
       ['Why are latitude and longitude used?', 'Coordinates provide a consistent way to compare donor and hospital locations after a text address or place name has been resolved.'],
       ['What is the Haversine formula?', 'VitalTrack uses the Haversine calculation to estimate the straight-line distance between two latitude/longitude points on Earth.'],
       ['Is the displayed distance road distance?', 'No. The matching distance is geographic straight-line distance. It is not driving distance, travel time, or turn-by-turn navigation.'],
-      ['Why might a location not match?', 'A location may be too vague, unresolved by the geocoding providers, missing from a donor record, or unavailable as valid coordinates. The request can still use inventory when appropriate.']
+      ['Why might a location not match?', 'A location may be too vague, unresolved by the geocoding providers, missing from a donor record, or unavailable as valid coordinates. When a location lookup fails, matching is marked incomplete and inventory fallback waits until donor matching can be retried.']
     ]
   },
   {

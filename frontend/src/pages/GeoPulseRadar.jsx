@@ -42,6 +42,31 @@ const GeoPulseRadar = () => {
     };
   };
 
+  const getRequestMatchDetails = (request) => {
+    const isIncomplete = request.locationMatchStatus === 'Failed';
+    const isMatched = request.locationMatchStatus === 'Matched';
+    const diagnosticReasons = [...new Set((request.matchingDiagnostics || [])
+      .map((item) => item.rejectionReason || item.reason)
+      .filter(Boolean))];
+    const statusText = isMatched
+      ? 'Nearest eligible donor selected'
+      : isIncomplete
+        ? 'Matching incomplete — location could not be resolved'
+        : request.sourceType === 'inventory'
+          ? 'Donor search completed — inventory fallback'
+          : 'No suitable donor found';
+
+    return {
+      statusText,
+      diagnosticText: diagnosticReasons.join(', '),
+      statusClass: isMatched
+        ? 'bg-emerald-100 text-emerald-700'
+        : isIncomplete
+          ? 'bg-rose-100 text-rose-800'
+          : 'bg-amber-100 text-amber-800'
+    };
+  };
+
   const fetchRealDonors = useCallback(async (matches = []) => {
     try {
       const response = await fetch(`${API_URL}/donations`, { headers: authHeaders() });
@@ -255,7 +280,12 @@ const GeoPulseRadar = () => {
                 <td className="p-4"><div className="font-bold">{request.hospitalName}</div><div className="text-xs text-slate-500">{request.hospitalLocation}</div></td>
                 <td className="p-4">
                   <div className="font-black">{request.donorName || 'No suitable donor found'}</div>
-                  <div className="text-xs text-slate-500">{request.donorLocation || 'Inventory fallback'}</div>
+                  <div className="text-xs text-slate-500">
+                    {request.donorLocation || (request.sourceType === 'inventory' ? 'Inventory fallback' : 'No donor assigned')}
+                  </div>
+                  {request.locationMatchStatus === 'Failed' && <div className="mt-1 text-xs font-bold text-rose-700">
+                    Donor search did not complete. Refresh locations before approving or using inventory.
+                  </div>}
                   {request.locationMatchStatus === 'Matched' && request.donorId && <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-bold text-slate-500">/ Sending Email</span>
                     <button
@@ -269,7 +299,17 @@ const GeoPulseRadar = () => {
                   </div>}
                 </td>
                 <td className="p-4 font-bold">{request.donorDistance !== null && request.donorDistance !== undefined ? `${request.donorDistance} km` : 'N/A'}</td>
-                <td className="p-4"><span title={request.matchingDiagnostics?.map((item) => item.rejectionReason || 'eligible').join(', ')} className={`px-2 py-1 rounded-lg text-xs font-black ${request.locationMatchStatus === 'Matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{request.locationMatchStatus === 'Matched' ? 'Nearest Donor Selected' : request.matchingDiagnostics?.length ? `No suitable donor found (${request.matchingDiagnostics.map((item) => item.rejectionReason).filter(Boolean).join(', ')})` : 'No suitable donor found'}</span></td>
+                <td className="p-4">
+                  {(() => {
+                    const matchDetails = getRequestMatchDetails(request);
+                    return <span
+                      title={matchDetails.diagnosticText || matchDetails.statusText}
+                      className={`px-2 py-1 rounded-lg text-xs font-black ${matchDetails.statusClass}`}
+                    >
+                      {matchDetails.statusText}
+                    </span>;
+                  })()}
+                </td>
               </tr>) : <tr><td colSpan="6" className="p-8 text-center text-slate-500 italic">No patient request matches available yet.</td></tr>}
             </tbody>
           </table>
