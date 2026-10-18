@@ -18,7 +18,7 @@ import { findNearestMatchingDonor } from './controllers/donationController.js';
 import { requireAuth, requireHospitalRole } from './middleware/auth.js';
 import jwt from 'jsonwebtoken';
 import HospitalSettings from './models/HospitalSettings.js';
-import { sendDonorEmergencyEmail } from './services/emailService.js';
+import { sendContactMessage, sendDonorEmergencyEmail } from './services/emailService.js';
 
 
 // Load environment variables from .env and establish MongoDB connection
@@ -29,6 +29,25 @@ const app = express();
 // Middleware setup for parsing incoming JSON payloads and enabling CORS restrictions
 app.use(cors());
 app.use(express.json());
+
+app.post('/api/contact', async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const message = String(req.body?.message || '').trim();
+  if (!name || name.length > 120 || !email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !message || message.length > 5000) {
+    return res.status(400).json({ success: false, message: 'Please provide a valid name, email, and message.' });
+  }
+  try {
+    const result = await sendContactMessage({ name, email, message });
+    if (!result.sent) {
+      return res.status(502).json({ success: false, message: result.reason === 'email-not-configured' ? 'Contact email is not configured.' : 'Message could not be delivered.' });
+    }
+    return res.status(200).json({ success: true, message: 'Message sent successfully.' });
+  } catch (error) {
+    console.error('Contact email delivery failed:', error.message);
+    return res.status(502).json({ success: false, message: 'Message could not be delivered.' });
+  }
+});
 
 // Vercel can invoke a request before the serverless instance has connected.
 // Wait for the cached connection before any route performs a Mongoose query.

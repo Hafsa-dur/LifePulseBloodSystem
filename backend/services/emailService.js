@@ -13,7 +13,7 @@ const getTransporter = () => {
   return transporter;
 };
 
-export const sendEmailMessage = async ({ to, subject, text, html }) => {
+export const sendEmailMessage = async ({ to, subject, text, html, replyTo }) => {
   const mailer = getTransporter();
   const recipient = String(to || '').trim().toLowerCase();
   if (!mailer || !recipient) {
@@ -24,6 +24,7 @@ export const sendEmailMessage = async ({ to, subject, text, html }) => {
     await mailer.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: recipient,
+      ...(replyTo ? { replyTo: String(replyTo).trim().toLowerCase() } : {}),
       subject,
       text,
       html: html || text
@@ -33,6 +34,24 @@ export const sendEmailMessage = async ({ to, subject, text, html }) => {
     console.error('Email delivery failed:', error.message);
     return { sent: false, reason: error.code || 'send-failed', error: error.message };
   }
+};
+
+export const sendContactMessage = async ({ name, email, message }) => {
+  const recipient = String(process.env.CONTACT_EMAIL_TO || '').trim().toLowerCase();
+  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[character]));
+  return sendEmailMessage({
+    to: recipient,
+    subject: `VitalTrack contact message from ${String(name).trim()}`,
+    text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
+    html: `<p><strong>Name:</strong> ${escapeHtml(name)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p>${escapeHtml(message).replace(/\n/g, '<br />')}</p>`,
+    replyTo: String(email).trim().toLowerCase()
+  });
 };
 
 export const sendDonorEmergencyEmail = async ({ donorEmail, donorName, bloodGroup, urgency, hospitalName, hospitalLocation, patientName, unitsRequired, message }) => {
