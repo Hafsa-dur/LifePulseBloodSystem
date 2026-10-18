@@ -35,7 +35,12 @@ const PatientRequestForm = () => {
       const data = await parseResponse(response);
       if (!response.ok) throw new Error(data.message || 'Patient request could not be submitted.');
 
-      setMessage('Patient request submitted successfully. It is now available in the hospital queue.');
+      const noDonorMatch = data.data?.locationMatchStatus !== 'Matched';
+      const resultMessage = data.locationWarning
+        || (noDonorMatch ? 'No eligible donor match was found; review location and eligibility diagnostics in Location Intelligence.' : '');
+      setMessage(resultMessage
+        ? `${resultMessage} The patient request is in the hospital queue.`
+        : 'Patient request submitted successfully. It is now available in the hospital queue.');
       setFormData((current) => ({
         ...current,
         patientName: '',

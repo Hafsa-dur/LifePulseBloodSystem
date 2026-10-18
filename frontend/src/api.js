@@ -4,6 +4,9 @@ const configuredApiUrl = import.meta.env.DEV
 
 export const API_URL = configuredApiUrl.replace(/\/+$/, '');
 
+
+
+
 export const parseResponse = async (response) => {
 	const responseText = await response.text();
 

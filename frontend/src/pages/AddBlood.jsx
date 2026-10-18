@@ -63,7 +63,9 @@ const AddBlood = () => {
       });
 
       if (response.status === 200 || response.status === 201) {
-        setSuccessMessage('Blood donation record added successfully!');
+        setSuccessMessage(response.data.locationWarning
+          ? response.data.locationWarning
+          : 'Blood donation record added successfully!');
         setFormData({
           donorName: '',
           email: '',
